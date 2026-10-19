@@ -41,6 +41,7 @@ Static scenes, no skeleton.
 
 | File | Asset |
 |---|---|
+| `japanshrine.glb` | Japanese Shrine (torii, lanterns, lion-dogs, fountain, main hall) |
 | `island.glb` | Forest Island diorama |
 
 No animations yet; the character rigs are ready for them.
