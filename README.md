@@ -1,10 +1,14 @@
 # game-test
 
-Low-poly 3D assets for the web game, made in Poly Studio and exported as skinned GLB (glTF 2.0, validated with gltf-validator, 0 errors).
+Low-poly 3D assets for the web game, made in Poly Studio and exported as GLB (glTF 2.0, validated with gltf-validator, 0 errors).
 
-## Core assets (`assets/core/`)
+Assets are split by status (`core` is used by the game, `experimental` is for tests and style studies) and by kind (`characters` and `places`).
 
-Used by the game. Same chunky base style, 22-joint skeleton.
+## Core
+
+### Characters (`assets/core/characters/`)
+
+Same chunky base style, skinned to a 22-joint skeleton.
 
 | File | Asset |
 |---|---|
@@ -12,18 +16,30 @@ Used by the game. Same chunky base style, 22-joint skeleton.
 | `firefighter.glb` | Firefighter |
 | `seifuku.glb` | Game Schoolgirl (Japanese sailor uniform, twin tails) |
 
-## Experimental assets (`assets/experimental/`)
+### Places (`assets/core/places/`)
 
-Tests and style studies, not used by the game yet.
+Static scenes, no skeleton.
 
-| File | Asset | Skeleton |
-|---|---|---|
-| `casual.glb` | Casual Girl — **style reference for all future characters** (stays experimental, not shipped in the game) | 22 joints |
-| `school.glb` | School Girl | 22 joints |
-| `nurse.glb` | Nurse (first version, older style) | 22 joints |
-| `ribbon.glb` | Red Ribbon Girl | 22 joints |
-| `anime.glb` | Pink Anime Girl | 22 joints |
-| `japanhouse.glb` | Japanese House (minka with shoji doors, veranda and garden) | none (static) |
-| `island.glb` | Forest Island diorama | none (static) |
+| File | Asset |
+|---|---|
+| `japanhouse.glb` | Japanese House (minka with shoji doors, veranda and garden) |
 
-No animations yet; the rig is ready for them.
+## Experimental
+
+### Characters (`assets/experimental/characters/`)
+
+| File | Asset |
+|---|---|
+| `casual.glb` | Casual Girl — **style reference for all future characters** (stays experimental, not shipped in the game) |
+| `school.glb` | School Girl |
+| `nurse.glb` | Nurse (first version, older style) |
+| `ribbon.glb` | Red Ribbon Girl |
+| `anime.glb` | Pink Anime Girl |
+
+### Places (`assets/experimental/places/`)
+
+| File | Asset |
+|---|---|
+| `island.glb` | Forest Island diorama |
+
+No animations yet; the character rigs are ready for them.
