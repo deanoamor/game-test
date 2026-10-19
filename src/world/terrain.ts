@@ -1,70 +1,58 @@
 import { BufferGeometry, Color, Float32BufferAttribute, Mesh, MeshStandardMaterial } from 'three';
 import { fbm } from '../util/noise';
 import { clamp, smoothstep } from '../util/rng';
-import { CITY, HALF, SEA_Z, cityDist, forestDensity, heightAt, mountainMask } from './config';
+import { PADDY, TERRAIN_HALF, forestDensity, heightAt, mountainMask } from './config';
 
 const C = {
   grassA: new Color('#8fc653'),
-  grassB: new Color('#76b247'),
-  meadow: new Color('#a4d05e'),
-  forest: new Color('#4a8638'),
-  forestDark: new Color('#3b7232'),
-  rock: new Color('#7d776f'),
-  rockDark: new Color('#5e5a58'),
-  alpine: new Color('#8a8276'),
-  snow: new Color('#f5f8fb'),
-  sand: new Color('#e8d8a6'),
-  wet: new Color('#c9b88a'),
+  grassB: new Color('#7cb847'),
+  meadow: new Color('#a8d45f'),
+  forest: new Color('#4c8a3a'),
+  forestDark: new Color('#3d7433'),
+  rock: new Color('#8a8379'),
+  rockDark: new Color('#625d59'),
+  alpine: new Color('#9a9185'),
+  snow: new Color('#f6f8fb'),
   bed: new Color('#41707c'),
-  city: new Color('#8d9195'),
+  wet: new Color('#a9b88a'),
+  dirt: new Color('#b49a6e'),
+  riceA: new Color('#8fcf4a'),
+  riceB: new Color('#a6d94f'),
+  riceWater: new Color('#9fd2c0'),
 };
 
 const tmp = new Color();
-const FIELD = ['#a9d65b', '#c7da5e', '#8dc34f', '#e6d56b', '#7dbb62', '#b7d96a'].map((c) => new Color(c));
-const hash2 = (a: number, b: number) => {
-  const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
-  return v - Math.floor(v);
-};
 
-/** The colour of the ground at a point: grass, forest floor, rock, alpine scree, snow, sand and lake bed. */
+/** The colour of the ground at a point: grass, paddies, forest floor, rock, scree, snow and pond bed. */
 export function groundColor(x: number, z: number, h: number, ny: number, out = new Color()): Color {
-  const n = fbm(x * 0.012 + 3, z * 0.012 - 8, 2) * 0.5 + 0.5;
+  const n = fbm(x * 0.03 + 3, z * 0.03 - 8, 2) * 0.5 + 0.5;
   out.copy(C.grassA).lerp(C.grassB, smoothstep(0.35, 0.65, n));
-  const meadow = smoothstep(0.62, 0.8, fbm(x * 0.02 - 20, z * 0.02 + 5, 2) * 0.5 + 0.5);
-  out.lerp(C.meadow, meadow * 0.5);
+  out.lerp(C.meadow, smoothstep(0.62, 0.8, fbm(x * 0.05 - 20, z * 0.05 + 5, 2) * 0.5 + 0.5) * 0.55);
   const f = forestDensity(x, z, h);
   out.lerp(tmp.copy(C.forest).lerp(C.forestDark, smoothstep(0.4, 0.9, n)), smoothstep(0.1, 0.55, f) * 0.9);
-  // the patchwork of farm fields on flat low ground
-  if (h > 1.8 && h < 70 && ny > 0.9 && f < 0.2 && cityDist(x, z) > 22 && z < SEA_Z - 45) {
-    const a = 0.35;
-    const u = x * Math.cos(a) - z * Math.sin(a), v = x * Math.sin(a) + z * Math.cos(a);
-    const iu = Math.floor(u / 36), iv = Math.floor(v / 52);
-    if (hash2(iu, iv) > 0.42) {
-      out.lerp(FIELD[Math.floor(hash2(iu + 9, iv - 3) * FIELD.length)], 0.85);
-      out.multiplyScalar(0.94 + 0.08 * (Math.sin(u * 0.9) * 0.5 + 0.5));
-    }
-  }
-  const steep = smoothstep(0.82, 0.62, ny);
-  const high = smoothstep(95, 190, h);
-  out.lerp(C.rock, clamp(steep * 0.9 + high * 0.5, 0, 1) * (mountainMask(x, z) > 0.05 || h > 90 ? 1 : 0.5) * (1 - f * 0.65));
-  out.lerp(C.rockDark, smoothstep(0.55, 0.4, ny) * 0.6);
-  out.lerp(C.alpine, smoothstep(190, 260, h) * 0.8);
-  const snowLine = 292 + fbm(x * 0.03, z * 0.03, 2) * 30 - steep * 35;
-  out.lerp(C.snow, smoothstep(snowLine - 10, snowLine + 12, h));
-  if (z > SEA_Z - 40 && h < 3.2) out.lerp(C.sand, smoothstep(3.2, 1.2, h) * 0.95);
-  out.lerp(C.wet, smoothstep(1.4, 0.2, h) * smoothstep(-0.4, 0.3, h) * 0.7);
-  out.lerp(C.bed, smoothstep(0.1, -2.2, h));
-  const dc = cityDist(x, z);
-  if (dc < 6) out.lerp(C.city, smoothstep(6, -2, dc));
+  const steep = smoothstep(0.82, 0.6, ny);
+  const high = smoothstep(55, 120, h);
+  out.lerp(C.rock, clamp(steep * 0.9 + high * 0.6, 0, 1) * (mountainMask(x, z) > 0.05 || h > 40 ? 1 : 0.4) * (1 - f * 0.55));
+  out.lerp(C.rockDark, smoothstep(0.55, 0.4, ny) * 0.5);
+  out.lerp(C.alpine, smoothstep(105, 150, h) * 0.8);
+  const snowLine = 150 + fbm(x * 0.04, z * 0.04, 2) * 22 - steep * 30;
+  out.lerp(C.snow, smoothstep(snowLine - 8, snowLine + 10, h));
+  // the paddies stand on muddy ground (the plots and banks are built as real geometry)
+  const pd = Math.max(Math.abs(x - PADDY.x) - PADDY.hx, Math.abs(z - PADDY.z) - PADDY.hz);
+  if (pd < 0) out.copy(C.dirt).lerp(C.riceA, 0.35);
+  else if (pd < 2.5) out.lerp(C.dirt, 0.55);
+  out.lerp(C.wet, smoothstep(1.1, 0.0, h) * smoothstep(-0.6, 0.1, h) * 0.6);
+  out.lerp(C.bed, smoothstep(0.05, -1.6, h));
   return out;
 }
 
-/** The terrain: a flat-shaded triangle mesh, each facet coloured from its own centre, which gives the low-poly look. */
+/** The terrain: a flat-shaded triangle mesh whose facets are coloured from their own centres (the low-poly look). */
 export function buildTerrain(): Mesh {
-  const seg = 250;
-  const step = (HALF * 2) / seg;
+  const seg = 232;
+  const half = TERRAIN_HALF;
+  const step = (half * 2) / seg;
   const hs = new Float32Array((seg + 1) * (seg + 1));
-  for (let j = 0; j <= seg; j++) for (let i = 0; i <= seg; i++) hs[j * (seg + 1) + i] = heightAt(-HALF + i * step, -HALF + j * step);
+  for (let j = 0; j <= seg; j++) for (let i = 0; i <= seg; i++) hs[j * (seg + 1) + i] = heightAt(-half + i * step, -half + j * step);
   const H = (i: number, j: number) => hs[j * (seg + 1) + i];
   const pos: number[] = [];
   const col: number[] = [];
@@ -72,9 +60,9 @@ export function buildTerrain(): Mesh {
   const c = new Color();
   const tri = (i0: number, j0: number, i1: number, j1: number, i2: number, j2: number) => {
     const p: [number, number, number][] = [
-      [-HALF + i0 * step, H(i0, j0), -HALF + j0 * step],
-      [-HALF + i1 * step, H(i1, j1), -HALF + j1 * step],
-      [-HALF + i2 * step, H(i2, j2), -HALF + j2 * step],
+      [-half + i0 * step, H(i0, j0), -half + j0 * step],
+      [-half + i1 * step, H(i1, j1), -half + j1 * step],
+      [-half + i2 * step, H(i2, j2), -half + j2 * step],
     ];
     const ux = p[1][0] - p[0][0], uy = p[1][1] - p[0][1], uz = p[1][2] - p[0][2];
     const vx = p[2][0] - p[0][0], vy = p[2][1] - p[0][1], vz = p[2][2] - p[0][2];
@@ -83,7 +71,7 @@ export function buildTerrain(): Mesh {
     nx /= l; ny /= l; nz /= l;
     const cx = (p[0][0] + p[1][0] + p[2][0]) / 3, cz = (p[0][2] + p[1][2] + p[2][2]) / 3, ch = (p[0][1] + p[1][1] + p[2][1]) / 3;
     groundColor(cx, cz, ch, ny, c);
-    const jitter = 0.94 + ((Math.sin(cx * 12.9898 + cz * 78.233) * 43758.5453) % 1 + 1) % 1 * 0.1;
+    const jitter = 0.95 + ((((Math.sin(cx * 12.9898 + cz * 78.233) * 43758.5453) % 1) + 1) % 1) * 0.09;
     c.multiplyScalar(jitter);
     for (const q of p) {
       pos.push(q[0], q[1], q[2]);
@@ -93,7 +81,6 @@ export function buildTerrain(): Mesh {
   };
   for (let j = 0; j < seg; j++) {
     for (let i = 0; i < seg; i++) {
-      // alternate the diagonal so the facets do not all lean the same way
       if ((i + j) % 2 === 0) {
         tri(i, j, i, j + 1, i + 1, j);
         tri(i + 1, j, i, j + 1, i + 1, j + 1);
@@ -111,6 +98,5 @@ export function buildTerrain(): Mesh {
   const m = new Mesh(g, new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 }));
   m.receiveShadow = true;
   m.name = 'Terrain';
-  void CITY;
   return m;
 }

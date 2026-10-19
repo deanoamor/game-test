@@ -11,7 +11,7 @@ const scriptTag = html.match(/<script type="module"[^>]*src="\.\/(assets\/[^"]+\
 if (!scriptTag) throw new Error('bundle script not found');
 const js = fs.readFileSync(path.join(dir, scriptTag[1]), 'utf8').replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
 const glb = {};
-for (const f of fs.readdirSync(path.join(dir, 'places'))) glb[f.replace(/\.glb$/, '')] = fs.readFileSync(path.join(dir, 'places', f)).toString('base64');
+for (const f of fs.readdirSync(path.join(dir, 'places')).filter((n) => n === 'japanshrine.glb')) glb[f.replace(/\.glb$/, '')] = fs.readFileSync(path.join(dir, 'places', f)).toString('base64');
 const style = html.match(/<style>([\s\S]*?)<\/style>/)[1];
 const body = html.match(/<body>([\s\S]*?)<\/body>/)[1].replace(/<script[\s\S]*?<\/script>/g, '');
 const out = `<title>Hoshi no Kuni</title>

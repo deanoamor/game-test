@@ -1,22 +1,10 @@
-import { Box3, BufferGeometry, Color, Group, Matrix4, Mesh, MeshStandardMaterial, Vector3, type Material } from 'three';
+import { Box3, BufferGeometry, Color, Group, Mesh, MeshStandardMaterial, Vector3, type Material } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { CITY, SHRINE, BLOCK_USE, blockAt } from './config';
+import { SHRINE } from './config';
 import { raiseSkyline } from './skyline';
 
-export const SHRINE_SCALE = 1.8;
-
-export interface Landmark {
-  /** names of parts to leave out */
-  skip?: string[];
-  file: string;
-  /** where to put it: the middle of a city block (fitted to it) or an exact spot (origin of the model) */
-  block?: [number, number];
-  at?: [number, number, number];
-  fit?: number; // the longest side it may have
-  scale?: number;
-  yaw?: number;
-}
+export const SHRINE_SCALE = 0.82;
 
 const url = (f: string) => `${import.meta.env.BASE_URL}places/${f}.glb`;
 
@@ -29,17 +17,7 @@ const decode = (b64: string): ArrayBuffer => {
   return bytes.buffer;
 };
 
-const G = CITY.height + 0.18;
-
-export const LANDMARKS: Landmark[] = [
-  { file: 'danchi', block: BLOCK_USE.danchi, fit: 50 },
-  { file: 'japanschool', block: BLOCK_USE.school, fit: 51 },
-  { file: 'japanalley', block: BLOCK_USE.alley, fit: 46 },
-  { file: 'catstall', block: BLOCK_USE.park, scale: 1.7 },
-  { file: 'japanshrine', at: [SHRINE.x, SHRINE.height - 0.02, SHRINE.z - 12 * SHRINE_SCALE], scale: SHRINE_SCALE, skip: ['Ground'] },
-];
-
-/** Colours that should glow at night (lit windows, lanterns). */
+/** Colours that should glow at night (lanterns). */
 const GLOW = ['#ffe39a', '#ffe58a', '#ffb85a', '#ffcf7a'].map((c) => new Color(c));
 
 /** Merge every mesh of a loaded model into one mesh per colour: hundreds of parts become a few draw calls. */
@@ -82,41 +60,27 @@ function mergeStatic(root: Group, glow: MeshStandardMaterial[], skip: string[] =
 
 export interface LoadedLandmarks { group: Group; glow: MeshStandardMaterial[] }
 
+/** The shrine on its mountain terrace (the model from assets/core/places, without its lawn). */
 export async function loadLandmarks(progress?: (n: number, total: number, name: string) => void): Promise<LoadedLandmarks> {
   const loader = new GLTFLoader();
   const group = new Group();
   group.name = 'Landmarks';
   const glow: MeshStandardMaterial[] = [];
-  let n = 0;
-  await Promise.all(LANDMARKS.map(async (l) => {
-    const inline = embedded()?.[l.file];
-    const gltf = inline ? await loader.parseAsync(decode(inline), '') : await loader.loadAsync(url(l.file));
-    const merged = mergeStatic(gltf.scene, glow, l.skip);
-    merged.name = l.file;
-    const box = new Box3().setFromObject(merged);
-    const size = box.getSize(new Vector3());
-    const centre = box.getCenter(new Vector3());
-    let s = l.scale ?? 1;
-    if (l.fit) s = Math.min(1.3, l.fit / Math.max(size.x, size.z));
-    const holder = new Group();
-    holder.add(merged);
-    if (l.block) {
-      const [bx, bz] = blockAt(...l.block);
-      // centre the model on the block and stand it on the sidewalk plate
-      merged.position.set(-centre.x, -box.min.y, -centre.z);
-      holder.scale.setScalar(s);
-      holder.position.set(bx, G, bz);
-    } else if (l.at) {
-      holder.scale.setScalar(s);
-      holder.position.set(l.at[0], l.at[1], l.at[2]);
-    }
-    if (l.yaw) holder.rotation.y = (l.yaw * Math.PI) / 180;
-    group.add(holder);
-    holder.updateMatrixWorld(true);
-    const fp = new Box3().setFromObject(holder);
-    raiseSkyline(fp.min.x, fp.min.z, fp.max.x, fp.max.z, fp.max.y);
-    progress?.(++n, LANDMARKS.length, l.file);
-  }));
-  void Matrix4;
+  const file = 'japanshrine';
+  const inline = embedded()?.[file];
+  const gltf = inline ? await loader.parseAsync(decode(inline), '') : await loader.loadAsync(url(file));
+  const merged = mergeStatic(gltf.scene, glow, ['Ground']);
+  merged.name = file;
+  const holder = new Group();
+  holder.add(merged);
+  holder.scale.setScalar(SHRINE_SCALE);
+  // the middle of the model (hall to gate) sits on the middle of the terrace, and it faces the village (+Z)
+  holder.position.set(SHRINE.x, SHRINE.height - 0.02, SHRINE.z - 12 * SHRINE_SCALE);
+  group.add(holder);
+  holder.updateMatrixWorld(true);
+  const fp = new Box3().setFromObject(holder);
+  raiseSkyline(fp.min.x, fp.min.z, fp.max.x, fp.max.z, fp.max.y);
+  void Vector3;
+  progress?.(1, 1, file);
   return { group, glow };
 }

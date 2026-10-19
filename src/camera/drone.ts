@@ -10,11 +10,11 @@ import { skylineAround } from '../world/skyline';
 export class Drone {
   camera: PerspectiveCamera;
   /** the point on the ground the drone looks at (smoothed) */
-  target = new Vector3(0, 3, 150);
-  private goal = new Vector3(0, 3, 150);
+  target = new Vector3(0, 3, 56);
+  private goal = new Vector3(0, 3, 56);
   yaw = (20 * Math.PI) / 180;
   pitch = (48 * Math.PI) / 180;
-  dist = 190;
+  dist = 210;
   private yawGoal = this.yaw;
   private pitchGoal = this.pitch;
   private distGoal = this.dist;
@@ -26,7 +26,7 @@ export class Drone {
   private flying = false;
 
   constructor(private dom: HTMLElement) {
-    this.camera = new PerspectiveCamera(42, 1, 1, 4000);
+    this.camera = new PerspectiveCamera(40, 1, 0.3, 4000);
     window.addEventListener('keydown', (e) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'SELECT') return;
       this.keys.add(e.code);
@@ -39,7 +39,7 @@ export class Drone {
     window.addEventListener('pointerup', (e) => this.up(e));
     dom.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.distGoal = clamp(this.distGoal * Math.exp(e.deltaY * 0.0011), 18, 900);
+      this.distGoal = clamp(this.distGoal * Math.exp(e.deltaY * 0.0011), 10, 520);
       this.flying = false;
     }, { passive: false });
     this.update(0);
@@ -67,7 +67,7 @@ export class Drone {
     if (!this.drag) return;
     if (this.touches.size === 2) {
       const d = this.pinchDistance();
-      if (this.pinch > 0 && d > 0) this.distGoal = clamp(this.distGoal * (this.pinch / d), 18, 900);
+      if (this.pinch > 0 && d > 0) this.distGoal = clamp(this.distGoal * (this.pinch / d), 10, 520);
       this.pinch = d;
       return;
     }
@@ -76,7 +76,7 @@ export class Drone {
     this.drag.y = e.clientY;
     if (this.drag.mode === 'orbit') {
       this.yawGoal -= dx * 0.005;
-      this.pitchGoal = clamp(this.pitchGoal + dy * 0.004, 0.28, 1.5);
+      this.pitchGoal = clamp(this.pitchGoal + dy * 0.004, 0.14, 1.5);
     } else {
       // grab the ground: the map follows the pointer
       const scale = (this.dist * 2 * Math.tan(MathUtils.degToRad(this.camera.fov / 2))) / this.dom.clientHeight;
@@ -145,10 +145,10 @@ export class Drone {
     }
     if (k.has('KeyQ')) this.yawGoal += 1.4 * dt;
     if (k.has('KeyE')) this.yawGoal -= 1.4 * dt;
-    if (k.has('KeyR')) this.pitchGoal = clamp(this.pitchGoal + 0.8 * dt, 0.28, 1.5);
-    if (k.has('KeyF')) this.pitchGoal = clamp(this.pitchGoal - 0.8 * dt, 0.28, 1.5);
-    if (k.has('Equal') || k.has('NumpadAdd')) this.distGoal = clamp(this.distGoal * Math.exp(-1.2 * dt), 18, 900);
-    if (k.has('Minus') || k.has('NumpadSubtract')) this.distGoal = clamp(this.distGoal * Math.exp(1.2 * dt), 18, 900);
+    if (k.has('KeyR')) this.pitchGoal = clamp(this.pitchGoal + 0.8 * dt, 0.14, 1.5);
+    if (k.has('KeyF')) this.pitchGoal = clamp(this.pitchGoal - 0.8 * dt, 0.14, 1.5);
+    if (k.has('Equal') || k.has('NumpadAdd')) this.distGoal = clamp(this.distGoal * Math.exp(-1.2 * dt), 10, 520);
+    if (k.has('Minus') || k.has('NumpadSubtract')) this.distGoal = clamp(this.distGoal * Math.exp(1.2 * dt), 10, 520);
 
     const a = 1 - Math.exp(-dt * (this.flying ? 2.6 : 9));
     this.yaw += (this.yawGoal - this.yaw) * a;
@@ -163,8 +163,8 @@ export class Drone {
     const cp = Math.cos(this.pitch);
     const pos = new Vector3(Math.sin(this.yaw) * cp, Math.sin(this.pitch), Math.cos(this.yaw) * cp).multiplyScalar(this.dist).add(this.target);
     // stay above the ground and out of the mountains
-    const ground = Math.max(heightAt(pos.x, pos.z), skylineAround(pos.x, pos.z, 14));
-    if (pos.y < ground + 12) pos.y = ground + 12;
+    const ground = Math.max(heightAt(pos.x, pos.z), skylineAround(pos.x, pos.z, 6));
+    if (pos.y < ground + 3) pos.y = ground + 3;
     this.camera.position.copy(pos);
     this.camera.lookAt(this.target);
   }

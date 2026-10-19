@@ -1,6 +1,6 @@
 import { Color } from 'three';
 import { clamp, smoothstep } from '../util/rng';
-import { HALF, PLACES, cityDist, heightAt, placeAt, CITY, SHRINE } from '../world/config';
+import { HALF, PLACES, PADDY, SHRINE, VILLAGE, getRoads, heightAt, placeAt } from '../world/config';
 import { groundColor } from '../world/terrain';
 import type { Drone } from '../camera/drone';
 
@@ -78,21 +78,24 @@ export class Hud {
       }
     }
     g.putImageData(img, 0, 0);
-    // the city
+    // the roads, the village ground and the shrine
     const s = n / (HALF * 2);
-    const cx = (CITY.cx + HALF) * s, cz = (CITY.cz + HALF) * s, e = CITY.extent * s;
-    g.fillStyle = 'rgba(190,190,200,0.85)';
-    g.fillRect(cx - e / 2, cz - e / 2, e, e);
-    g.fillStyle = 'rgba(70,74,82,0.9)';
-    for (let k = 0; k <= CITY.blocks; k++) {
-      g.fillRect(cx - e / 2 + k * CITY.pitch * s, cz - e / 2, CITY.street * s, e);
-      g.fillRect(cx - e / 2, cz - e / 2 + k * CITY.pitch * s, e, CITY.street * s);
+    const px = (x: number) => (x + HALF) * s, pz = (z: number) => (z + HALF) * s;
+    g.fillStyle = 'rgba(200,196,182,0.55)';
+    g.fillRect(px(-HALF), pz(VILLAGE.cz - VILLAGE.hz), px(HALF) - px(-HALF), (VILLAGE.hz + 30) * s);
+    for (const r of getRoads()) {
+      g.strokeStyle = r.name === 'main' ? 'rgba(60,64,72,0.95)' : 'rgba(80,84,92,0.9)';
+      g.lineWidth = Math.max(1.5, r.width * s * 1.2);
+      g.beginPath();
+      r.x.forEach((x, i) => (i ? g.lineTo(px(x), pz(r.z[i])) : g.moveTo(px(x), pz(r.z[i]))));
+      g.stroke();
     }
+    g.fillStyle = 'rgba(190,230,120,0.5)';
+    g.fillRect(px(PADDY.x - PADDY.hx), pz(PADDY.z - PADDY.hz), PADDY.hx * 2 * s, PADDY.hz * 2 * s);
     g.fillStyle = '#ff8fb4';
     g.beginPath();
-    g.arc((SHRINE.x + HALF) * s, (SHRINE.z + HALF) * s, 3, 0, Math.PI * 2);
+    g.arc(px(SHRINE.x), pz(SHRINE.z), 3, 0, Math.PI * 2);
     g.fill();
-    void cityDist;
     return cv;
   }
 

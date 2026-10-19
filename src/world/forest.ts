@@ -2,12 +2,12 @@ import { BufferGeometry, Color, Euler, Float32BufferAttribute, Group, Icosahedro
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { GeoBuilder, toRgb } from '../util/builder';
 import { rng, smoothstep } from '../util/rng';
-import { HALF, SHRINE, cityDist, forestDensity, heightAt, mountainMask, roadNear, slopeAt } from './config';
+import { SHRINE, TERRAIN_HALF, forestDensity, heightAt, mountainMask, roadNear, slopeAt, villageDist } from './config';
 
-export type TreeKind = 'cedar' | 'pine' | 'round' | 'sakura' | 'maple' | 'ginkgo';
+export type TreeKind = 'cedar' | 'pine' | 'round' | 'sakura' | 'maple' | 'ginkgo' | 'jacaranda' | 'shrub';
 
 /** A lumpy low-poly blob (an icosphere with flat faces) as coloured geometry. */
-function blob(cx: number, cy: number, cz: number, rx: number, ry: number, rz: number, color: string, detail = 1, jitter = 0.12, seed = 1): BufferGeometry {
+export function blob(cx: number, cy: number, cz: number, rx: number, ry: number, rz: number, color: string, detail = 1, jitter = 0.12, seed = 1): BufferGeometry {
   const g = new IcosahedronGeometry(1, detail).toNonIndexed();
   g.deleteAttribute('uv');
   const r = rng(seed);
@@ -62,6 +62,13 @@ function geoFor(kind: TreeKind): BufferGeometry {
       b.frustum(0, 0, 0, 0.42, 0.28, 3.0, 6, '#5a4036');
       b.box(0.8, 3.2, 0, 1.6, 0.25, 0.3, '#5a4036', { yaw: 25 });
       return mergeGeometries([fromBuilder(b), blob(0, 4.7, 0, 3.4, 2.5, 3.4, '#f3a9c2', 1, 0.15, 6), blob(1.6, 4.1, 0.6, 2.2, 1.7, 2.2, '#f7bfd2', 1, 0.15, 7), blob(-1.3, 4.5, -0.5, 2.1, 1.7, 2.1, '#ee9bb8', 1, 0.15, 8)])!;
+    }
+    case 'jacaranda': {
+      b.frustum(0, 0, 0, 0.36, 0.24, 3.2, 6, '#5a4036');
+      return mergeGeometries([fromBuilder(b), blob(0, 4.4, 0, 2.6, 2.2, 2.6, '#b27adb', 1, 0.15, 12), blob(1.1, 3.9, 0.5, 1.7, 1.4, 1.7, '#c79af0', 1, 0.15, 13), blob(-1.0, 4.0, -0.4, 1.6, 1.3, 1.6, '#a666d0', 1, 0.15, 14)])!;
+    }
+    case 'shrub': {
+      return mergeGeometries([blob(0, 0.7, 0, 1.0, 0.8, 1.0, '#58a444', 1, 0.14, 15), blob(0.6, 0.5, 0.3, 0.6, 0.5, 0.6, '#6ab852', 1, 0.14, 16)])!;
     }
     case 'maple': {
       b.frustum(0, 0, 0, 0.38, 0.26, 3.0, 6, '#5a4036');
@@ -120,29 +127,28 @@ export class TreeField {
   }
 }
 
-/** Scatter trees over the whole map by forest density, and rocks on the steep mountain sides. */
+/** Scatter trees over the hills and the mountain by forest density, and rocks on the steep sides. */
 export function growForest(field: TreeField): { rocks: Group } {
   const r = rng(1337);
-  const step = 6.5;
-  for (let gz = -HALF + 10; gz < HALF - 10; gz += step) {
-    for (let gx = -HALF + 10; gx < HALF - 10; gx += step) {
+  const step = 4.2;
+  for (let gz = -TERRAIN_HALF + 8; gz < TERRAIN_HALF - 8; gz += step) {
+    for (let gx = -TERRAIN_HALF + 8; gx < TERRAIN_HALF - 8; gx += step) {
       const x = gx + (r() - 0.5) * step * 0.9;
       const z = gz + (r() - 0.5) * step * 0.9;
       const h = heightAt(x, z);
       const d = forestDensity(x, z, h);
-      if (d <= 0.02 || r() > d * 0.9) continue;
-      if (slopeAt(x, z, 2) > 1.25) continue;
+      if (d <= 0.02 || r() > d * 0.95) continue;
+      if (slopeAt(x, z, 2) > 1.3) continue;
       const rn = roadNear(x, z);
-      if (rn.d < rn.width * 0.5 + 6) continue;
+      if (rn.d < rn.width * 0.5 + 3.5) continue;
+      if (Math.hypot(x - SHRINE.x, z - SHRINE.z) < SHRINE.radius - 3) continue;
       const mt = mountainMask(x, z);
-      const ds = Math.hypot(x - SHRINE.x, z - SHRINE.z);
       const t = r();
       let kind: TreeKind;
-      if (h > 120) kind = t < 0.85 ? 'pine' : 'cedar';
-      else if (ds < 160) kind = t < 0.42 ? 'cedar' : t < 0.62 ? 'maple' : t < 0.78 ? 'ginkgo' : t < 0.9 ? 'round' : 'sakura';
-      else if (mt > 0.3) kind = t < 0.6 ? 'cedar' : t < 0.78 ? 'pine' : 'round';
-      else kind = t < 0.42 ? 'cedar' : t < 0.7 ? 'round' : t < 0.82 ? 'sakura' : t < 0.92 ? 'ginkgo' : 'pine';
-      const scale = (kind === 'pine' || kind === 'cedar' ? 0.9 + r() * 0.7 : 0.8 + r() * 0.55) * (1 + mt * 0.15);
+      if (h > 80) kind = t < 0.8 ? 'pine' : 'cedar';
+      else if (mt > 0.35) kind = t < 0.5 ? 'cedar' : t < 0.7 ? 'pine' : t < 0.82 ? 'maple' : t < 0.92 ? 'round' : 'ginkgo';
+      else kind = t < 0.3 ? 'cedar' : t < 0.55 ? 'round' : t < 0.7 ? 'sakura' : t < 0.82 ? 'ginkgo' : t < 0.9 ? 'maple' : 'jacaranda';
+      const scale = (kind === 'pine' || kind === 'cedar' ? 0.85 + r() * 0.7 : 0.75 + r() * 0.55) * (1 + mt * 0.12);
       field.add(kind, x, z, scale, h - 0.3);
     }
   }
@@ -152,13 +158,13 @@ export function growForest(field: TreeField): { rocks: Group } {
   rockGeo.computeVertexNormals();
   const rocks: Matrix4[] = [];
   const colors: Color[] = [];
-  for (let i = 0; i < 9000 && rocks.length < 900; i++) {
-    const x = (r() * 2 - 1) * (HALF - 20);
-    const z = (r() * 2 - 1) * (HALF - 20) - 60;
-    if (z > 380 || cityDist(x, z) < 10) continue;
+  for (let i = 0; i < 12000 && rocks.length < 520; i++) {
+    const x = (r() * 2 - 1) * (TERRAIN_HALF - 20);
+    const z = (r() * 2 - 1) * (TERRAIN_HALF - 20) - 60;
+    if (villageDist(x, z) < 6) continue;
     const h = heightAt(x, z);
-    if (h < 8 || slopeAt(x, z, 3) < 0.5) continue;
-    const s = 1 + r() * 4.5;
+    if (h < 8 || slopeAt(x, z, 3) < 0.55) continue;
+    const s = 0.8 + r() * 3.6;
     rocks.push(new Matrix4().compose(new Vector3(x, h + s * 0.15, z), new Quaternion().setFromEuler(new Euler(r() * 3, r() * 6, r() * 3)), new Vector3(s * (0.8 + r() * 0.6), s * (0.6 + r() * 0.5), s * (0.8 + r() * 0.6))));
     const k = 0.7 + r() * 0.35;
     colors.push(new Color(k, k * 0.97, k * 0.92));

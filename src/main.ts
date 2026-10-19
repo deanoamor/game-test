@@ -3,7 +3,7 @@ import { Drone } from './camera/drone';
 import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { PLACES } from './world/config';
-import { buildCity } from './world/city';
+import { buildVillage } from './world/village';
 import { DaylightRig } from './world/daylight';
 import { TreeField, growForest } from './world/forest';
 import { loadLandmarks } from './world/landmarks';
@@ -46,15 +46,15 @@ async function main() {
   const { rocks } = growForest(trees);
   scene.add(rocks);
 
-  progress(0.4, 'Raising the city…');
+  progress(0.4, 'Building the village…');
   await nextFrame();
   const atlas = new SignAtlas();
-  const city = buildCity(trees, atlas);
-  scene.add(city.group);
+  const village = buildVillage(trees, atlas);
+  scene.add(village.group);
   scene.add(buildRoads());
   const windU = { value: 0 };
   scene.add(trees.build(windU));
-  const traffic = new Traffic(city.streetX, city.streetZ);
+  const traffic = new Traffic();
   scene.add(traffic.group);
 
   progress(0.62, 'Placing landmarks…');
@@ -106,7 +106,7 @@ async function main() {
     hour = ((h % 24) + 24) % 24;
     light.setHour(hour);
     const s = light.state;
-    city.update(s.night);
+    village.update(s.night);
     marks.glow.forEach((m) => { m.emissiveIntensity = s.night * 1.4; });
     clouds.tint(s.sky.horizon, s.night);
     post.setLook(s.night, s.bloom);
