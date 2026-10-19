@@ -24,6 +24,7 @@ Static scenes, no skeleton.
 |---|---|
 | `japanhouse.glb` | Japanese House (minka with shoji doors, veranda and garden) |
 | `japanschool.glb` | Japanese School (school building, clock tower, gym, schoolyard, cherry trees) |
+| `japanshrine.glb` | Japanese Shrine (torii, lanterns, lion-dogs, fountain, main hall) |
 
 ## Experimental
 
@@ -41,7 +42,6 @@ Static scenes, no skeleton.
 
 | File | Asset |
 |---|---|
-| `japanshrine.glb` | Japanese Shrine (torii, lanterns, lion-dogs, fountain, main hall) |
 | `island.glb` | Forest Island diorama |
 
 No animations yet; the character rigs are ready for them.
