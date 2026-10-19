@@ -44,6 +44,7 @@ Static scenes, no skeleton.
 | File | Asset |
 |---|---|
 | `japanshops.glb` | Japanese Shopping Street (eight shops, arch, poles, vending machines) |
+| `catstall.glb` | Cat Sushi Stall (yatai cart with a cat chef on a cobblestone plaza) |
 | `island.glb` | Forest Island diorama |
 
 No animations yet; the character rigs are ready for them.
