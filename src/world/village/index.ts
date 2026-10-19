@@ -1,7 +1,7 @@
 import { Color, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { GeoBuilder, V3 } from '../../util/builder';
 import { pick, rng } from '../../util/rng';
-import { PADDY, PLATFORMS, POND, STAIRS, TERRACES, WATER_Y, heightAt, rampY, roadNear } from '../config';
+import { EXPRESSWAY, IC_RAMP, PADDY, PLATFORMS, POND, STAIRS, TERRACES, WATER_Y, heightAt, rampY, roadNear } from '../config';
 import type { TreeField } from '../forest';
 import { raiseSkyline } from '../skyline';
 import type { SignAtlas } from '../signs';
@@ -500,7 +500,7 @@ function outskirts(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tr
       const a = r() * Math.PI * 2, rad = Math.sqrt(r()) * 12;
       const tx = gx + Math.cos(a) * rad, tz = gz + Math.sin(a) * rad;
       const rd = roadNear(tx, tz);
-      if (rd.d < rd.width / 2 + 2.5 || Math.abs(tz - 151) < 12 || (Math.abs(tz - 139) < 7 && Math.abs(tx) < 200)) continue;
+      if (rd.d < rd.width / 2 + 2.5 || Math.abs(tz - EXPRESSWAY.z) < 12 || (Math.abs(tz - IC_RAMP.z) < 14 && Math.abs(tx) < 200)) continue;
       trees.add(pick(r, ['round', 'round', 'ginkgo', 'sakura', 'cedar', 'maple', 'jacaranda'] as const), tx, tz, 0.8 + r() * 0.5, heightAt(tx, tz) - 0.2);
     }
   }

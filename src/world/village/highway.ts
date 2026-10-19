@@ -129,7 +129,7 @@ export function buildExpressway(at: (x: number) => Ctx, atlas: SignAtlas) {
     // the lanes through the toll gate and their markings
     const lanes = 3, lw = (IC_RAMP.half * 2) / lanes, z0 = IC_RAMP.z - IC_RAMP.half;
     for (const s of [-1, 1]) {
-      const xg = s * 9.5;
+      const xg = s * (IC.x1 - 5);
       for (let k = 0; k <= lanes; k++) {
         const z = z0 + k * lw;
         // an island with a booth (and a barrier arm on the ETC lanes)
@@ -155,15 +155,18 @@ export function buildExpressway(at: (x: number) => Ctx, atlas: SignAtlas) {
       raiseSkyline(xg - 3, IC_RAMP.z - IC_RAMP.half - 1, xg + 3, IC_RAMP.z + IC_RAMP.half + 1, py + 7);
     }
     // a small office of the toll gate by the frontage road, and two tall lights
-    B.box(0, py + 1.6, IC.z0 + 1.6, 7.0, 3.2, 2.6, '#e8e4d8', { ao: 0.12 });
-    B.box(0, py + 3.3, IC.z0 + 1.6, 7.4, 0.2, 3.0, '#5a6068', { ao: 0 });
-    for (let k = 0; k < 4; k++) ctx.win.box(-2.4 + k * 1.6, py + 1.9, IC.z0 + 2.92, 1.1, 1.0, 0.04, '#9ec4dc', { ao: 0 });
+    const ox = IC.x0 + 5;
+    B.box(ox, py + 1.6, IC.z0 + 1.6, 7.0, 3.2, 2.6, '#e8e4d8', { ao: 0.12 });
+    B.box(ox, py + 3.3, IC.z0 + 1.6, 7.4, 0.2, 3.0, '#5a6068', { ao: 0 });
+    for (let k = 0; k < 4; k++) ctx.win.box(ox - 2.4 + k * 1.6, py + 1.9, IC.z0 + 2.92, 1.1, 1.0, 0.04, '#9ec4dc', { ao: 0 });
     for (const s of [-1, 1]) {
-      B.box(s * 4.5, py + 4.5, IC.z0 + 4.5, 0.2, 9, 0.2, '#8a9096', { ao: 0 });
-      ctx.litB.box(s * 4.5, py + 9.05, IC.z0 + 4.5, 0.9, 0.15, 0.5, '#ffffff', { ao: 0 });
+      B.box(s * 5, py + 4.5, IC.z0 + 1.0, 0.2, 9, 0.2, '#8a9096', { ao: 0 });
+      ctx.litB.box(s * 5, py + 9.05, IC.z0 + 1.0, 0.9, 0.15, 0.5, '#ffffff', { ao: 0 });
     }
+    // the entrance: lane arrows from the access road and a green board pointing to the gates
+    for (const s of [-1, 1]) B.box(s * 1.75, py + 0.02, IC.z0 + 4, 0.5, 0.02, 2.5, WHITE, { ao: 0 });
     // painted arrows to the ramps
     for (const s of [-1, 1]) B.box(s * 3.25, py + 0.02, IC_RAMP.z, 2.5, 0.02, 0.5, WHITE, { ao: 0 });
-    raiseSkyline(-4, IC.z0, 4, IC.z0 + 3, py + 4);
+    raiseSkyline(ox - 4, IC.z0, ox + 4, IC.z0 + 3, py + 4);
   }
 }
