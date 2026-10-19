@@ -17,7 +17,7 @@ Tests and style studies, not used by the game yet.
 
 | File | Asset | Skeleton |
 |---|---|---|
-| `casual.glb` | Casual Girl (base the core characters were built on) | 22 joints |
+| `casual.glb` | Casual Girl — **style reference for all future characters** (stays experimental, not shipped in the game) | 22 joints |
 | `school.glb` | School Girl | 22 joints |
 | `nurse.glb` | Nurse (first version, older style) | 22 joints |
 | `ribbon.glb` | Red Ribbon Girl | 22 joints |
