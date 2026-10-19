@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HALF, MOUNTAIN, PADDY, PLACES, POND, SHRINE, VILLAGE, WATER_Y, forestDensity, getRoad, getRoads, heightAt, placeAt, roadNear, villageDist } from '../src/world/config';
+import { HALF, MOUNTAIN, PADDY, PLACES, POND, RAMPS, SHRINE, TERRACES, WATER_Y, forestDensity, getRoad, getRoads, heightAt, inTown, paddyY, placeAt, roadNear } from '../src/world/config';
 import { fbm, noise2 } from '../src/util/noise';
 import { rng } from '../src/util/rng';
 
@@ -18,20 +18,25 @@ describe('the shape of the world', () => {
     }
   });
 
-  it('has flat ground for the village', () => {
-    for (let i = 0; i < 40; i++) {
-      const x = VILLAGE.cx + Math.sin(i * 12.9) * (VILLAGE.hx - 30);
-      const z = VILLAGE.cz + Math.cos(i * 7.3) * (VILLAGE.hz - 30);
-      expect(villageDist(x, z)).toBeLessThan(0);
-      if (roadNear(x, z).d > 14 && Math.hypot(x - POND.x, z - POND.z) > POND.radius + 25 && Math.max(Math.abs(x - PADDY.x) - PADDY.hx, Math.abs(z - PADDY.z) - PADDY.hz) > 8) expect(Math.abs(heightAt(x, z) - VILLAGE.height)).toBeLessThan(0.3);
-    }
+  it('builds the town on terraces that step down the hill, joined by ramps', () => {
+    expect(TERRACES[0].y).toBeGreaterThan(TERRACES[1].y);
+    expect(TERRACES[1].y).toBeGreaterThan(TERRACES[2].y);
+    for (const t of TERRACES) for (const x of [-100, -40, 30, 90]) expect(heightAt(x, (t.z0 + t.z1) / 2)).toBe(t.y);
+    // a ramp street climbs smoothly between two terraces
+    for (const r of RAMPS) for (let z = r.z0; z < r.z1; z += 0.5) expect(Math.abs(heightAt(0, z + 0.5) - heightAt(0, z))).toBeLessThan(0.15);
+    expect(inTown(0, 44)).toBe(true);
+    expect(inTown(0, 140)).toBe(false);
+  });
+
+  it('steps the paddies down the slope', () => {
+    for (let k = 1; k < PADDY.rows; k++) expect(paddyY(k)).toBeLessThan(paddyY(k - 1));
   });
 
   it('has a tall mountain behind the village, a pond below the water line and a shrine terrace', () => {
     expect(heightAt(MOUNTAIN.x, MOUNTAIN.z)).toBeGreaterThan(120);
     expect(heightAt(POND.x, POND.z)).toBeLessThan(WATER_Y - 1.5);
     expect(heightAt(SHRINE.x, SHRINE.z)).toBeCloseTo(SHRINE.height, 0);
-    expect(heightAt(PADDY.x, PADDY.z)).toBeLessThan(VILLAGE.height);
+    expect(heightAt(PADDY.x, PADDY.z)).toBeLessThan(TERRACES[2].y);
   });
 
   it('keeps every place on the map and names it', () => {

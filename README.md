@@ -1,12 +1,15 @@
-# Hoshi no Kuni 星の国 — a dense little Japanese town under a big mountain
+# Hoshi no Kuni 星の国 — a dense little Japanese hillside town under a big mountain
 
 A 3D world in the browser (three.js + TypeScript + Vite), seen from a drone. It is small on purpose and packed with
-detail, like a real Japanese neighbourhood: buildings shoulder to shoulder and every one different (shops with box,
+detail, like a real Japanese neighbourhood built up a hillside: three terraces held by concrete retaining walls (with
+caps, drains and fences), ramp streets that climb from one terrace to the next between walls and railings, stair
+alleys up the walls, house rows on raised strips with little steps down to the lane, and rice paddies stepping down
+the slope below. In the streets: buildings shoulder to shoulder and every one different (shops with box,
 striped and curved awnings, round signs, noren and banners; a café with outside stairs; tiled walls; apartment blocks
 with open corridors and laundry; offices with roof billboards), a konbini and a supermarket with car parks, a main
 street with pavements, tactile strips, curbs and gutters, a signalled crossing with traffic lights, back lanes with red
 paint and 止まれ, utility poles with transformers and wires, double red lamps, green-white guard pipes, vending
-machines, hydrants, cones, convex mirrors, road signs and moving traffic. Around the town: rice paddies, a koi pond, and
+machines, hydrants, cones, convex mirrors, road signs and moving traffic. Around the town: stepped rice paddies, a koi pond, wooded hills on both sides, and
 a forest-covered mountain with a shrine reached by a stone path and red torii gates. Day turns to night: windows, shop
 signs and lamps light up.
 
@@ -84,8 +87,9 @@ e2e/shots.mjs            screenshots with Playwright (npm run dev -- --port 5300
 | | |
 |---|---|
 | ![The main street](docs/preview-street.jpg) | ![The crossing](docs/preview-crossing.jpg) |
-| ![The konbini](docs/preview-konbini.jpg) | ![The town](docs/preview-town.jpg) |
-| ![The rice paddies](docs/preview-paddies.jpg) | ![Night on the main street](docs/preview-night.jpg) |
+| ![The hillside terraces](docs/preview-hillside.jpg) | ![The ramp street](docs/preview-slope.jpg) |
+| ![Stairs up a terrace wall](docs/preview-stairs.jpg) | ![The konbini](docs/preview-konbini.jpg) |
+| ![The rice paddies](docs/preview-paddies.jpg) | ![The hillside at night](docs/preview-night.jpg) |
 
 ---
 
