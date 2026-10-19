@@ -20,6 +20,15 @@ export interface Landmark {
 
 const url = (f: string) => `${import.meta.env.BASE_URL}places/${f}.glb`;
 
+/** A single-file build can carry the models inside the page (window.__GLB, base64) instead of fetching them. */
+const embedded = (): Record<string, string> | undefined => (window as unknown as { __GLB?: Record<string, string> }).__GLB;
+const decode = (b64: string): ArrayBuffer => {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+};
+
 const G = CITY.height + 0.18;
 
 export const LANDMARKS: Landmark[] = [
@@ -80,7 +89,8 @@ export async function loadLandmarks(progress?: (n: number, total: number, name: 
   const glow: MeshStandardMaterial[] = [];
   let n = 0;
   await Promise.all(LANDMARKS.map(async (l) => {
-    const gltf = await loader.loadAsync(url(l.file));
+    const inline = embedded()?.[l.file];
+    const gltf = inline ? await loader.parseAsync(decode(inline), '') : await loader.loadAsync(url(l.file));
     const merged = mergeStatic(gltf.scene, glow, l.skip);
     merged.name = l.file;
     const box = new Box3().setFromObject(merged);

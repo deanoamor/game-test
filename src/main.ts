@@ -119,7 +119,7 @@ async function main() {
   hud.onMapClick = (x, z) => drone.flyTo({ key: 'map', name: '', jp: '', x, z, radius: 1, dist: Math.max(drone.dist, 120), pitch: (drone.pitch * 180) / Math.PI, yaw: (drone.yaw * 180) / Math.PI });
   hud.onHour = (h) => { playing = false; (document.getElementById('play') as HTMLElement).textContent = '▶ Play'; applyHour(h); };
   hud.onPlay = (p) => { playing = p; };
-  hud.onQuality = (q) => applyQuality(q as Quality);
+  hud.onQuality = (q) => { manual = true; applyQuality(q as Quality); };
   applyQuality(quality);
   applyHour(hour);
   const start = params.get('view');
@@ -135,6 +135,9 @@ async function main() {
   // ---- loop ----
   let last = performance.now();
   let frames = 0;
+  let manual = params.has('q');
+  let autoClock = 0, autoFrames = 0, autoSteps = 0;
+  let ratio = renderer.getPixelRatio();
   const loop = (now: number) => {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
@@ -152,6 +155,21 @@ async function main() {
     if (post.usesComposer) post.render(dt);
     else renderer.render(scene, drone.camera);
     frames++;
+    // the first seconds decide the quality: a slow machine gets a lighter picture
+    if (!manual && autoSteps < 3 && frames > 20) {
+      autoClock += dt;
+      autoFrames++;
+      if (autoClock > 2.5) {
+        if (autoFrames / autoClock < 26) {
+          autoSteps++;
+          if (quality === 'high') applyQuality('medium');
+          else if (quality === 'medium') applyQuality('low');
+          else { ratio = Math.max(0.6, ratio * 0.75); renderer.setPixelRatio(ratio); resize(); }
+        } else autoSteps = 3;
+        autoClock = 0;
+        autoFrames = 0;
+      }
+    }
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
