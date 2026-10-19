@@ -1,6 +1,6 @@
 import { Color } from 'three';
 import { clamp, smoothstep } from '../util/rng';
-import { HALF, PLACES, PADDY, SHRINE, VILLAGE, getRoads, heightAt, placeAt } from '../world/config';
+import { EXPRESSWAY, HALF, IC, IC_RAMP, PLACES, PADDY, SHRINE, VILLAGE, getRoads, heightAt, placeAt } from '../world/config';
 import { groundColor } from '../world/terrain';
 import type { Drone } from '../camera/drone';
 
@@ -90,6 +90,14 @@ export class Hud {
       r.x.forEach((x, i) => (i ? g.lineTo(px(x), pz(r.z[i])) : g.moveTo(px(x), pz(r.z[i]))));
       g.stroke();
     }
+    // the expressway with its toll plaza and ramps
+    g.strokeStyle = 'rgba(40,120,80,0.95)';
+    g.lineWidth = Math.max(3, EXPRESSWAY.half * 2 * s);
+    g.beginPath(); g.moveTo(px(-HALF), pz(EXPRESSWAY.z)); g.lineTo(px(HALF), pz(EXPRESSWAY.z)); g.stroke();
+    g.lineWidth = Math.max(1.5, IC_RAMP.half * 2 * s);
+    g.beginPath(); g.moveTo(px(-IC_RAMP.end - 30), pz(EXPRESSWAY.z - EXPRESSWAY.half)); g.lineTo(px(-IC_RAMP.end), pz(IC_RAMP.z)); g.lineTo(px(IC_RAMP.end), pz(IC_RAMP.z)); g.lineTo(px(IC_RAMP.end + 30), pz(EXPRESSWAY.z - EXPRESSWAY.half)); g.stroke();
+    g.fillStyle = 'rgba(80,84,92,0.9)';
+    g.fillRect(px(IC.x0), pz(IC.z0), (IC.x1 - IC.x0) * s, (IC.z1 - IC.z0) * s);
     g.fillStyle = 'rgba(190,230,120,0.5)';
     g.fillRect(px(PADDY.x - PADDY.hx), pz(PADDY.z - PADDY.hz), PADDY.hx * 2 * s, PADDY.hz * 2 * s);
     g.fillStyle = '#ff8fb4';

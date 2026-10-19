@@ -9,6 +9,7 @@ import { apartmentBlock, konbini, officeBlock, supermarket } from './buildings';
 import { appendCtx, newCtx, type Ctx } from './frame';
 import { Occupancy, fillEmpty } from './fillers';
 import { buildPaddies, buildTownGround, wallSeg } from './ground';
+import { buildExpressway } from './highway';
 import { buildHouse, type HouseSpec } from './house';
 import {
   aBoard, bicycle, bins, blockWall, boxes, busStop, classicLamp, cone, convexMirror, doubleLamp, guardPipe, hydrant, jizo, parkedVehicle, pot, roadPaint,
@@ -276,6 +277,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
   streets(at, atlas, r, trees, occ);
   outskirts(at, atlas, r, trees);
   fillEmpty(occ, at, atlas, r, trees);
+  buildExpressway(at, atlas);
   // the stair alleys: a lamp at the top and the bottom of each flight, pots along one side
   for (const st of STAIRS) {
     const yU = heightAt(st.x, st.z - 0.5), yL = heightAt(st.x, st.z + 9);
@@ -493,10 +495,12 @@ function outskirts(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tr
   A(POND.x).body.box(POND.x + POND.radius - 4, WATER_Y + 0.5, POND.z, 8, 0.2, 2.0, '#9a7a52', { ao: 0.1 });
   jizo(A(2), 3.0, Y_N + 0.1, -2, -20);
   jizo(A(-2), -3.0, Y_N + 0.1, -4, 25);
-  for (const [gx, gz, n] of [[-28, 116, 24], [-132, 60, 14], [-60, 140, 12], [-8, 142, 20], [-134, 120, 18], [40, 118, 18], [134, 20, 14], [-132, 0, 16], [134, 70, 12]] as const) {
+  for (const [gx, gz, n] of [[-28, 115, 24], [-132, 60, 14], [-134, 116, 18], [30, 115, 18], [134, 20, 14], [-132, 0, 16], [134, 70, 12], [-60, 165, 18], [40, 168, 20]] as const) {
     for (let k = 0; k < n; k++) {
       const a = r() * Math.PI * 2, rad = Math.sqrt(r()) * 12;
       const tx = gx + Math.cos(a) * rad, tz = gz + Math.sin(a) * rad;
+      const rd = roadNear(tx, tz);
+      if (rd.d < rd.width / 2 + 2.5 || Math.abs(tz - 151) < 12 || (Math.abs(tz - 139) < 7 && Math.abs(tx) < 200)) continue;
       trees.add(pick(r, ['round', 'round', 'ginkgo', 'sakura', 'cedar', 'maple', 'jacaranda'] as const), tx, tz, 0.8 + r() * 0.5, heightAt(tx, tz) - 0.2);
     }
   }

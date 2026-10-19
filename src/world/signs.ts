@@ -355,6 +355,46 @@ export class SignAtlas {
         reg('phone', x, y, 128, 128);
       }
     }
+    // the expressway: green direction boards, the IC exit, the toll gate, ETC and general lanes, the route shield
+    {
+      const green = (key: string, x: number, y: number, w: number, h: number, lines: [string, number, number][]) => {
+        g.fillStyle = '#1c7a4a'; g.fillRect(x, y, w, h);
+        g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.strokeRect(x + 7, y + 7, w - 14, h - 14);
+        for (const [t, yy, size] of lines) text(t, x, y + yy, w, size + 6, '#ffffff', size);
+        reg(key, x, y, w, h);
+      };
+      green('hwExit', 0, 1408, 512, 128, [['星の町 IC 出口', 10, 54], ['Hoshinomachi  EXIT 1km', 76, 30]]);
+      green('hwDir', 512, 1408, 512, 128, [['東京 120 km', 10, 54], ['Tokyo   名古屋 Nagoya', 76, 30]]);
+      green('tollGate', 1024, 1408, 512, 128, [['星の町 料金所', 10, 58], ['TOLL GATE', 78, 30]]);
+      {
+        const x = 1536, y = 1408;
+        g.fillStyle = '#7a2db8'; g.fillRect(x, y, 128, 128);
+        text('ETC', x, y + 10, 128, 70, '#ffffff', 52);
+        text('専用', x, y + 76, 128, 40, '#ffffff', 28);
+        reg('etc', x, y, 128, 128);
+      }
+      {
+        const x = 1664, y = 1408;
+        g.fillStyle = '#1c7a4a'; g.fillRect(x, y, 128, 128);
+        text('一般', x, y + 10, 128, 70, '#ffffff', 52);
+        text('ETC/一般', x, y + 76, 128, 40, '#ffffff', 22);
+        reg('ippan', x, y, 128, 128);
+      }
+      {
+        const x = 1792, y = 1408;
+        g.fillStyle = '#ffffff';
+        g.beginPath();
+        for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + (k * Math.PI) / 3; g.lineTo(x + 64 + Math.cos(a) * 60, y + 64 + Math.sin(a) * 60); }
+        g.closePath(); g.fill();
+        g.fillStyle = '#1c7a4a';
+        g.beginPath();
+        for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + (k * Math.PI) / 3; g.lineTo(x + 64 + Math.cos(a) * 52, y + 64 + Math.sin(a) * 52); }
+        g.closePath(); g.fill();
+        text('E1', x, y, 128, 128, '#ffffff', 56);
+        reg('e1', x, y, 128, 128);
+      }
+      green('hwSpeed', 1664, 1024, 384, 128, [['80', 14, 70], ['km/h', 86, 26]]);
+    }
     this.texture = new CanvasTexture(cv);
     this.texture.colorSpace = SRGBColorSpace;
     this.texture.anisotropy = 8;

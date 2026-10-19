@@ -49,7 +49,7 @@ describe('the shape of the world', () => {
 
   it('cuts the roads into the ground and joins them to the main street', () => {
     const roads = getRoads();
-    expect(roads.map((r) => r.name)).toEqual(['main', 'cross', 'back north', 'back south', 'west lane', 'east lane', 'shrine path']);
+    expect(roads.map((r) => r.name)).toEqual(['main', 'cross', 'back north', 'back south', 'west lane', 'east lane', 'frontage', 'shrine path']);
     for (const r of roads) {
       for (let i = 0; i < r.len; i += 5) {
         expect(roadNear(r.x[i], r.z[i]).d).toBeLessThan(0.5);

@@ -9,7 +9,9 @@ striped and curved awnings, round signs, noren and banners; a café with outside
 with open corridors and laundry; offices with roof billboards), a konbini and a supermarket with car parks, a main
 street with pavements, tactile strips, curbs and gutters, a signalled crossing with traffic lights, back lanes with red
 paint and 止まれ, utility poles with transformers and wires, double red lamps, green-white guard pipes, vending
-machines, hydrants, cones, convex mirrors, road signs and moving traffic. Around the town: stepped rice paddies, a koi pond, wooded hills on both sides, and
+machines, hydrants, cones, convex mirrors, road signs and moving traffic. Below the town a frontage road gathers the streets and leads to the Hoshinomachi IC: a toll plaza with ETC and
+general booths under green canopies, and ramps up to an elevated four-lane expressway on piers, with sound walls, a
+median, lights, green sign gantries and fast traffic, cut through the hills at both ends. Around the town: stepped rice paddies, a koi pond, wooded hills on both sides, and
 a forest-covered mountain with a shrine reached by a stone path and red torii gates. No lot is left bare: every free patch becomes a coin car park, a yatai food stall, a pocket park with swings, bicycle
 parking, a vending machine corner with a green phone box, a little roadside shrine, a vegetable garden or a nook of
 pots and bikes. Day turns to night: windows, shop
@@ -92,7 +94,7 @@ e2e/shots.mjs            screenshots with Playwright (npm run dev -- --port 5300
 | ![The hillside terraces](docs/preview-hillside.jpg) | ![The ramp street](docs/preview-slope.jpg) |
 | ![Stairs up a terrace wall](docs/preview-stairs.jpg) | ![The konbini](docs/preview-konbini.jpg) |
 | ![Coin parking, a pocket park and a roadside shrine](docs/preview-fillers.jpg) | ![The rice paddies](docs/preview-paddies.jpg) |
-| ![The hillside at night](docs/preview-night.jpg) | |
+| ![The hillside at night](docs/preview-night.jpg) | ![The expressway and the toll plaza](docs/preview-expressway.jpg) |
 
 ---
 

@@ -5,7 +5,7 @@ import { fbm, ridged } from '../util/noise';
  * The shape of the world: a Japanese village at the foot of a big mountain. Metres: x east, z south, y up.
  * The drone can fly over a 300 x 300 m map (HALF); the ground mesh reaches further so the mountain can rise behind it.
  */
-export const HALF = 150;
+export const HALF = 170;
 export const TERRAIN_HALF = 290;
 
 export const VILLAGE = { cx: 0, cz: 70, hx: 150, hz: 95 }; // the open country around the town (no forest)
@@ -13,6 +13,19 @@ export const MOUNTAIN = { x: 10, z: -270, radius: 270, height: 255 };
 export const POND = { x: -100, z: 128, radius: 16 };
 /** Terraced rice paddies on the slope below the town (edges on the 2.5 m terrain grid). */
 export const PADDY = { x: 112.5, z: 123.75, hx: 27.5, hz: 18.75, rows: 6 };
+/**
+ * The expressway: an elevated deck running east-west along the south of the map, cut through the hills at both ends.
+ * The frontage road below collects the town's streets and leads to the toll plaza, whose two ramps climb to the deck
+ * on its north side (the eastbound side, traffic keeps left).
+ */
+export const EXPRESSWAY = { z: 151, y: 11, half: 8, x0: -290, x1: 290 };
+export const IC = { x0: -14, x1: 14, z0: 130.5, z1: 142.5, y: 2.3 };
+export const IC_RAMP = { z: 139, half: 3.5, end: 150 };
+/** The deck height of an IC ramp at x: level with the plaza, then an even climb to the expressway. */
+export function icRampY(x: number): number {
+  const t = clamp((Math.abs(x) - IC.x1) / (IC_RAMP.end - IC.x1), 0, 1);
+  return IC.y + (EXPRESSWAY.y - IC.y) * (t * t * (3 - 2 * t));
+}
 export const SHRINE = { x: 66, z: -78, radius: 24, height: 50 };
 
 /**
@@ -96,6 +109,11 @@ function baseHeight(x: number, z: number): number {
   // the pond, dug into the slope
   const dp = Math.hypot(x - POND.x, z - POND.z);
   h = lerp(h, -3, smoothstep(POND.radius + 6, POND.radius - 8, dp));
+  // the expressway cuts through the hills; the toll plaza and its ramps sit on levelled ground
+  const de = Math.abs(z - EXPRESSWAY.z);
+  if (de < 24) h = Math.min(h, EXPRESSWAY.y - 1.2 + Math.max(0, de - EXPRESSWAY.half - 3) * 0.9);
+  const dr = Math.abs(z - IC_RAMP.z);
+  if (dr < 12) h = Math.min(h, icRampY(x) - 0.45 + Math.max(0, dr - IC_RAMP.half - 1) * 0.7);
   return h;
 }
 
@@ -106,11 +124,12 @@ export const rawHeight = baseHeight;
 export interface RoadPath { name: string; width: number; x: number[]; z: number[]; y: number[]; len: number; box: [number, number, number, number] }
 const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: boolean }[] = [
   { name: 'main', width: 8, pts: [[-152, 44], [-60, 44], [0, 44], [60, 44], [152, 44]] },
-  { name: 'cross', width: 7, pts: [[0, 126], [0, 84], [0, 44], [0, 8], [0, 2]] },
+  { name: 'cross', width: 7, pts: [[0, 127], [0, 84], [0, 44], [0, 8], [0, 2]] },
   { name: 'back north', width: 4.6, pts: [[-112, 8], [-60, 8], [0, 8], [60, 8], [112, 8]] },
   { name: 'back south', width: 4.6, pts: [[-112, 84], [-60, 84], [0, 84], [60, 84], [92, 84]] },
-  { name: 'west lane', width: 4.6, pts: [[-62, 8], [-62, 44], [-62, 84], [-62, 106], [-46, 134]] },
-  { name: 'east lane', width: 4.6, pts: [[62, 8], [62, 44], [62, 84], [62, 106], [72, 124]] },
+  { name: 'west lane', width: 4.6, pts: [[-62, 8], [-62, 44], [-62, 84], [-62, 106], [-60, 118], [-53, 125.6], [-44, 127]] },
+  { name: 'east lane', width: 4.6, pts: [[62, 8], [62, 44], [62, 84], [62, 106], [64, 118], [71, 125.6], [80, 127]] },
+  { name: 'frontage', width: 7, pts: [[-48, 127], [-20, 127], [0, 127], [40, 127], [83, 127]] },
   { name: 'shrine path', width: 4.2, even: true, pts: [[0, 2], [0, -8], [4, -26], [20, -42], [42, -52], [58, -56], [66, -62], [66, -66]] },
 ];
 function buildRoad(def: (typeof ROAD_DEFS)[number]): RoadPath {
@@ -154,7 +173,35 @@ function buildRoad(def: (typeof ROAD_DEFS)[number]): RoadPath {
   return { name: def.name, width: def.width, x: xs, z: zs, y, len: pts.length, box: [Math.min(...xs) - m, Math.min(...zs) - m, Math.max(...xs) + m, Math.max(...zs) + m] };
 }
 let roads: RoadPath[] | null = null;
-export const getRoads = (): RoadPath[] => (roads ??= ROAD_DEFS.map(buildRoad));
+export const getRoads = (): RoadPath[] => (roads ??= joinEnds(ROAD_DEFS.map(buildRoad)));
+
+/** A road that ends on another one meets it at exactly its height, easing into it over the last 24 m. */
+function joinEnds(all: RoadPath[]): RoadPath[] {
+  const trunk = new Set(['main', 'frontage']);
+  for (const r of all) {
+    if (trunk.has(r.name)) continue;
+    for (const e of [0, r.len - 1]) {
+      if (inTown(r.x[e], r.z[e])) continue;
+      let best = 1.5, by = NaN;
+      for (const o of all) {
+        if (o === r) continue;
+        for (let i = 0; i < o.len; i++) {
+          const d = Math.hypot(o.x[i] - r.x[e], o.z[i] - r.z[e]);
+          if (d < best) { best = d; by = o.y[i]; }
+        }
+      }
+      if (isNaN(by)) continue;
+      // a hair under the other road so the overlapping ribbons never fight
+      const delta = by - 0.015 - r.y[e], dir = e === 0 ? 1 : -1;
+      for (let k = 0; k <= 12; k++) {
+        const i = e + dir * k;
+        if (i < 0 || i >= r.len || inTown(r.x[i], r.z[i])) break;
+        r.y[i] += delta * (1 - k / 12);
+      }
+    }
+  }
+  return all;
+}
 export const getRoad = (name: string): RoadPath => getRoads().find((r) => r.name === name)!;
 
 /** Distance to the nearest road and that road's height there. */
@@ -199,6 +246,7 @@ export function slopeAt(x: number, z: number, d = 2): number {
 /** How much forest grows here: 0 (none) to 1 (dense). */
 export function forestDensity(x: number, z: number, h = heightAt(x, z)): number {
   if (h < 0.8 || h > 110) return 0;
+  if (Math.abs(z - EXPRESSWAY.z) < EXPRESSWAY.half + 7 || (Math.abs(z - IC_RAMP.z) < IC_RAMP.half + 5 && Math.abs(x) < IC_RAMP.end + 40)) return 0;
   const dv = villageDist(x, z);
   if (dv < 2) return 0;
   if (Math.hypot(x - POND.x, z - POND.z) < POND.radius + 6) return 0;
@@ -231,6 +279,7 @@ export const PLACES: Place[] = [
   { key: 'slope', name: 'Hoshi Slope', jp: '星坂', x: 0, z: 64, radius: 12, dist: 34, pitch: 20, yaw: 160 },
   { key: 'stairs', name: 'Stone Steps', jp: '石段', x: 34, z: 72, radius: 9, dist: 30, pitch: 52, yaw: 0 },
   { key: 'hillside', name: 'Hillside Terraces', jp: '段々の町', x: -30, z: 60, radius: 6, dist: 130, pitch: 17, yaw: 32 },
+  { key: 'ic', name: 'Hoshi IC', jp: '星の町IC', x: 0, z: 136, radius: 14, dist: 70, pitch: 30, yaw: 24 },
   { key: 'town', name: 'Hoshi Town', jp: '星の町', x: 0, z: 46, radius: 110, dist: 190, pitch: 42, yaw: 16 },
   { key: 'paddies', name: 'Rice Paddies', jp: '田んぼ', x: PADDY.x, z: PADDY.z, radius: 34, dist: 80, pitch: 32, yaw: -28 },
   { key: 'pond', name: 'Koi Pond', jp: '鯉の池', x: POND.x, z: POND.z, radius: 24, dist: 56, pitch: 34, yaw: 30 },
