@@ -7,7 +7,7 @@ import { buildCity } from './world/city';
 import { DaylightRig } from './world/daylight';
 import { TreeField, growForest } from './world/forest';
 import { loadLandmarks } from './world/landmarks';
-import { buildMountainRoad } from './world/mountainRoad';
+import { buildRoads } from './world/roads';
 import { Clouds, SkyDome } from './world/sky';
 import { SignAtlas } from './world/signs';
 import { buildTerrain } from './world/terrain';
@@ -51,7 +51,7 @@ async function main() {
   const atlas = new SignAtlas();
   const city = buildCity(trees, atlas);
   scene.add(city.group);
-  scene.add(buildMountainRoad());
+  scene.add(buildRoads());
   const windU = { value: 0 };
   scene.add(trees.build(windU));
   const traffic = new Traffic(city.streetX, city.streetZ);
@@ -107,7 +107,7 @@ async function main() {
     light.setHour(hour);
     const s = light.state;
     city.update(s.night);
-    marks.glow.forEach((m) => { m.emissiveIntensity = s.night * 2.4; });
+    marks.glow.forEach((m) => { m.emissiveIntensity = s.night * 1.4; });
     clouds.tint(s.sky.horizon, s.night);
     post.setLook(s.night, s.bloom);
     document.body.style.background = `#${s.sky.horizon.getHexString()}`;

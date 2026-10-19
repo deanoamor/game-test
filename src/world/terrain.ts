@@ -20,6 +20,11 @@ const C = {
 };
 
 const tmp = new Color();
+const FIELD = ['#a9d65b', '#c7da5e', '#8dc34f', '#e6d56b', '#7dbb62', '#b7d96a'].map((c) => new Color(c));
+const hash2 = (a: number, b: number) => {
+  const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return v - Math.floor(v);
+};
 
 /** The colour of the ground at a point: grass, forest floor, rock, alpine scree, snow, sand and lake bed. */
 export function groundColor(x: number, z: number, h: number, ny: number, out = new Color()): Color {
@@ -29,9 +34,19 @@ export function groundColor(x: number, z: number, h: number, ny: number, out = n
   out.lerp(C.meadow, meadow * 0.5);
   const f = forestDensity(x, z, h);
   out.lerp(tmp.copy(C.forest).lerp(C.forestDark, smoothstep(0.4, 0.9, n)), smoothstep(0.1, 0.55, f) * 0.9);
+  // the patchwork of farm fields on flat low ground
+  if (h > 1.8 && h < 70 && ny > 0.9 && f < 0.2 && cityDist(x, z) > 22 && z < SEA_Z - 45) {
+    const a = 0.35;
+    const u = x * Math.cos(a) - z * Math.sin(a), v = x * Math.sin(a) + z * Math.cos(a);
+    const iu = Math.floor(u / 36), iv = Math.floor(v / 52);
+    if (hash2(iu, iv) > 0.42) {
+      out.lerp(FIELD[Math.floor(hash2(iu + 9, iv - 3) * FIELD.length)], 0.85);
+      out.multiplyScalar(0.94 + 0.08 * (Math.sin(u * 0.9) * 0.5 + 0.5));
+    }
+  }
   const steep = smoothstep(0.82, 0.62, ny);
   const high = smoothstep(95, 190, h);
-  out.lerp(C.rock, clamp(steep * 0.9 + high * 0.5, 0, 1) * (mountainMask(x, z) > 0.05 || h > 90 ? 1 : 0.5));
+  out.lerp(C.rock, clamp(steep * 0.9 + high * 0.5, 0, 1) * (mountainMask(x, z) > 0.05 || h > 90 ? 1 : 0.5) * (1 - f * 0.65));
   out.lerp(C.rockDark, smoothstep(0.55, 0.4, ny) * 0.6);
   out.lerp(C.alpine, smoothstep(190, 260, h) * 0.8);
   const snowLine = 292 + fbm(x * 0.03, z * 0.03, 2) * 30 - steep * 35;

@@ -2,7 +2,7 @@ import { BufferGeometry, Color, Euler, Float32BufferAttribute, Group, Icosahedro
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { GeoBuilder, toRgb } from '../util/builder';
 import { rng, smoothstep } from '../util/rng';
-import { HALF, SHRINE, cityDist, forestDensity, heightAt, mountainMask, roadNear, slopeAt, PATH_WIDTH } from './config';
+import { HALF, SHRINE, cityDist, forestDensity, heightAt, mountainMask, roadNear, slopeAt } from './config';
 
 export type TreeKind = 'cedar' | 'pine' | 'round' | 'sakura' | 'maple' | 'ginkgo';
 
@@ -131,8 +131,9 @@ export function growForest(field: TreeField): { rocks: Group } {
       const h = heightAt(x, z);
       const d = forestDensity(x, z, h);
       if (d <= 0.02 || r() > d * 0.9) continue;
-      if (slopeAt(x, z, 2) > 0.95) continue;
-      if (roadNear(x, z).d < PATH_WIDTH * 0.5 + 6 && x > 20 && x < 250 && z < -60 && z > -250) continue;
+      if (slopeAt(x, z, 2) > 1.25) continue;
+      const rn = roadNear(x, z);
+      if (rn.d < rn.width * 0.5 + 6) continue;
       const mt = mountainMask(x, z);
       const ds = Math.hypot(x - SHRINE.x, z - SHRINE.z);
       const t = r();

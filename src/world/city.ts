@@ -1,7 +1,7 @@
 import { AdditiveBlending, CanvasTexture, CircleGeometry, Color, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial, Quaternion, Vector3 } from 'three';
 import { GeoBuilder, shadeOf, toRgb, type V3 } from '../util/builder';
 import { pick, rng } from '../util/rng';
-import { BLOCK_USE, CITY, blockAt } from './config';
+import { BLOCK_USE, CITY, VILLAGE, blockAt } from './config';
 import { raiseSkyline } from './skyline';
 import type { SignAtlas, Cell } from './signs';
 import type { TreeField } from './forest';
@@ -164,6 +164,11 @@ export function buildCity(trees: TreeField, atlas: SignAtlas): CityBuild {
   plateMesh.name = 'Blocks';
   group.add(plateMesh);
 
+  // a small village at the end of the west road
+  const vch = new Chunk();
+  chunks.push(vch);
+  buildVillage(vch, trees, r);
+
   for (const ch of chunks) {
     const add = (b: GeoBuilder, mat: MeshStandardMaterial, shadow: boolean, name: string) => {
       if (b.triangles === 0) return;
@@ -194,7 +199,7 @@ export function buildCity(trees: TreeField, atlas: SignAtlas): CityBuild {
     b.box(0.95, 5.95, 0, 0.7, 0.14, 0.36, '#fff4d6', { ao: 0 });
     heads.geometry = b.toGeometry();
   }
-  const glow = new InstancedMesh(new CircleGeometry(8, 20).rotateX(-Math.PI / 2), mats.lampGlow, lampPos.length);
+  const glow = new InstancedMesh(new CircleGeometry(5.5, 20).rotateX(-Math.PI / 2), mats.lampGlow, lampPos.length);
   const poleInst = new InstancedMesh(poles.geometry, mats.pole, lampPos.length);
   const m4 = new Matrix4();
   lampPos.forEach(([x, z], i) => {
@@ -220,11 +225,11 @@ export function buildCity(trees: TreeField, atlas: SignAtlas): CityBuild {
     streetX,
     streetZ,
     update(night: number) {
-      mats.litA.emissiveIntensity = night * 2.6;
-      mats.litB.emissiveIntensity = night * 2.2;
-      mats.sign.emissiveIntensity = 0.55 + night * 1.6;
-      mats.lampHead.emissiveIntensity = 0.15 + night * 3.2;
-      (mats.lampGlow as MeshBasicMaterial).opacity = night * 0.5;
+      mats.litA.emissiveIntensity = night * 1.25;
+      mats.litB.emissiveIntensity = night * 1.05;
+      mats.sign.emissiveIntensity = 0.5 + night * 1.05;
+      mats.lampHead.emissiveIntensity = 0.15 + night * 2.2;
+      (mats.lampGlow as MeshBasicMaterial).opacity = night * 0.4;
     },
   };
 }
@@ -383,7 +388,9 @@ function billboard(ch: Chunk, atlas: SignAtlas, cx: number, cz: number, y: numbe
   for (const side of [1, -1]) {
     const o = 0.17 * side;
     const p = (along: number, yy: number): V3 => [cx + dir[0] * along + nor[0] * o, yy, cz + dir[2] * along + nor[2] * o];
-    const flip = side < 0;
+    // seen from this side the picture runs left to right along `dir` only if the right-hand vector points along it
+    const fw: V3 = [-nor[0] * side, 0, -nor[2] * side];
+    const flip = -fw[2] * dir[0] + fw[0] * dir[2] < 0;
     const uL = flip ? c.u1 : c.u0, uR = flip ? c.u0 : c.u1;
     ch.sign.quadFacing(p(-w / 2, y + lift), p(w / 2, y + lift), p(w / 2, y + lift + h), p(-w / 2, y + lift + h), [nor[0] * side, 0, nor[2] * side], [1, 1, 1], [[uL, c.v0], [uR, c.v0], [uR, c.v1], [uL, c.v1]]);
   }
@@ -550,5 +557,25 @@ function building(ch: Chunk, x0: number, z0: number, x1: number, z1: number, G: 
     const h = 3.2 + r() * 3.0;
     const yy = G + 4.8 + r() * Math.max(0.5, Math.min(height - 12, 14));
     verticalSign(ch, atlas, f, sx0, sz0, sw0 / 2 + 0.2, sd0 / 2 + 0.2, u, yy, h, Math.floor(r() * 8));
+  }
+}
+
+
+/** A handful of houses around a little plaza, at the end of the country road. */
+function buildVillage(ch: Chunk, trees: TreeField, r: () => number) {
+  const G = VILLAGE.height - 0.12;
+  for (let j = -2; j <= 2; j++) {
+    for (let i = -2; i <= 2; i++) {
+      if (Math.abs(i) <= 0 && Math.abs(j) <= 0) continue;
+      if (Math.hypot(i, j) > 2.5 || r() < 0.18) continue;
+      const cx = VILLAGE.x + i * 21 + (r() - 0.5) * 3, cz = VILLAGE.z + j * 21 + (r() - 0.5) * 3;
+      house(ch, cx - 9, cz - 9, cx + 9, cz + 9, G, r);
+    }
+  }
+  ch.body.frustum(VILLAGE.x, VILLAGE.height - 0.1, VILLAGE.z, 8, 8, 0.16, 20, '#cdbba0', { cap: true });
+  trees.add('sakura', VILLAGE.x, VILLAGE.z, 1.5, VILLAGE.height);
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    trees.add(k % 2 ? 'maple' : 'ginkgo', VILLAGE.x + Math.cos(a) * 52, VILLAGE.z + Math.sin(a) * 52, 1.1, undefined);
   }
 }

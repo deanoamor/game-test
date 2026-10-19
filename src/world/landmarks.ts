@@ -18,7 +18,7 @@ export interface Landmark {
   yaw?: number;
 }
 
-const url = (f: string) => `${import.meta.env.BASE_URL}core/places/${f}.glb`;
+const url = (f: string) => `${import.meta.env.BASE_URL}places/${f}.glb`;
 
 const G = CITY.height + 0.18;
 

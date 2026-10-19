@@ -74,7 +74,7 @@ export class Clouds {
   private data: { x: number; y: number; z: number; s: number; v: number }[] = [];
   private m = new Matrix4();
 
-  constructor(count = 34) {
+  constructor(count = 22) {
     const r = rng(77);
     const blobs: BufferGeometry[] = [];
     const place = (x: number, y: number, z: number, sx: number, sy: number, sz: number) => {
@@ -95,7 +95,7 @@ export class Clouds {
     this.mesh.frustumCulled = false;
     this.mesh.name = 'Clouds';
     for (let i = 0; i < count; i++) {
-      this.data.push({ x: (r() * 2 - 1) * HALF * 1.6, y: 330 + r() * 140, z: (r() * 2 - 1) * HALF * 1.5, s: 0.7 + r() * 1.1, v: 2 + r() * 2.5 });
+      this.data.push({ x: (r() * 2 - 1) * HALF * 1.6, y: 400 + r() * 140, z: (r() * 2 - 1) * HALF * 1.5, s: 0.7 + r() * 1.1, v: 2 + r() * 2.5 });
     }
     this.step(0);
   }

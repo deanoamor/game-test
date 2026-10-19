@@ -28,8 +28,8 @@ const northMask = (z: number) => smoothstep(-90, -330, z);
 const sideMask = (x: number, z: number) => smoothstep(300, 470, Math.abs(x)) * (z < 380 ? 1 : smoothstep(470, 380, z));
 export const mountainMask = (x: number, z: number) => Math.max(northMask(z), sideMask(x, z) * 0.8);
 
-/** The ground height before roads are carved into it. */
-export function rawHeight(x: number, z: number): number {
+/** The ground height before the village and the roads are cut into it. */
+function baseHeight(x: number, z: number): number {
   let h = 5 + fbm(x * 0.006, z * 0.006, 4) * 16 + fbm(x * 0.02 + 50, z * 0.02, 2) * 2.5;
   // the mountain wall in the north and the ridges on both sides
   const m = mountainMask(x, z);
@@ -53,20 +53,34 @@ export function rawHeight(x: number, z: number): number {
   h = lerp(h, -9, smoothstep(SEA_Z, SEA_Z + 70, z));
   // the shelf of the shrine
   const ds = Math.hypot(x - SHRINE.x, z - SHRINE.z);
-  h = lerp(h, SHRINE.height, 1 - smoothstep(SHRINE.radius - 6, SHRINE.radius + 42, ds));
+  h = lerp(h, SHRINE.height, 1 - smoothstep(SHRINE.radius - 6, SHRINE.radius + 95, ds));
   // the flat city
   const dc = cityDist(x, z);
   h = lerp(h, CITY.height, 1 - smoothstep(0, 70, dc));
   return h;
 }
 
-/** The mountain road from the city to the shrine: waypoints, then a smooth path sampled every 3 m. */
-const PATH_WAYPOINTS: [number, number][] = [[58, -76], [62, -104], [92, -126], [140, -132], [182, -146], [208, -166], [215, -184], [215, -198]];
-export const PATH_WIDTH = 7;
-export interface RoadPath { x: number[]; z: number[]; y: number[]; len: number }
-function buildRoadPath(): RoadPath {
-  // Catmull-Rom through the waypoints
-  const P = PATH_WAYPOINTS;
+export const VILLAGE = { x: -345, z: 165, radius: 46, height: 0 };
+VILLAGE.height = Math.max(4, baseHeight(VILLAGE.x, VILLAGE.z));
+
+/** The ground height before the roads are carved into it. */
+export function rawHeight(x: number, z: number): number {
+  const h = baseHeight(x, z);
+  const d = Math.hypot(x - VILLAGE.x, z - VILLAGE.z);
+  return d > VILLAGE.radius + 40 ? h : lerp(h, VILLAGE.height, 1 - smoothstep(VILLAGE.radius - 6, VILLAGE.radius + 36, d));
+}
+
+/** The roads: each is a smooth path sampled every 3 m, with a smoothed height so it never jumps. */
+export interface RoadPath { name: string; width: number; x: number[]; z: number[]; y: number[]; len: number; box: [number, number, number, number] }
+const ROAD_DEFS: { name: string; width: number; pts: [number, number][] }[] = [
+  { name: 'mountain', width: 7, pts: [[64, -78], [62, -104], [92, -126], [140, -132], [182, -146], [208, -166], [215, -184], [215, -198]] },
+  { name: 'coast', width: 10, pts: [[0, 318], [0, 340], [0, 366], [0, 388]] },
+  { name: 'promenade', width: 8, pts: [[-250, 391], [-125, 388], [0, 388], [125, 388], [250, 391]] },
+  { name: 'west', width: 8, pts: [[-198, 120], [-246, 126], [-296, 146], [-330, 160], [-345, 165]] },
+  { name: 'east', width: 8, pts: [[198, 120], [226, 132], [246, 158], [254, 184]] },
+];
+function buildRoad(def: (typeof ROAD_DEFS)[number]): RoadPath {
+  const P = def.pts;
   const pts: [number, number][] = [];
   for (let i = 0; i < P.length - 1; i++) {
     const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)];
@@ -79,39 +93,48 @@ function buildRoadPath(): RoadPath {
   }
   pts.push(P[P.length - 1]);
   const raw = pts.map(([x, z]) => rawHeight(x, z));
-  // smooth the profile so the road never jumps
   const y = raw.map((_, i) => {
     let sum = 0, n = 0;
-    for (let k = -7; k <= 7; k++) {
+    for (let k = -8; k <= 8; k++) {
       const j = i + k;
       if (j >= 0 && j < raw.length) { sum += raw[j]; n++; }
     }
     return sum / n;
   });
-  y[0] = CITY.height;
-  return { x: pts.map((p) => p[0]), z: pts.map((p) => p[1]), y, len: pts.length };
-}
-let roadPath: RoadPath | null = null;
-export const getRoadPath = (): RoadPath => (roadPath ??= buildRoadPath());
-
-/** Distance to the road and the road height at the nearest point. */
-export function roadNear(x: number, z: number): { d: number; y: number } {
-  const r = getRoadPath();
-  let best = Infinity, by = 0;
-  for (let i = 0; i < r.len; i++) {
-    const dx = x - r.x[i], dz = z - r.z[i];
-    const d = dx * dx + dz * dz;
-    if (d < best) { best = d; by = r.y[i]; }
+  // the roads that leave the city start at its level
+  if (def.name === 'mountain' || def.name === 'west' || def.name === 'east' || def.name === 'coast') {
+    const blend = 14;
+    for (let i = 0; i < Math.min(blend, y.length); i++) y[i] = lerp(CITY.height, y[i], i / blend);
   }
-  return { d: Math.sqrt(best), y: by };
+  const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
+  const m = def.width / 2 + 20;
+  return { name: def.name, width: def.width, x: xs, z: zs, y, len: pts.length, box: [Math.min(...xs) - m, Math.min(...zs) - m, Math.max(...xs) + m, Math.max(...zs) + m] };
+}
+let roads: RoadPath[] | null = null;
+export const getRoads = (): RoadPath[] => (roads ??= ROAD_DEFS.map(buildRoad));
+export const getRoadPath = (name = 'mountain'): RoadPath => getRoads().find((r) => r.name === name)!;
+export const PATH_WIDTH = 7;
+
+/** Distance to the nearest road and that road's height there. */
+export function roadNear(x: number, z: number): { d: number; y: number; width: number } {
+  let best = Infinity, by = 0, bw = 0;
+  for (const r of getRoads()) {
+    if (x < r.box[0] || x > r.box[2] || z < r.box[1] || z > r.box[3]) continue;
+    for (let i = 0; i < r.len; i++) {
+      const dx = x - r.x[i], dz = z - r.z[i];
+      const d = dx * dx + dz * dz;
+      if (d < best) { best = d; by = r.y[i]; bw = r.width; }
+    }
+  }
+  return { d: Math.sqrt(best), y: by, width: bw };
 }
 
-/** The ground height at a point, with the road carved in. Deterministic and cheap enough for tens of thousands of calls. */
+/** The ground height at a point, with the roads carved in. Deterministic and cheap enough for tens of thousands of calls. */
 export function heightAt(x: number, z: number): number {
   const h = rawHeight(x, z);
-  if (x < 20 || x > 250 || z < -250 || z > -60) return h;
-  const { d, y } = roadNear(x, z);
-  const w = 1 - smoothstep(PATH_WIDTH * 0.5 + 1.5, PATH_WIDTH * 0.5 + 16, d);
+  const { d, y, width } = roadNear(x, z);
+  if (!isFinite(d)) return h;
+  const w = 1 - smoothstep(width * 0.5 + 1.5, width * 0.5 + 16, d);
   return w > 0 ? lerp(h, y - 0.15, w) : h;
 }
 
@@ -170,7 +193,7 @@ export const PLACES: Place[] = [
   { key: 'danchi', name: 'Kaze Danchi', jp: '風団地', x: blockCenter(...BLOCK_USE.danchi)[0], z: blockCenter(...BLOCK_USE.danchi)[1], radius: 40, dist: 110, pitch: 38, yaw: 70 },
   { key: 'school', name: 'Sakura Gakuen', jp: '桜学園', x: blockCenter(...BLOCK_USE.school)[0], z: blockCenter(...BLOCK_USE.school)[1], radius: 40, dist: 110, pitch: 40, yaw: -60 },
   { key: 'shrine', name: 'Kamigawa Shrine', jp: '神川神社', x: SHRINE.x, z: SHRINE.z, radius: 90, dist: 170, pitch: 40, yaw: 20 },
-  { key: 'fuji', name: 'Mt. Hoshi', jp: '星山', x: FUJI.x, z: FUJI.z + 30, radius: 260, dist: 520, pitch: 24, yaw: 0 },
+  { key: 'fuji', name: 'Mt. Hoshi', jp: '星山', x: FUJI.x, z: FUJI.z + 190, radius: 230, dist: 720, pitch: 17, yaw: 0 },
   { key: 'lake', name: 'Kagami Lake', jp: '鏡湖', x: LAKE.x, z: LAKE.z, radius: LAKE.radius + 25, dist: 250, pitch: 40, yaw: -40 },
   { key: 'coast', name: 'Shiosai Coast', jp: '潮騒海岸', x: 0, z: SEA_Z - 20, radius: 120, dist: 240, pitch: 30, yaw: 180 },
 ];
