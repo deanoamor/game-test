@@ -2,15 +2,26 @@
 
 Low-poly 3D assets for the web game, made in Poly Studio and exported as skinned GLB (glTF 2.0, validated with gltf-validator, 0 errors).
 
+## Core assets (`assets/core/`)
+
+Used by the game. Same chunky base style, 22-joint skeleton.
+
+| File | Asset |
+|---|---|
+| `gamenurse.glb` | Game Nurse |
+| `firefighter.glb` | Firefighter |
+
+## Experimental assets (`assets/experimental/`)
+
+Tests and style studies, not used by the game yet.
+
 | File | Asset | Skeleton |
 |---|---|---|
-| `assets/models/casual.glb` | Casual Girl (base character) | 22 joints |
-| `assets/models/gamenurse.glb` | Game Nurse (same base) | 22 joints |
-| `assets/models/firefighter.glb` | Firefighter (same base, male face/hair) | 22 joints |
-| `assets/models/school.glb` | School Girl | 22 joints |
-| `assets/models/nurse.glb` | Nurse | 22 joints |
-| `assets/models/ribbon.glb` | Red Ribbon Girl | 22 joints |
-| `assets/models/anime.glb` | Pink Anime Girl | 22 joints |
-| `assets/models/island.glb` | Forest Island diorama | none (static) |
+| `casual.glb` | Casual Girl (base the core characters were built on) | 22 joints |
+| `school.glb` | School Girl | 22 joints |
+| `nurse.glb` | Nurse (first version, older style) | 22 joints |
+| `ribbon.glb` | Red Ribbon Girl | 22 joints |
+| `anime.glb` | Pink Anime Girl | 22 joints |
+| `island.glb` | Forest Island diorama | none (static) |
 
 No animations yet; the rig is ready for them.
