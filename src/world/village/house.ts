@@ -399,6 +399,11 @@ function outsideStairs(ctx: Ctx, spec: HouseSpec, base: number, fh: number) {
   const z0 = spec.d / 2 - 0.4;
   for (let k = 0; k < n; k++) B.box(x, rise * (k + 1) - 0.03, z0 - k * run, 1.0, 0.06, run + 0.02, '#8a9096', { ao: 0 });
   const zTop = z0 - n * run;
+  // the two steel stringers the treads sit on, and a post at the foot
+  for (const sd of [-0.52, 0.52]) {
+    B.cable([[x + sd, 0.05, z0 + run * 0.6], [x + sd, top - 0.12, zTop]], 0.07, '#6a7076');
+    B.box(x + sd, 0.12, z0 + run * 0.6, 0.12, 0.24, 0.16, '#6a7076', { ao: 0 });
+  }
   B.box(x, top - 0.06, zTop - 0.6, 1.1, 0.12, 1.3, '#8a9096', { ao: 0.05 });
   for (const sz of [zTop - 1.2, z0]) B.box(x + s * 0.5, (sz === z0 ? 0.1 : top) / 2, sz, 0.08, sz === z0 ? 0.2 : top, 0.08, '#6a7076', { ao: 0 });
   B.box(x + s * 0.5, top / 2, zTop - 1.2, 0.08, top, 0.08, '#6a7076', { ao: 0 });

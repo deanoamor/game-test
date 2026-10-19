@@ -1,7 +1,7 @@
 import { Color, Group, Mesh, MeshStandardMaterial } from 'three';
 import type { GeoBuilder, V3 } from '../../util/builder';
 import { pick, rng } from '../../util/rng';
-import { PADDY, PLATFORMS, POND, STAIRS, TERRACES, WATER_Y, heightAt, rampY } from '../config';
+import { PADDY, PLATFORMS, POND, STAIRS, TERRACES, WATER_Y, heightAt, rampY, roadNear } from '../config';
 import type { TreeField } from '../forest';
 import { raiseSkyline } from '../skyline';
 import type { SignAtlas } from '../signs';
@@ -132,6 +132,11 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
 
   /** Put a finished building down, register its roof for the camera. */
   const place = (ctx: Ctx, x: number, z: number, yaw: number, y: number, w: number, d: number, height: number) => {
+    // never on a street: a building whose footprint touches a road is left out (the lot gets filled later)
+    for (let a = -w / 2; a <= w / 2 + 1e-6; a += w / Math.ceil(w / 1.5)) for (let b = -d / 2; b <= d / 2 + 1e-6; b += d / Math.ceil(d / 1.5)) {
+      const rd = roadNear(x + a, z + b);
+      if (rd.d < rd.width / 2 + 0.2) return;
+    }
     appendCtx(at(x), ctx, x, y, z, yaw);
     const rr = Math.max(w, d) / 2 + 1;
     raiseSkyline(x - rr, z - rr, x + rr, z + rr, y + height + 2.5);

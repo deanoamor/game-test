@@ -109,8 +109,8 @@ const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: 
   { name: 'cross', width: 7, pts: [[0, 126], [0, 84], [0, 44], [0, 8], [0, 2]] },
   { name: 'back north', width: 4.6, pts: [[-112, 8], [-60, 8], [0, 8], [60, 8], [112, 8]] },
   { name: 'back south', width: 4.6, pts: [[-112, 84], [-60, 84], [0, 84], [60, 84], [92, 84]] },
-  { name: 'west lane', width: 4.6, pts: [[-62, 8], [-62, 44], [-62, 84], [-60, 112], [-44, 134]] },
-  { name: 'east lane', width: 4.6, pts: [[62, 8], [62, 44], [62, 84], [66, 100], [76, 118]] },
+  { name: 'west lane', width: 4.6, pts: [[-62, 8], [-62, 44], [-62, 84], [-62, 106], [-46, 134]] },
+  { name: 'east lane', width: 4.6, pts: [[62, 8], [62, 44], [62, 84], [62, 106], [72, 124]] },
   { name: 'shrine path', width: 4.2, even: true, pts: [[0, 2], [0, -8], [4, -26], [20, -42], [42, -52], [58, -56], [66, -62], [66, -66]] },
 ];
 function buildRoad(def: (typeof ROAD_DEFS)[number]): RoadPath {
@@ -183,8 +183,10 @@ export function naturalHeight(x: number, z: number): number {
   const h = baseHeight(x, z);
   const { d, y, width } = roadNear(x, z);
   if (!isFinite(d)) return h;
-  const w = 1 - smoothstep(width * 0.5 + 1, width * 0.5 + 9, d);
-  return w > 0 ? lerp(h, y - 0.06, w) : h;
+  // fully cut down for a terrain cell's diagonal (3.6 m) beyond the road edge, so no grid triangle can poke through the
+  // road surface on a slope; then blending back into the hillside
+  const w = 1 - smoothstep(width * 0.5 + 3.6, width * 0.5 + 11, d);
+  return w > 0 ? lerp(h, y - 0.25, w) : h;
 }
 
 /** Slope (rise over run) from a short central difference. */

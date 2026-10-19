@@ -126,7 +126,7 @@ async function main() {
   const startPlace = PLACES.find((p) => p.key === start);
   if (startPlace) drone.flyTo(startPlace, true);
   else drone.flyTo(PLACES[0], true);
-  if (params.has('yaw')) drone.setView(drone.target.x, drone.target.z, Number(params.get('yaw')), Number(params.get('pitch') ?? 45), Number(params.get('dist') ?? drone.dist));
+  if (params.has('yaw')) drone.setView(params.has('tx') ? Number(params.get('tx')) : drone.target.x, params.has('tz') ? Number(params.get('tz')) : drone.target.z, Number(params.get('yaw')), Number(params.get('pitch') ?? 45), Number(params.get('dist') ?? drone.dist));
   if (params.get('hud') === '0') hud.setHud(false);
 
   progress(1, 'Ready');

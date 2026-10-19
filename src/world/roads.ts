@@ -56,9 +56,9 @@ function ribbon(b: GeoBuilder, p: RoadPath, o: { stoneFrom?: number; center?: 'd
         if (i + 4 < Math.min(p.len - 2, stoneStart - 2)) {
           const f2 = frame(i + 4);
           const x2 = p.x[i + 4] + f2.nx * (W + 0.4) * s, z2 = p.z[i + 4] + f2.nz * (W + 0.4) * s;
-          const len = Math.hypot(x2 - x, z2 - z);
-          const yaw = (Math.atan2(-(z2 - z), x2 - x) * 180) / Math.PI;
-          b.box((x + x2) / 2, (p.y[i] + p.y[i + 4]) / 2 + 0.8, (z + z2) / 2, len, 0.1, 0.07, '#d8d5ca', { yaw, ao: 0 });
+          // the rails follow the slope of the path from post to post
+          b.cable([[x, p.y[i] + 0.85, z], [x2, p.y[i + 4] + 0.85, z2]], 0.05, '#d8d5ca');
+          b.cable([[x, p.y[i] + 0.45, z], [x2, p.y[i + 4] + 0.45, z2]], 0.04, '#d8d5ca');
         }
       }
     }
