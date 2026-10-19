@@ -7,6 +7,7 @@ import { raiseSkyline } from '../skyline';
 import type { SignAtlas } from '../signs';
 import { apartmentBlock, konbini, officeBlock, supermarket } from './buildings';
 import { appendCtx, newCtx, type Ctx } from './frame';
+import { Occupancy, fillEmpty } from './fillers';
 import { buildPaddies, buildTownGround, wallSeg } from './ground';
 import { buildHouse, type HouseSpec } from './house';
 import {
@@ -49,6 +50,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
     return c;
   };
   const lots: Lot[] = [];
+  const occ = new Occupancy();
 
   // ---------------------------------------------------------------------------------------------
   // recipes: a shop-house, a house, and their dice
@@ -98,6 +100,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
   /** The strip behind a building, up to the next retaining wall: a garden, a shed, a parked car, laundry, AC units. */
   const backyard = (x0: number, x1: number, zA: number, zB: number, y: number) => {
     const depth = Math.abs(zB - zA), dir = Math.sign(zB - zA);
+    occ.mark(x0, zA, x1, zB);
     if (depth < 2.2 || x1 - x0 < 3) return;
     const c = at((x0 + x1) / 2), xm = (x0 + x1) / 2, zm = (zA + zB) / 2;
     const t = r();
@@ -133,6 +136,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
     const rr = Math.max(w, d) / 2 + 1;
     raiseSkyline(x - rr, z - rr, x + rr, z + rr, y + height + 2.5);
     lots.push({ x, z, yaw, w, d, y, ctx, height });
+    occ.mark(x - w / 2 - 0.2, z - d / 2 - 0.2, x + w / 2 + 0.2, z + d / 2 + 0.2);
   };
 
   // ---------------------------------------------------------------------------------------------
@@ -150,6 +154,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
         const s = special.build();
         if (x + s.w > next) { x = next; continue; }
         const setback = s.setback ?? 0;
+        occ.mark(x, row.front, x + s.w, row.yaw === 0 ? row.front - setback : row.front + setback);
         const cx = x + s.w / 2;
         const cz = row.yaw === 0 ? row.front - setback - s.d / 2 : row.front + setback + s.d / 2;
         place(s.ctx, cx, cz, row.yaw, row.y, s.w, s.d, s.height);
@@ -160,6 +165,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
       // a gap now and then: a driveway with a parked car, or a little garden
       if (row.kind === 'back' && r() < 0.1 && next - x > 7) {
         const gw = 3 + r() * 2;
+        occ.mark(x, row.front, x + gw, row.yaw === 0 ? row.front - row.depth : row.front + row.depth);
         const gc = x + gw / 2;
         const gz = row.yaw === 0 ? row.front - 3 : row.front + 3;
         if (row.raised === undefined && r() < 0.6) parkedVehicle(at(gc), pick(r, ['kei', 'keivan', 'car'] as const), pick(r, ['#f4f4ee', '#3a4a6a', '#7a2a2e', '#d8d8d0', '#2f2f35']), gc, row.ground + 0.05, gz, row.yaw === 0 ? 90 + (r() - 0.5) * 10 : -90 + (r() - 0.5) * 10);
@@ -253,16 +259,34 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
     specials: (x) => (r() < 0.22 ? { w: 13, build: () => { const f = 4 + Math.floor(r() * 4); return { ctx: officeBlock(r, atlas, 13, 10, f, pick(r, ['#e8e4dc', '#d8dcd8', '#cfd6dc', '#e6dccb'])), w: 13, d: 10, height: f * 3.3 + 4 }; } } : null) || (x > 300 ? null : null),
   });
 
+  // the pavements of the main street, the front strips of the back rows, the stair alleys
+  occ.mark(-200, MAIN_Z - MAIN_HALF - WALK - 0.9, 200, MAIN_Z + MAIN_HALF + WALK + 0.9);
+  for (const lz of [BACK_N, BACK_S]) occ.mark(-200, lz - BACK_HALF - 2.5, 200, lz + BACK_HALF + 2.5);
+  for (const st of STAIRS) {
+    const [za, zb] = st.z === TERRACES[0].z1 ? [BACK_N, MAIN_Z] : [MAIN_Z, BACK_S];
+    occ.mark(st.x - st.w / 2 - 0.4, za, st.x + st.w / 2 + 0.4, zb);
+  }
+
   buildTownGround(at);
-  streets(at, atlas, r, trees);
+  streets(at, atlas, r, trees, occ);
   outskirts(at, atlas, r, trees);
+  fillEmpty(occ, at, atlas, r, trees);
+  // the stair alleys: a lamp at the top and the bottom of each flight, pots along one side
+  for (const st of STAIRS) {
+    const yU = heightAt(st.x, st.z - 0.5), yL = heightAt(st.x, st.z + 9);
+    const side = st.x + st.w / 2 - 0.25;
+    classicLamp(at(st.x), st.x - st.w / 2 + 0.25, yU, st.z - 1.0);
+    classicLamp(at(st.x), side, yL, st.z + 9.2);
+    const [za, zb] = st.z === TERRACES[0].z1 ? [BACK_N + BACK_HALF + 2.6, st.z - 1.2] : [st.z + 9.6, BACK_S - BACK_HALF - 0.3];
+    for (let z = za; z < zb - 0.4; z += 0.9) if (r() < 0.6) pot(at(st.x), side, heightAt(side, z), z, Math.floor(r() * 5));
+  }
   return assemble(chunks, atlas);
 }
 
 // ---------------------------------------------------------------------------------------------
 // pavements, the crossing, poles and wires, lamps and everything on the pavement
 // ---------------------------------------------------------------------------------------------
-function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, trees: TreeField) {
+function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, trees: TreeField, occ: Occupancy) {
   const pave = (x0: number, x1: number, z0: number, z1: number, curbSide: 'n' | 's' | 'e' | 'w') => {
     const ctx = at((x0 + x1) / 2);
     const B = ctx.body;
@@ -408,6 +432,7 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
   // the konbini and supermarket car parks: lines, wheel stops, cars and a tall sign
   const park = (x0: number, n: number, zEdge: number, zDeep: number) => {
     const c = at(x0 + n * 1.5);
+    occ.mark(x0 - 0.3, zEdge, x0 + n * 2.8 + 0.3, zDeep + 0.3);
     for (let k = 0; k <= n; k++) c.body.box(x0 + k * 2.8, Y_M + 0.08, (zEdge + zDeep) / 2, 0.12, 0.02, Math.abs(zDeep - zEdge) - 0.6, '#f4f2ea', { ao: 0 });
     for (let k = 0; k < n; k++) {
       c.body.box(x0 + 1.4 + k * 2.8, Y_M + 0.12, zDeep - 0.5, 1.4, 0.12, 0.18, '#c9c6bd', { ao: 0.1 });

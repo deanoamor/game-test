@@ -15,7 +15,7 @@ export class SignAtlas {
   readonly wideNames: string[] = [];
 
   constructor() {
-    const W = 2048, H = 1024;
+    const W = 2048, H = 1536;
     const cv = document.createElement('canvas');
     cv.width = W;
     cv.height = H;
@@ -287,6 +287,73 @@ export class SignAtlas {
       text('特売', x, sy + 10, 128, 60, '#c8322e', 48);
       text('セール中', x, sy + 70, 128, 40, '#1a1a1a', 24);
       reg('sale', x, sy, 128, 128);
+    }
+    // the stalls, coin parking, parks and bicycle parking: a third band
+    {
+      const tall2: [string, string, string, string, string][] = [
+        ['takoyaki', 'たこ焼き', '#e8862a', '#ffffff', '#9a4a10'],
+        ['yakisoba', '焼きそば', '#c8322e', '#ffe36a', '#7a1010'],
+        ['oden', 'おでん', '#f4ecd8', '#3a2a1a', '#d8c8a8'],
+        ['taiyaki', 'たい焼き', '#3a6ab8', '#ffffff', '#1a3a7a'],
+        ['kakigori', '氷', '#ffffff', '#d8322e', '#e8f4ff'],
+      ];
+      tall2.forEach(([key, t, bg, fg, edge], i) => {
+        const x = i * 128, y = 1024, w = 128, h = 384;
+        const grd = g.createLinearGradient(x, y, x, y + h);
+        grd.addColorStop(0, bg);
+        grd.addColorStop(1, edge);
+        g.fillStyle = grd;
+        g.fillRect(x, y, w, h);
+        if (key === 'kakigori') {
+          g.fillStyle = '#2a7ad8';
+          for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(x + 30 + k * 34, y + h - 40, 20, Math.PI, 0); g.fill(); }
+          text(t, x, y - 30, w, h, fg, 110, true);
+        } else {
+          g.strokeStyle = fg;
+          g.lineWidth = 6;
+          g.strokeRect(x + 10, y + 10, w - 20, h - 20);
+          text(t, x, y, w, h, fg, 84, true);
+        }
+        reg(key, x, y, w, h);
+      });
+      const wide2: [string, string, string, string, number, number][] = [
+        ['coinPark', 'コインパーキング', '#f2c230', '#1a1a1a', 640, 1024],
+        ['parkName', '星ヶ丘公園', '#2f7a46', '#ffffff', 1152, 1024],
+        ['bikePark', '駐輪場', '#1f5ea8', '#ffffff', 640, 1152],
+        ['yataiSign', '屋台 ほし', '#7a2418', '#ffe8b0', 1152, 1152],
+      ];
+      for (const [key, t, bg, fg, x, y] of wide2) {
+        g.fillStyle = bg;
+        g.fillRect(x, y, 512, 128);
+        g.strokeStyle = fg;
+        g.lineWidth = 5;
+        g.strokeRect(x + 8, y + 8, 496, 112);
+        text(t, x, y, 512, 128, fg, 72);
+        reg(key, x, y, 512, 128);
+      }
+      {
+        const x = 640, y = 1280;
+        g.fillStyle = '#f2c230'; g.fillRect(x, y, 128, 128);
+        text('24H', x, y + 4, 128, 40, '#c8322e', 32);
+        text('20分', x, y + 44, 128, 36, '#1a1a1a', 26);
+        text('¥100', x, y + 80, 128, 40, '#1a1a1a', 32);
+        reg('parkPrice', x, y, 128, 128);
+      }
+      {
+        const x = 768, y = 1280;
+        g.fillStyle = '#16305a'; g.fillRect(x, y, 128, 128);
+        g.fillStyle = '#7fd0ff'; g.fillRect(x + 14, y + 14, 100, 48);
+        text('精算機', x, y + 70, 128, 44, '#ffffff', 28);
+        reg('payScreen', x, y, 128, 128);
+      }
+      {
+        const x = 896, y = 1280;
+        g.fillStyle = '#2f9a4a'; g.fillRect(x, y, 128, 128);
+        g.fillStyle = '#ffffff'; g.fillRect(x + 14, y + 14, 100, 100);
+        text('公衆', x, y + 18, 128, 46, '#2f9a4a', 34);
+        text('電話', x, y + 62, 128, 46, '#2f9a4a', 34);
+        reg('phone', x, y, 128, 128);
+      }
     }
     this.texture = new CanvasTexture(cv);
     this.texture.colorSpace = SRGBColorSpace;

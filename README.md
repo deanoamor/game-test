@@ -10,7 +10,9 @@ with open corridors and laundry; offices with roof billboards), a konbini and a 
 street with pavements, tactile strips, curbs and gutters, a signalled crossing with traffic lights, back lanes with red
 paint and 止まれ, utility poles with transformers and wires, double red lamps, green-white guard pipes, vending
 machines, hydrants, cones, convex mirrors, road signs and moving traffic. Around the town: stepped rice paddies, a koi pond, wooded hills on both sides, and
-a forest-covered mountain with a shrine reached by a stone path and red torii gates. Day turns to night: windows, shop
+a forest-covered mountain with a shrine reached by a stone path and red torii gates. No lot is left bare: every free patch becomes a coin car park, a yatai food stall, a pocket park with swings, bicycle
+parking, a vending machine corner with a green phone box, a little roadside shrine, a vegetable garden or a nook of
+pots and bikes. Day turns to night: windows, shop
 signs and lamps light up.
 
 This is the **world only**. Characters come next. (The earlier big-city version is kept in the git history: commit
@@ -89,7 +91,8 @@ e2e/shots.mjs            screenshots with Playwright (npm run dev -- --port 5300
 | ![The main street](docs/preview-street.jpg) | ![The crossing](docs/preview-crossing.jpg) |
 | ![The hillside terraces](docs/preview-hillside.jpg) | ![The ramp street](docs/preview-slope.jpg) |
 | ![Stairs up a terrace wall](docs/preview-stairs.jpg) | ![The konbini](docs/preview-konbini.jpg) |
-| ![The rice paddies](docs/preview-paddies.jpg) | ![The hillside at night](docs/preview-night.jpg) |
+| ![Coin parking, a pocket park and a roadside shrine](docs/preview-fillers.jpg) | ![The rice paddies](docs/preview-paddies.jpg) |
+| ![The hillside at night](docs/preview-night.jpg) | |
 
 ---
 
