@@ -238,7 +238,7 @@ export function heightAt(x: number, z: number): number {
 
 /** The natural ground with the roads cut in (what the terrain mesh shows outside the town and the paddies). */
 /** On the bridge over the underpass. */
-export const onBridge = (x: number, z: number) => Math.abs(x - UNDERPASS.x) < 4.6 && Math.abs(z - UNDERPASS.z) < UNDERPASS.cut + 0.3;
+export const onBridge = (x: number, z: number) => Math.abs(x - UNDERPASS.x) < 4.6 && Math.abs(z - UNDERPASS.z) < UNDERPASS.fill + 0.3;
 
 export function naturalHeight(x: number, z: number): number {
   const h = baseHeight(x, z);

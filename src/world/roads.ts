@@ -1,6 +1,6 @@
 import { Group, Mesh, MeshStandardMaterial } from 'three';
 import { GeoBuilder, toRgb, type V3 } from '../util/builder';
-import { getRoads, type RoadPath } from './config';
+import { getRoads, onBridge, type RoadPath } from './config';
 
 const ASPHALT = '#4a4e55';
 
@@ -30,8 +30,11 @@ function ribbon(b: GeoBuilder, p: RoadPath, o: { stoneFrom?: number; center?: 'd
     const stoneCol = stone[Math.floor(i / 1) % 2];
     b.quadFacing(L0, R0, R1, L1, [0, 1, 0], isStone ? stoneCol : toRgb(ASPHALT));
     const drop = 1.4;
-    b.quadFacing(L0, L1, [L1[0] + f1.nx * 1.0, y1 - drop, L1[2] + f1.nz * 1.0], [L0[0] + f0.nx * 1.0, y0 - drop, L0[2] + f0.nz * 1.0], [f0.nx, 0.4, f0.nz], dirt);
-    b.quadFacing(R0, R1, [R1[0] - f1.nx * 1.0, y1 - drop, R1[2] - f1.nz * 1.0], [R0[0] - f0.nx * 1.0, y0 - drop, R0[2] - f0.nz * 1.0], [-f0.nx, 0.4, -f0.nz], dirt);
+    // no earth skirts where the road crosses the bridge over the underpass
+    if (!onBridge(p.x[i], p.z[i]) || p.name !== 'cross') {
+      b.quadFacing(L0, L1, [L1[0] + f1.nx * 1.0, y1 - drop, L1[2] + f1.nz * 1.0], [L0[0] + f0.nx * 1.0, y0 - drop, L0[2] + f0.nz * 1.0], [f0.nx, 0.4, f0.nz], dirt);
+      b.quadFacing(R0, R1, [R1[0] - f1.nx * 1.0, y1 - drop, R1[2] - f1.nz * 1.0], [R0[0] - f0.nx * 1.0, y0 - drop, R0[2] - f0.nz * 1.0], [-f0.nx, 0.4, -f0.nz], dirt);
+    }
     const line = (off: number, cw: number, color: string) => {
       const a: V3 = [p.x[i] + f0.nx * (off + cw), y0 + 0.012, p.z[i] + f0.nz * (off + cw)], c: V3 = [p.x[i] + f0.nx * (off - cw), y0 + 0.012, p.z[i] + f0.nz * (off - cw)];
       const d: V3 = [p.x[i + 1] + f1.nx * (off + cw), y1 + 0.012, p.z[i + 1] + f1.nz * (off + cw)], e: V3 = [p.x[i + 1] + f1.nx * (off - cw), y1 + 0.012, p.z[i + 1] + f1.nz * (off - cw)];

@@ -195,12 +195,14 @@ export function buildUnderpass(at: (x: number) => Ctx) {
     const ya = fy(x0), yb = fy(x1);
     for (const s of [-1, 1]) {
       const zo = U.z + s * (U.fill + 0.3);
-      const ta = naturalHeight(x0, zo), tb = naturalHeight(x1, zo);
+      let ta = naturalHeight(x0, zo), tb = naturalHeight(x1, zo);
+      // under the bridge the wall and the fill stop below the deck (which follows the cross street's slope)
+      if (Math.abs(xm - U.x) < 5.2) ta = tb = Math.min(cy(U.z + s * U.wall), cy(U.z + s * (U.fill + 0.3))) - 1.2;
       // the wall with its cap, the fill behind it (its top is the ground), the walkway at its foot
       wallSeg(B, x0, U.z + s * (U.wall + 0.25), x1, U.z + s * (U.wall + 0.25), ya - 0.6, ta + 0.15, yb - 0.6, tb + 0.15, 0.5, '#b9b6ad', '#d2cfc6');
       wallSeg(B, x0, U.z + s * (U.wall + 0.5 + (U.fill - U.wall - 0.5) / 2), x1, U.z + s * (U.wall + 0.5 + (U.fill - U.wall - 0.5) / 2), ya - 0.6, ta, yb - 0.6, tb, U.fill - U.wall - 0.5, '#a9a69c', Math.abs(xm - U.x) < 4.6 ? '#7d7a72' : '#86b24e');
       wallSeg(B, x0, U.z + s * 3.85, x1, U.z + s * 3.85, ya - 0.5, ya + 0.15, yb - 0.5, yb + 0.15, 0.7, '#c4c0b6', '#cfcbc0');
-      if (ta - ya > 1.2 && Math.abs(xm - U.x) > 4.8) fence(at(xm), x0, U.z + s * (U.wall + 0.4), ta + 0.15, x1, U.z + s * (U.wall + 0.4), tb + 0.15, 1.0, '#7d8a80');
+      if (ta - ya > 1.2 && Math.abs(xm - U.x) > 5.2) fence(at(xm), x0, U.z + s * (U.wall + 0.4), ta + 0.15, x1, U.z + s * (U.wall + 0.4), tb + 0.15, 1.0, '#7d8a80');
       // lights on the wall faces, and a dark band of damp at the foot
       if (Math.round(x0) % 8 === 0 && ta - ya > 2.5) at(xm).litB.box(xm, ya + 3.0, U.z + s * (U.wall - 0.02), 1.2, 0.12, 0.08, '#ffffff', { ao: 0 });
       B.box(xm, (ya + yb) / 2 + 0.45, U.z + s * (U.wall - 0.005), step, 0.3, 0.01, '#8f8c84', { ao: 0 });
@@ -208,7 +210,7 @@ export function buildUnderpass(at: (x: number) => Ctx) {
   }
   // the bridge: a deck following the cross street's slope, parapets with a rail, a name plate
   const B = at(U.x).body;
-  const z0 = U.z - U.cut - 0.3, z1 = U.z + U.cut + 0.3;
+  const z0 = U.z - U.fill - 0.3, z1 = U.z + U.fill + 0.3;
   for (let za = z0; za < z1 - 0.01; za += 1) {
     const zb = Math.min(z1, za + 1), ya = cy(za), yb = cy(zb);
     wallSeg(B, U.x, za, U.x, zb, ya - 1.0, ya - 0.01, yb - 1.0, yb - 0.01, 9.2, '#b3b0a7', '#9a978f');
