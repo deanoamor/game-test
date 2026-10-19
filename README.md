@@ -40,6 +40,7 @@ Static scenes, no skeleton.
 
 | File | Asset |
 |---|---|
+| `japanschool.glb` | Japanese School (school building, clock tower, gym, schoolyard, cherry trees) |
 | `island.glb` | Forest Island diorama |
 
 No animations yet; the character rigs are ready for them.
