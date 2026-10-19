@@ -44,7 +44,7 @@ describe('the shape of the world', () => {
 
   it('cuts the roads into the ground and joins them to the main street', () => {
     const roads = getRoads();
-    expect(roads.map((r) => r.name)).toEqual(['main', 'lane north', 'lane south', 'lane east']);
+    expect(roads.map((r) => r.name)).toEqual(['main', 'cross', 'back north', 'back south', 'west lane', 'east lane', 'shrine path']);
     for (const r of roads) {
       for (let i = 0; i < r.len; i += 5) {
         expect(roadNear(r.x[i], r.z[i]).d).toBeLessThan(0.5);
@@ -52,10 +52,17 @@ describe('the shape of the world', () => {
       }
       for (let i = 1; i < r.len; i++) expect(Math.abs(r.y[i] - r.y[i - 1])).toBeLessThan(1.2);
     }
-    const main = getRoad('main');
-    for (const lane of roads.slice(1)) expect(Math.abs(lane.z[0] - main.z[0]) < 1 || Math.abs(lane.z[0] - 44) < 1).toBe(true);
-    // the north lane ends by the shrine
-    const n = getRoad('lane north');
+    // every street meets another one somewhere
+    for (const r of roads) {
+      let best = Infinity;
+      for (const o of roads) {
+        if (o === r) continue;
+        for (let i = 0; i < r.len; i += 2) for (let j = 0; j < o.len; j += 2) best = Math.min(best, Math.hypot(r.x[i] - o.x[j], r.z[i] - o.z[j]));
+      }
+      expect(best).toBeLessThan(2.5);
+    }
+    // the shrine path ends by the shrine
+    const n = getRoad('shrine path');
     expect(Math.hypot(n.x[n.len - 1] - SHRINE.x, n.z[n.len - 1] - SHRINE.z)).toBeLessThan(SHRINE.radius + 2);
   });
 

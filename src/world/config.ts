@@ -9,9 +9,9 @@ export const HALF = 150;
 export const TERRAIN_HALF = 290;
 
 export const VILLAGE = { cx: 0, cz: 70, hx: 150, hz: 95, height: 2 }; // the flat ground the village stands on
-export const MOUNTAIN = { x: 20, z: -230, radius: 250, height: 215 };
+export const MOUNTAIN = { x: 10, z: -270, radius: 270, height: 255 };
 export const POND = { x: -102, z: 108, radius: 17 };
-export const PADDY = { x: 112, z: 78, hx: 40, hz: 42, height: 1.2 };
+export const PADDY = { x: 120, z: 104, hx: 26, hz: 20, height: 1.2 };
 export const SHRINE = { x: 66, z: -78, radius: 24, height: 30 };
 export const WATER_Y = 0.25;
 
@@ -27,8 +27,8 @@ function baseHeight(x: number, z: number): number {
   const dm = Math.hypot((x - MOUNTAIN.x) * 0.9, z - MOUNTAIN.z);
   if (dm < MOUNTAIN.radius) {
     const t = 1 - dm / MOUNTAIN.radius;
-    h += MOUNTAIN.height * Math.pow(t, 1.75) + fbm(x * 0.03, z * 0.03, 3) * 14 * t;
-    h -= Math.max(0, 1 - dm / 22) * 14; // a crater at the top
+    h += MOUNTAIN.height * Math.pow(t, 1.5) + fbm(x * 0.03, z * 0.03, 3) * 10 * t;
+    h -= Math.max(0, 1 - dm / 20) * 12; // a crater at the top
   }
   const m = mountainMask(x, z);
   if (m > 0) h += (ridged(x * 0.012 + 7, z * 0.012 - 3, 4) * 0.75 + (fbm(x * 0.02, z * 0.02, 3) * 0.5 + 0.5) * 0.25) * m * 62;
@@ -54,10 +54,13 @@ export const rawHeight = baseHeight;
 /** The roads: smooth paths sampled every 2 m, with a smoothed height so they never jump. */
 export interface RoadPath { name: string; width: number; x: number[]; z: number[]; y: number[]; len: number; box: [number, number, number, number] }
 const ROAD_DEFS: { name: string; width: number; pts: [number, number][] }[] = [
-  { name: 'main', width: 8, pts: [[-152, 44], [-100, 44], [-40, 44], [0, 44], [50, 44], [100, 44], [152, 44]] },
-  { name: 'lane north', width: 4.4, pts: [[0, 44], [0, 12], [0, -6], [4, -26], [20, -42], [42, -52], [58, -56], [66, -62], [66, -66]] },
-  { name: 'lane south', width: 5, pts: [[-62, 44], [-62, 80], [-58, 110], [-40, 134]] },
-  { name: 'lane east', width: 4.6, pts: [[72, 44], [72, 76], [80, 104], [94, 126]] },
+  { name: 'main', width: 8, pts: [[-152, 44], [-60, 44], [0, 44], [60, 44], [152, 44]] },
+  { name: 'cross', width: 7, pts: [[0, 126], [0, 84], [0, 44], [0, 8], [0, 2]] },
+  { name: 'back north', width: 4.6, pts: [[-112, 8], [-60, 8], [0, 8], [60, 8], [112, 8]] },
+  { name: 'back south', width: 4.6, pts: [[-112, 84], [-60, 84], [0, 84], [60, 84], [92, 84]] },
+  { name: 'west lane', width: 4.6, pts: [[-62, 8], [-62, 44], [-62, 84], [-60, 112], [-44, 134]] },
+  { name: 'east lane', width: 4.6, pts: [[62, 8], [62, 44], [62, 84], [70, 104], [88, 118]] },
+  { name: 'shrine path', width: 4.2, pts: [[0, 2], [0, -8], [4, -26], [20, -42], [42, -52], [58, -56], [66, -62], [66, -66]] },
 ];
 function buildRoad(def: (typeof ROAD_DEFS)[number]): RoadPath {
   const P = def.pts;
@@ -121,7 +124,7 @@ export function slopeAt(x: number, z: number, d = 2): number {
 
 /** How much forest grows here: 0 (none) to 1 (dense). */
 export function forestDensity(x: number, z: number, h = heightAt(x, z)): number {
-  if (h < 0.8 || h > 135) return 0;
+  if (h < 0.8 || h > 110) return 0;
   const dv = villageDist(x, z);
   if (dv < 2) return 0;
   if (Math.hypot(x - POND.x, z - POND.z) < POND.radius + 6) return 0;
@@ -129,7 +132,7 @@ export function forestDensity(x: number, z: number, h = heightAt(x, z)): number 
   const n = fbm(x * 0.022 + 10, z * 0.022 - 4, 3) * 0.5 + 0.5;
   const base = smoothstep(0.3, 0.55, n);
   const mt = clamp(mountainMask(x, z) * 1.2, 0, 1);
-  const hi = 1 - smoothstep(85, 135, h);
+  const hi = 1 - smoothstep(70, 110, h);
   return clamp((base * 0.6 + mt * 0.7) * hi * smoothstep(2, 18, dv), 0, 1);
 }
 
@@ -146,13 +149,16 @@ export interface Place {
 }
 
 export const PLACES: Place[] = [
-  { key: 'corner', name: 'Ramen Corner', jp: 'ラーメン角', x: -12, z: 36, radius: 26, dist: 30, pitch: 15, yaw: 58 },
-  { key: 'village', name: 'Hoshi Village', jp: '星の村', x: 0, z: 56, radius: 110, dist: 210, pitch: 44, yaw: 14 },
-  { key: 'street', name: 'Main Street', jp: '本通り', x: -62, z: 44, radius: 40, dist: 70, pitch: 28, yaw: 62 },
-  { key: 'paddies', name: 'Rice Paddies', jp: '田んぼ', x: PADDY.x, z: PADDY.z, radius: 48, dist: 105, pitch: 34, yaw: -28 },
-  { key: 'pond', name: 'Koi Pond', jp: '鯉の池', x: POND.x, z: POND.z, radius: 26, dist: 62, pitch: 36, yaw: 30 },
-  { key: 'shrine', name: 'Kamigawa Shrine', jp: '神川神社', x: SHRINE.x, z: SHRINE.z + 8, radius: 34, dist: 80, pitch: 30, yaw: 12 },
-  { key: 'mountain', name: 'Mt. Hoshi', jp: '星山', x: 18, z: -70, radius: 150, dist: 330, pitch: 18, yaw: 8 },
+  { key: 'street', name: 'Hoshi Ginza', jp: '星銀座', x: -16, z: 42, radius: 30, dist: 15, pitch: 9, yaw: 70 },
+  { key: 'crossing', name: 'Ekimae Crossing', jp: '駅前交差点', x: 0, z: 44, radius: 18, dist: 24, pitch: 12, yaw: 200 },
+  { key: 'konbini', name: 'Hoshi Mart', jp: 'ほしマート', x: 16, z: 56, radius: 16, dist: 22, pitch: 12, yaw: 150 },
+  { key: 'ramen', name: 'Ramen Corner', jp: 'ラーメン角', x: 34, z: 40, radius: 16, dist: 20, pitch: 12, yaw: 20 },
+  { key: 'backlane', name: 'Back Lane', jp: '裏通り', x: -30, z: 8, radius: 26, dist: 16, pitch: 10, yaw: 80 },
+  { key: 'town', name: 'Hoshi Town', jp: '星の町', x: 0, z: 46, radius: 110, dist: 190, pitch: 42, yaw: 16 },
+  { key: 'paddies', name: 'Rice Paddies', jp: '田んぼ', x: PADDY.x, z: PADDY.z, radius: 34, dist: 80, pitch: 32, yaw: -28 },
+  { key: 'pond', name: 'Koi Pond', jp: '鯉の池', x: POND.x, z: POND.z, radius: 24, dist: 56, pitch: 34, yaw: 30 },
+  { key: 'shrine', name: 'Kamigawa Shrine', jp: '神川神社', x: SHRINE.x, z: SHRINE.z + 8, radius: 32, dist: 80, pitch: 30, yaw: 12 },
+  { key: 'mountain', name: 'Mt. Hoshi', jp: '星山', x: 6, z: -40, radius: 120, dist: 360, pitch: 14, yaw: 4 },
 ];
 
 export function placeAt(x: number, z: number): Place {
@@ -167,5 +173,5 @@ export function placeAt(x: number, z: number): Place {
   const mk = (key: string, name: string, jp: string): Place => ({ key, name, jp, x, z, radius: 1, dist: 1, pitch: 1, yaw: 0 });
   if (h > 70) return mk('peak', 'Mt. Hoshi', '星山');
   if (villageDist(x, z) > 2 && forestDensity(x, z, h) > 0.3) return mk('forest', 'Hoshi Forest', '星の森');
-  return mk('village', 'Hoshi Village', '星の村');
+  return mk('town', 'Hoshi Town', '星の町');
 }

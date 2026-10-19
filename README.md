@@ -1,10 +1,14 @@
-# Hoshi no Kuni 星の国 — a small Japanese village under a big mountain
+# Hoshi no Kuni 星の国 — a dense little Japanese town under a big mountain
 
-A 3D world in the browser (three.js + TypeScript + Vite), seen from a drone. It is small on purpose and full of detail:
-a village street with a ramen shop, vending machines, utility poles with wires, red street lamps, a convex mirror and a
-mini truck; houses with tiled roofs, shutters, pent eaves, balconies and air conditioners; rice paddies, a koi pond,
-apartment blocks in the distance, and a forest-covered mountain with a shrine reached by a stone path and red torii
-gates. Day turns to night: windows, shop signs and lamps light up.
+A 3D world in the browser (three.js + TypeScript + Vite), seen from a drone. It is small on purpose and packed with
+detail, like a real Japanese neighbourhood: buildings shoulder to shoulder and every one different (shops with box,
+striped and curved awnings, round signs, noren and banners; a café with outside stairs; tiled walls; apartment blocks
+with open corridors and laundry; offices with roof billboards), a konbini and a supermarket with car parks, a main
+street with pavements, tactile strips, curbs and gutters, a signalled crossing with traffic lights, back lanes with red
+paint and 止まれ, utility poles with transformers and wires, double red lamps, green-white guard pipes, vending
+machines, hydrants, cones, convex mirrors, road signs and moving traffic. Around the town: rice paddies, a koi pond, and
+a forest-covered mountain with a shrine reached by a stone path and red torii gates. Day turns to night: windows, shop
+signs and lamps light up.
 
 This is the **world only**. Characters come next. (The earlier big-city version is kept in the git history: commit
 `fb057cc`, tag `city-world`.)
@@ -79,8 +83,9 @@ e2e/shots.mjs            screenshots with Playwright (npm run dev -- --port 5300
 
 | | |
 |---|---|
-| ![The ramen corner](docs/preview-corner.jpg) | ![The village](docs/preview-village.jpg) |
-| ![The rice paddies](docs/preview-paddies.jpg) | ![Night at the ramen corner](docs/preview-night.jpg) |
+| ![The main street](docs/preview-street.jpg) | ![The crossing](docs/preview-crossing.jpg) |
+| ![The konbini](docs/preview-konbini.jpg) | ![The town](docs/preview-town.jpg) |
+| ![The rice paddies](docs/preview-paddies.jpg) | ![Night on the main street](docs/preview-night.jpg) |
 
 ---
 

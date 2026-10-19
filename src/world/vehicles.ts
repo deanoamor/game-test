@@ -1,6 +1,6 @@
 import { GeoBuilder } from '../util/builder';
 
-export type VehicleKind = 'car' | 'van' | 'kei' | 'bus';
+export type VehicleKind = 'car' | 'van' | 'kei' | 'bus' | 'truck' | 'keivan';
 
 /** A little low-poly vehicle, nose toward +X, standing on y = 0, in the given body colour. */
 export function buildVehicle(kind: VehicleKind, body = '#ffffff'): GeoBuilder {
@@ -47,6 +47,31 @@ export function buildVehicle(kind: VehicleKind, body = '#ffffff'): GeoBuilder {
       b.box(1.66, 0.7, 0.5, 0.05, 0.14, 0.3, '#fff3c0', { ao: 0 });
       b.box(1.66, 0.7, -0.5, 0.05, 0.14, 0.3, '#fff3c0', { ao: 0 });
       for (const x of [-1.05, 1.05]) for (const z of [-0.66, 0.66]) wheel(x, z, 0.3);
+      break;
+    }
+    case 'truck': {
+      // a delivery truck: a cab and a tall box
+      b.box(2.1, 1.05, 0, 1.6, 1.5, 1.9, body, { ao: 0.2 });
+      b.box(2.35, 1.45, 0, 1.0, 0.6, 1.92, glass, { ao: 0 });
+      b.box(-0.7, 1.65, 0, 4.2, 2.3, 2.1, '#e8eaec', { ao: 0.18 });
+      b.box(-0.7, 1.9, 1.06, 3.4, 0.5, 0.02, '#3a6ab8', { ao: 0 });
+      b.box(-0.7, 1.9, -1.06, 3.4, 0.5, 0.02, '#3a6ab8', { ao: 0 });
+      b.box(2.92, 0.7, 0.62, 0.05, 0.16, 0.36, '#fff3c0', { ao: 0 });
+      b.box(2.92, 0.7, -0.62, 0.05, 0.16, 0.36, '#fff3c0', { ao: 0 });
+      for (const x of [-1.9, 2.0]) for (const z of [-0.95, 0.95]) wheel(x, z, 0.4);
+      break;
+    }
+    case 'keivan': {
+      // a tall boxy kei car
+      b.box(0, 0.62, 0, 3.4, 0.62, 1.48, body, { ao: 0.25 });
+      b.box(-0.1, 1.3, 0, 2.9, 0.78, 1.44, body, { ao: 0.2 });
+      b.box(1.2, 1.32, 0, 0.6, 0.6, 1.46, glass, { ao: 0 });
+      b.box(-0.2, 1.36, 0, 2.2, 0.48, 1.5, glass, { ao: 0 });
+      b.box(1.71, 0.7, 0.5, 0.05, 0.16, 0.3, '#fff3c0', { ao: 0 });
+      b.box(1.71, 0.7, -0.5, 0.05, 0.16, 0.3, '#fff3c0', { ao: 0 });
+      b.box(-1.71, 0.9, 0.55, 0.05, 0.3, 0.16, '#e8402a', { ao: 0 });
+      b.box(-1.71, 0.9, -0.55, 0.05, 0.3, 0.16, '#e8402a', { ao: 0 });
+      for (const x of [-1.15, 1.15]) for (const z of [-0.68, 0.68]) wheel(x, z, 0.3);
       break;
     }
     case 'bus': {

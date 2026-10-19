@@ -6,6 +6,7 @@ import { FACES, NORMAL, TANGENT, dk, hangSign, newCtx, wallBox, wallPicture, wal
 export interface ShopSpec {
   awning: [string, string];
   curved?: boolean;
+  style?: 'stripes' | 'box' | 'none';
   sign?: string; // a wide sign on the awning front (atlas name)
   noren?: string;
   banners?: string[]; // tall banners hung from the wall (atlas names)
@@ -38,6 +39,14 @@ export interface HouseSpec {
   glass?: string;
   lit?: number;
   shop?: ShopSpec;
+  tiles?: string; // ground floor walls covered in small tiles of this colour
+  stairs?: 'left' | 'right'; // outside steel stairs up the side to the first floor
+  board?: string; // a wide sign board over the ground floor (atlas name)
+  roundSign?: string; // a round sign on a bracket at the corner (atlas name)
+  lattice?: string; // wooden slats over the front of the ground floor
+  planters?: boolean; // window boxes with plants under the upper windows
+  bars?: boolean; // grilles on the ground floor windows
+  parapet?: string; // for flat roofs: the low wall around the roof
 }
 
 const FRONT: Face = '+z';
@@ -65,7 +74,7 @@ export function windowUnit(ctx: Ctx, f: Face, hw: number, hd: number, u: number,
 }
 
 /** An air conditioner on a wall: a box, a dark fan and a hose. */
-function airConditioner(ctx: Ctx, f: Face, hw: number, hd: number, u: number, y: number) {
+export function airConditioner(ctx: Ctx, f: Face, hw: number, hd: number, u: number, y: number) {
   wallBox(ctx.body, f, hw, hd, u, y, 0.9, 0.5, 0.3, 0.15, '#e6e9eb');
   wallBox(ctx.body, f, hw, hd, u - 0.12, y, 0.34, 0.34, 0.04, 0.32, '#4a4f55', 0);
   wallBox(ctx.body, f, hw, hd, u + 0.3, y - 0.05, 0.12, 0.22, 0.05, 0.32, '#c8ccd0', 0);
@@ -73,6 +82,7 @@ function airConditioner(ctx: Ctx, f: Face, hw: number, hd: number, u: number, y:
 }
 
 type Pt = [number, number, number];
+const pick2 = <T,>(r: () => number, a: readonly T[]): T => a[Math.floor(r() * a.length) % a.length];
 const lerp3 = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
 /** Rows of tiles on a roof slope: thin darker strips from the eave line to the ridge line. */
@@ -95,9 +105,16 @@ function tileRows(ctx: Ctx, e0: Pt, e1: Pt, r0: Pt, r1: Pt, color: Color, rows =
 /** The roof: slopes, tile rows, ridge, fascia boards and gutters. Returns the roof peak height. */
 function roof(ctx: Ctx, spec: HouseSpec, H: number): number {
   if (spec.roof === 'flat') {
-    ctx.body.box(0, H + 0.12, 0, spec.w + 0.3, 0.24, spec.d + 0.3, spec.trim);
-    ctx.body.box(0, H + 0.45, 0, spec.w + 0.3, 0.5, 0.14, spec.trim, { ao: 0 });
-    return H + 0.3;
+    const B = ctx.body;
+    const pc = spec.parapet ?? spec.trim;
+    B.box(0, H + 0.1, 0, spec.w + 0.2, 0.2, spec.d + 0.2, '#9a9a96', { ao: 0 });
+    for (const [x, z, sx, sz] of [[0, spec.d / 2, spec.w + 0.3, 0.2], [0, -spec.d / 2, spec.w + 0.3, 0.2], [spec.w / 2, 0, 0.2, spec.d + 0.3], [-spec.w / 2, 0, 0.2, spec.d + 0.3]] as const) B.box(x, H + 0.45, z, sx, 0.7, sz, pc, { ao: 0.05 });
+    // roof gear: a water tank or air conditioners and a little stair hut
+    if (ctx.r() < 0.5) {
+      for (const [lx, lz] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) B.box(spec.w * 0.2 + lx, H + 0.6, lz, 0.08, 1.0, 0.08, '#5a5f66', { ao: 0 });
+      B.frustum(spec.w * 0.2, H + 1.1, 0, 0.75, 0.75, 1.3, 10, pick2(ctx.r, ['#9fb3c4', '#c9cfd4', '#b98a6a']));
+    } else for (let k = 0; k < 2; k++) B.box(-spec.w * 0.2 + k * 1.0, H + 0.5, -spec.d * 0.2, 0.8, 0.6, 0.5, '#e6e9eb', { ao: 0.1 });
+    return H + 0.8;
   }
   const ov = 0.7;
   const RW = spec.w + ov * 2, RD = spec.d + ov * 2;
@@ -168,6 +185,7 @@ export function buildHouse(spec: HouseSpec, r: () => number, atlas: SignAtlas): 
     }
   }
   const H = base + spec.floors * fh;
+  if (spec.tiles) tileWalls(ctx, w, d, base, fh, spec.tiles);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) B.box(sx * hw, base + (spec.floors * fh) / 2, sz * hd, 0.22, spec.floors * fh, 0.22, dk(spec.wall, 0.9), { ao: 0.08 });
 
   // windows
@@ -181,7 +199,15 @@ export function buildHouse(spec: HouseSpec, r: () => number, atlas: SignAtlas): 
         const u = -L / 2 + (c + 0.5) * (L / cols);
         if (f === FRONT && fl === 0 && (spec.shop || Math.abs(u - doorU) < 1.4)) continue;
         if (f === FRONT && fl >= 1 && spec.balcony && c === Math.floor(cols / 2)) continue;
-        windowUnit(ctx, f, hw, hd, u, yb, Math.min(1.55, L / cols - 0.9), 1.3, { frame, glass, lit: r() < litP, shutter: spec.shutters && r() < 0.8 ? spec.shutters : undefined });
+        const ww = Math.min(1.55, L / cols - 0.9);
+        windowUnit(ctx, f, hw, hd, u, yb, ww, 1.3, { frame, glass, lit: r() < litP, shutter: spec.shutters && r() < 0.8 ? spec.shutters : undefined });
+        if (spec.bars && fl === 0) for (let k = 0; k < 5; k++) wallBox(B, f, hw, hd, u - ww / 2 + 0.12 + (k * (ww - 0.24)) / 4, yb + 0.65, 0.04, 1.25, 0.04, 0.16, '#d8dcdf', 0);
+        if (spec.planters && fl > 0 && f === FRONT && r() < 0.7) {
+          wallBox(B, f, hw, hd, u, yb - 0.12, ww + 0.1, 0.26, 0.32, 0.26, '#8a6a46');
+          const p0 = wp(f, 0, 0, hw, hd, u, yb + 0.12, 0.26);
+          B.blob(p0[0], p0[1], p0[2], ww * 0.45, 0.22, 0.2, '#5aa845', { seed: c + fl * 7 });
+          if (r() < 0.6) for (let k = 0; k < 3; k++) { const q = wp(f, 0, 0, hw, hd, u - ww / 3 + k * (ww / 3), yb + 0.28, 0.32); B.blob(q[0], q[1], q[2], 0.08, 0.08, 0.08, pick2(r, ['#f08aac', '#ffe36a', '#e8402a', '#ffffff']), { detail: 0, jitter: 0.02 }); }
+        }
       }
     }
   }
@@ -233,6 +259,27 @@ export function buildHouse(spec: HouseSpec, r: () => number, atlas: SignAtlas): 
   wallBox(B, '+x', hw, hd, -hd + 0.5, 1.4, 0.35, 0.5, 0.2, 0.1, '#d6d9dc');
   wallBox(B, '+x', hw, hd, hd - 0.12, H / 2, 0.1, H, 0.1, 0.07, '#9aa0a6', 0);
 
+  if (spec.stairs) outsideStairs(ctx, spec, base, fh);
+  if (spec.board) {
+    const c = atlas.get(spec.board);
+    const bw = Math.min(w - 0.6, 5.4), bh = bw / c.aspect;
+    wallBox(B, FRONT, hw, hd, 0, base + fh - 0.35, bw + 0.2, bh + 0.2, 0.12, 0.08, '#2a2c30');
+    wallPicture(ctx.sign, FRONT, hw, hd, 0, base + fh - 0.35 - bh / 2, bw, bh, c, 0.15);
+  }
+  if (spec.roundSign) {
+    const c = atlas.get(spec.roundSign);
+    const u = hw - 0.4;
+    const p0 = wp(FRONT, 0, 0, hw, hd, u, base + fh + 0.6, 0.55);
+    B.box(p0[0], p0[1] + 0.62, p0[2] - 0.2, 0.06, 0.06, 0.7, '#3a3a3a', { ao: 0 });
+    B.disc(p0[0], p0[1], p0[2], 0.6, 0.1, 'x', '#c8322e', 18);
+    for (const side of [1, -1]) {
+      const x = p0[0] + side * 0.056;
+      const uL = side > 0 ? c.u1 : c.u0, uR = side > 0 ? c.u0 : c.u1;
+      ctx.sign.quadFacing([x, p0[1] - 0.55, p0[2] - 0.55], [x, p0[1] - 0.55, p0[2] + 0.55], [x, p0[1] + 0.55, p0[2] + 0.55], [x, p0[1] + 0.55, p0[2] - 0.55], [side, 0, 0], [1, 1, 1], [[uL, c.v0], [uR, c.v0], [uR, c.v1], [uL, c.v1]]);
+    }
+  }
+  if (spec.lattice) for (let k = 0; k < Math.floor((w - 1.2) / 0.16); k++) wallBox(B, FRONT, hw, hd, -w / 2 + 0.6 + k * 0.16, base + 1.6, 0.05, 1.9, 0.05, 0.2, spec.lattice, 0);
+
   // the way in: a shop front, or a front door with a step and a porch light
   if (spec.shop) shopFront(ctx, spec, atlas);
   else {
@@ -276,6 +323,22 @@ function shopFront(ctx: Ctx, spec: HouseSpec, atlas: SignAtlas) {
   }
   // the awning: stripes over a bent profile, then a valance with the sign
   const aw = w - 0.5;
+  if (shop.style === 'box' || shop.style === 'none') {
+    if (shop.style === 'box') {
+      const a = wp(f, 0, 0, hw, hd, -aw / 2, 3.45, 0.05), b = wp(f, 0, 0, hw, hd, aw / 2, 3.45, 0.05);
+      const c = wp(f, 0, 0, hw, hd, aw / 2, 3.0, 1.3), e = wp(f, 0, 0, hw, hd, -aw / 2, 3.0, 1.3);
+      const col = new Color(shop.awning[0]);
+      B.quadFacing(a, b, c, e, [0, 1, 0.6], [col.r, col.g, col.b]);
+      wallBox(B, f, hw, hd, 0, 2.78, aw, 0.45, 0.08, 1.3, dk(shop.awning[0], 0.9), 0);
+      wallBox(B, f, hw, hd, 0, 2.58, aw, 0.05, 0.1, 1.31, shop.awning[1], 0);
+    }
+    if (shop.sign) {
+      const c = atlas.get(shop.sign);
+      const sw = Math.min(aw - 0.8, 3.6);
+      wallBox(B, f, hw, hd, 0, 4.0, sw + 0.2, sw / c.aspect + 0.2, 0.12, 0.08, '#2a2c30');
+      wallPicture(ctx.sign, f, hw, hd, 0, 4.0 - sw / c.aspect / 2, sw, sw / c.aspect, c, 0.15);
+    }
+  } else {
   const n = Math.max(6, Math.round(aw / 0.65));
   const profile: [number, number][] = shop.curved
     ? [[0, 3.55], [0.55, 3.5], [1.0, 3.32], [1.3, 3.05], [1.4, 2.8]]
@@ -296,6 +359,7 @@ function shopFront(ctx: Ctx, spec: HouseSpec, atlas: SignAtlas) {
     const sw = Math.min(aw - 0.8, 3.8);
     wallPicture(ctx.sign, f, hw, hd, 0, profile[profile.length - 1][1] - 0.46, sw, sw / c.aspect, c, profile[profile.length - 1][0] + 0.09);
   }
+  }
   // tall banners on the wall, and a menu board on the ground
   (shop.banners ?? []).forEach((name, i) => {
     const c = atlas.get(name);
@@ -310,4 +374,39 @@ function shopFront(ctx: Ctx, spec: HouseSpec, atlas: SignAtlas) {
   ctx.litA.box(lant[0], lant[1], lant[2], 0.34, 0.5, 0.34, '#ff6a3a', { ao: 0 });
   B.box(lant[0], lant[1] + 0.32, lant[2], 0.4, 0.06, 0.4, '#222', { ao: 0 });
   void TANGENT;
+}
+
+/** Small square tiles over the ground floor walls: a fill and a grid of grout lines. */
+function tileWalls(ctx: Ctx, w: number, d: number, base: number, fh: number, color: string) {
+  const hw = w / 2, hd = d / 2;
+  const grout = new Color(color).multiplyScalar(0.82);
+  for (const f of FACES) {
+    const L = f === '+z' || f === '-z' ? w : d;
+    wallQuad(ctx.body, f, hw, hd, 0, base, L - 0.02, fh - 0.2, color, 0.012);
+    for (let y = base + 0.3; y < base + fh - 0.25; y += 0.3) wallQuad(ctx.body, f, hw, hd, 0, y, L - 0.02, 0.025, grout, 0.016);
+    for (let u = -L / 2 + 0.3; u < L / 2 - 0.1; u += 0.3) wallQuad(ctx.body, f, hw, hd, u, base, 0.025, fh - 0.2, grout, 0.016);
+  }
+}
+
+/** Steel stairs up the outside of a side wall to a landing and a door on the first floor. */
+function outsideStairs(ctx: Ctx, spec: HouseSpec, base: number, fh: number) {
+  const B = ctx.body;
+  const s = spec.stairs === 'right' ? 1 : -1;
+  const x = s * (spec.w / 2 + 0.62);
+  const top = base + fh;
+  const n = 15;
+  const rise = top / n, run = Math.min(0.26, (spec.d - 1.6) / n);
+  const z0 = spec.d / 2 - 0.4;
+  for (let k = 0; k < n; k++) B.box(x, rise * (k + 1) - 0.03, z0 - k * run, 1.0, 0.06, run + 0.02, '#8a9096', { ao: 0 });
+  const zTop = z0 - n * run;
+  B.box(x, top - 0.06, zTop - 0.6, 1.1, 0.12, 1.3, '#8a9096', { ao: 0.05 });
+  for (const sz of [zTop - 1.2, z0]) B.box(x + s * 0.5, (sz === z0 ? 0.1 : top) / 2, sz, 0.08, sz === z0 ? 0.2 : top, 0.08, '#6a7076', { ao: 0 });
+  B.box(x + s * 0.5, top / 2, zTop - 1.2, 0.08, top, 0.08, '#6a7076', { ao: 0 });
+  B.cable([[x + s * 0.5, 1.0, z0], [x + s * 0.5, top + 0.95, zTop]], 0.03, '#5a6066');
+  B.cable([[x - s * 0.5, 1.0, z0], [x - s * 0.5, top + 0.95, zTop]], 0.025, '#5a6066');
+  B.box(x + s * 0.5, top + 0.95, zTop - 0.6, 0.05, 0.05, 1.3, '#5a6066', { ao: 0 });
+  for (let k = 0; k < 4; k++) B.box(x + s * 0.5, top + 0.5, zTop - 0.1 - k * 0.35, 0.03, 0.9, 0.03, '#5a6066', { ao: 0 });
+  // the upstairs door on the side wall
+  const f: Face = s > 0 ? '+x' : '-x';
+  wallBox(B, f, spec.w / 2, spec.d / 2, zTop - 0.6, top + 1.05, 0.9, 2.0, 0.08, 0.05, '#7a8088');
 }

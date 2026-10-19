@@ -19,6 +19,9 @@ const C = {
   riceA: new Color('#8fcf4a'),
   riceB: new Color('#a6d94f'),
   riceWater: new Color('#9fd2c0'),
+  paveA: new Color('#a7a49c'),
+  paveB: new Color('#8f8c86'),
+  gravel: new Color('#b5ab98'),
 };
 
 const tmp = new Color();
@@ -34,9 +37,16 @@ export function groundColor(x: number, z: number, h: number, ny: number, out = n
   const high = smoothstep(55, 120, h);
   out.lerp(C.rock, clamp(steep * 0.9 + high * 0.6, 0, 1) * (mountainMask(x, z) > 0.05 || h > 40 ? 1 : 0.4) * (1 - f * 0.55));
   out.lerp(C.rockDark, smoothstep(0.55, 0.4, ny) * 0.5);
-  out.lerp(C.alpine, smoothstep(105, 150, h) * 0.8);
-  const snowLine = 150 + fbm(x * 0.04, z * 0.04, 2) * 22 - steep * 30;
+  out.lerp(C.alpine, smoothstep(95, 140, h) * 0.8);
+  const snowLine = 140 + fbm(x * 0.04, z * 0.04, 2) * 18 - steep * 16;
   out.lerp(C.snow, smoothstep(snowLine - 8, snowLine + 10, h));
+  // the town is all concrete, asphalt yards and gravel lots between the houses
+  const td = Math.max(Math.abs(x) - 116, z < 44 ? -14 - z : z - 102);
+  if (td < 4) {
+    const pn = fbm(x * 0.11 + 7, z * 0.11 - 3, 2) * 0.5 + 0.5;
+    tmp.copy(C.paveA).lerp(C.paveB, smoothstep(0.4, 0.7, pn)).lerp(C.gravel, smoothstep(0.62, 0.8, fbm(x * 0.07 - 9, z * 0.07 + 2, 2) * 0.5 + 0.5) * 0.7);
+    out.lerp(tmp, smoothstep(4, -2, td));
+  }
   // the paddies stand on muddy ground (the plots and banks are built as real geometry)
   const pd = Math.max(Math.abs(x - PADDY.x) - PADDY.hx, Math.abs(z - PADDY.z) - PADDY.hz);
   if (pd < 0) out.copy(C.dirt).lerp(C.riceA, 0.35);
