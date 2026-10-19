@@ -25,6 +25,7 @@ Static scenes, no skeleton.
 | `japanhouse.glb` | Japanese House (minka with shoji doors, veranda and garden) |
 | `japanschool.glb` | Japanese School (school building, clock tower, gym, schoolyard, cherry trees) |
 | `japanshrine.glb` | Japanese Shrine (torii, lanterns, lion-dogs, fountain, main hall) |
+| `japanalley.glb` | Japanese Alley (back alley of plaster shophouses, after a low-poly reference) |
 
 ## Experimental
 
@@ -43,7 +44,6 @@ Static scenes, no skeleton.
 | File | Asset |
 |---|---|
 | `japanshops.glb` | Japanese Shopping Street (eight shops, arch, poles, vending machines) |
-| `japanalley.glb` | Japanese Alley (back alley of plaster shophouses, after a low-poly reference) |
 | `island.glb` | Forest Island diorama |
 
 No animations yet; the character rigs are ready for them.
