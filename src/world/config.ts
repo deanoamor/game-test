@@ -122,15 +122,22 @@ export const rawHeight = baseHeight;
 
 /** The roads: smooth paths sampled every 2 m, with a smoothed height so they never jump. */
 export interface RoadPath { name: string; width: number; x: number[]; z: number[]; y: number[]; len: number; box: [number, number, number, number] }
-const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: boolean }[] = [
+/**
+ * The underpass south of the town: the frontage road (west lane to east lane) dips into a concrete U-cut and passes
+ * under a short bridge that carries the cross street on to the toll plaza.
+ */
+export const UNDERPASS = { x: 0, z: 127, half: 31, wall: 4.2, cut: 7.4, fill: 10.2, depth: 3.4, rise: 1.3 };
+const RISE = (z: number) => (z > TOWN.z1 ? UNDERPASS.rise * (1 - smoothstep(6, 24, Math.abs(z - UNDERPASS.z))) : 0);
+const DIP = (x: number) => -UNDERPASS.depth * (1 - smoothstep(8, 36, Math.abs(x - UNDERPASS.x)));
+
+const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: boolean; bump?: (x: number, z: number) => number }[] = [
   { name: 'main', width: 8, pts: [[-152, 44], [-60, 44], [0, 44], [60, 44], [152, 44]] },
-  { name: 'cross', width: 7, pts: [[0, 127], [0, 84], [0, 44], [0, 8], [0, 2]] },
+  { name: 'cross', width: 7, bump: (_x, z) => RISE(z), pts: [[0, 172.6], [0, 150], [0, 127], [0, 104], [0, 84], [0, 44], [0, 8], [0, 2]] },
   { name: 'back north', width: 4.6, pts: [[-112, 8], [-60, 8], [0, 8], [60, 8], [112, 8]] },
   { name: 'back south', width: 4.6, pts: [[-112, 84], [-60, 84], [0, 84], [60, 84], [92, 84]] },
   { name: 'west lane', width: 4.6, pts: [[-62, 8], [-62, 44], [-62, 84], [-62, 106], [-60, 118], [-53, 125.6], [-44, 127]] },
   { name: 'east lane', width: 4.6, pts: [[62, 8], [62, 44], [62, 84], [62, 106], [64, 118], [71, 125.6], [80, 127]] },
-  { name: 'ic access', width: 7, pts: [[0, 127], [0, 150], [0, 172.6]] },
-  { name: 'frontage', width: 7, pts: [[-48, 127], [-20, 127], [0, 127], [40, 127], [83, 127]] },
+  { name: 'frontage', width: 7, bump: (x) => DIP(x), pts: [[-48, 127], [-20, 127], [0, 127], [40, 127], [83, 127]] },
   { name: 'shrine path', width: 4.2, even: true, pts: [[0, 2], [0, -8], [4, -26], [20, -42], [42, -52], [58, -56], [66, -62], [66, -66]] },
 ];
 function buildRoad(def: (typeof ROAD_DEFS)[number]): RoadPath {
@@ -164,6 +171,7 @@ function buildRoad(def: (typeof ROAD_DEFS)[number]): RoadPath {
     }
     return smooth[i];
   });
+  if (def.bump) for (let i = 0; i < y.length; i++) y[i] += def.bump(pts[i][0], pts[i][1]);
   // a path that climbs at an even grade from the town's edge to its end (cut into the hillside)
   if (def.even) {
     const i0 = town.indexOf(false), n = y.length - 1;
@@ -206,9 +214,10 @@ function joinEnds(all: RoadPath[]): RoadPath[] {
 export const getRoad = (name: string): RoadPath => getRoads().find((r) => r.name === name)!;
 
 /** Distance to the nearest road and that road's height there. */
-export function roadNear(x: number, z: number): { d: number; y: number; width: number } {
+export function roadNear(x: number, z: number, only?: (name: string) => boolean): { d: number; y: number; width: number } {
   let best = Infinity, by = 0, bw = 0;
   for (const r of getRoads()) {
+    if (only && !only(r.name)) continue;
     if (x < r.box[0] || x > r.box[2] || z < r.box[1] || z > r.box[3]) continue;
     for (let i = 0; i < r.len; i++) {
       const dx = x - r.x[i], dz = z - r.z[i];
@@ -222,14 +231,22 @@ export function roadNear(x: number, z: number): { d: number; y: number; width: n
 /** The ground you stand on: the town's terraces, the paddy steps, or the natural ground with the roads cut in. */
 export function heightAt(x: number, z: number): number {
   if (inTown(x, z)) return townGround(x, z);
+  if (onBridge(x, z)) return roadNear(x, z, (n) => n === 'cross').y;
   if (inPaddy(x, z)) return paddyY(paddyRow(z));
   return naturalHeight(x, z);
 }
 
 /** The natural ground with the roads cut in (what the terrain mesh shows outside the town and the paddies). */
+/** On the bridge over the underpass. */
+export const onBridge = (x: number, z: number) => Math.abs(x - UNDERPASS.x) < 4.6 && Math.abs(z - UNDERPASS.z) < UNDERPASS.cut + 0.3;
+
 export function naturalHeight(x: number, z: number): number {
   const h = baseHeight(x, z);
-  const { d, y, width } = roadNear(x, z);
+  // the underpass: a cut at the frontage road's level inside the walls, untouched ground behind them
+  const ux = Math.abs(x - UNDERPASS.x), uz = Math.abs(z - UNDERPASS.z);
+  const inCut = ux < UNDERPASS.half && uz < UNDERPASS.cut;
+  if (inCut) return roadNear(x, z, (n) => n === 'frontage').y - 0.25;
+  const { d, y, width } = ux < UNDERPASS.half + 4 && uz < 16 ? roadNear(x, z, (n) => n !== 'frontage') : roadNear(x, z);
   if (!isFinite(d)) return h;
   // fully cut down for a terrain cell's diagonal (3.6 m) beyond the road edge, so no grid triangle can poke through the
   // road surface on a slope; then blending back into the hillside

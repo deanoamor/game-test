@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HALF, MOUNTAIN, PADDY, PLACES, POND, RAMPS, SHRINE, TERRACES, WATER_Y, forestDensity, getRoad, getRoads, heightAt, inTown, paddyY, placeAt, roadNear } from '../src/world/config';
+import { HALF, MOUNTAIN, PADDY, PLACES, POND, RAMPS, SHRINE, TERRACES, WATER_Y, forestDensity, getRoad, getRoads, heightAt, onBridge, inTown, paddyY, placeAt, roadNear } from '../src/world/config';
 import { fbm, noise2 } from '../src/util/noise';
 import { rng } from '../src/util/rng';
 
@@ -49,11 +49,12 @@ describe('the shape of the world', () => {
 
   it('cuts the roads into the ground and joins them to the main street', () => {
     const roads = getRoads();
-    expect(roads.map((r) => r.name)).toEqual(['main', 'cross', 'back north', 'back south', 'west lane', 'east lane', 'ic access', 'frontage', 'shrine path']);
+    expect(roads.map((r) => r.name)).toEqual(['main', 'cross', 'back north', 'back south', 'west lane', 'east lane', 'frontage', 'shrine path']);
     for (const r of roads) {
       for (let i = 0; i < r.len; i += 5) {
         expect(roadNear(r.x[i], r.z[i]).d).toBeLessThan(0.5);
-        expect(Math.abs(heightAt(r.x[i], r.z[i]) - (r.y[i] - 0.06))).toBeLessThan(0.6);
+        // (the frontage road passes under the cross street's bridge: there the ground is the bridge deck)
+        if (r.name !== 'frontage' || !onBridge(r.x[i], r.z[i])) expect(Math.abs(heightAt(r.x[i], r.z[i]) - (r.y[i] - 0.06))).toBeLessThan(0.6);
       }
       for (let i = 1; i < r.len; i++) expect(Math.abs(r.y[i] - r.y[i - 1])).toBeLessThan(1.2);
     }

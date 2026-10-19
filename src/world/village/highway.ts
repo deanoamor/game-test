@@ -1,9 +1,9 @@
 import { smoothstep } from '../../util/rng';
-import { EXPRESSWAY, IC, IC_RAMP, icRampY, inPaddy, naturalHeight } from '../config';
+import { EXPRESSWAY, IC, IC_RAMP, UNDERPASS, getRoad, icRampY, inPaddy, naturalHeight, roadNear } from '../config';
 import type { Cell, SignAtlas } from '../signs';
 import { raiseSkyline } from '../skyline';
 import type { Ctx } from './frame';
-import { wallSeg } from './ground';
+import { fence, wallSeg } from './ground';
 
 /**
  * The expressway (高速道路): a four-lane deck on piers with concrete barriers, sound walls, a median, lane markings,
@@ -169,4 +169,54 @@ export function buildExpressway(at: (x: number) => Ctx, atlas: SignAtlas) {
     for (const s of [-1, 1]) B.box(s * 3.25, py + 0.02, IC_RAMP.z, 2.5, 0.02, 0.5, WHITE, { ao: 0 });
     raiseSkyline(ox - 4, IC.z0, ox + 4, IC.z0 + 3, py + 4);
   }
+}
+
+/**
+ * The underpass: the frontage road runs down between concrete U-walls (with a walkway, lights and a fence along the
+ * top), under a short bridge that carries the cross street; behind the walls the ground stays at its own level.
+ */
+export function buildUnderpass(at: (x: number) => Ctx) {
+  const U = UNDERPASS;
+  // heights interpolated between the road samples (the frontage runs along x here, the cross street along z)
+  const along = (name: string, key: 'x' | 'z', v: number) => {
+    const r = getRoad(name), a = r[key];
+    for (let i = 0; i < r.len - 1; i++) {
+      const lo = Math.min(a[i], a[i + 1]), hi = Math.max(a[i], a[i + 1]);
+      if (v >= lo && v <= hi && hi > lo) return r.y[i] + ((r.y[i + 1] - r.y[i]) * (v - a[i])) / (a[i + 1] - a[i]);
+    }
+    return roadNear(key === 'x' ? v : U.x, key === 'z' ? v : U.z, (n) => n === name).y;
+  };
+  const fy = (x: number) => along('frontage', 'x', x);
+  const cy = (z: number) => along('cross', 'z', z);
+  const step = 2;
+  for (let x0 = U.x - U.half; x0 < U.x + U.half - 0.01; x0 += step) {
+    const x1 = x0 + step, xm = (x0 + x1) / 2;
+    const B = at(xm).body;
+    const ya = fy(x0), yb = fy(x1);
+    for (const s of [-1, 1]) {
+      const zo = U.z + s * (U.fill + 0.3);
+      const ta = naturalHeight(x0, zo), tb = naturalHeight(x1, zo);
+      // the wall with its cap, the fill behind it (its top is the ground), the walkway at its foot
+      wallSeg(B, x0, U.z + s * (U.wall + 0.25), x1, U.z + s * (U.wall + 0.25), ya - 0.6, ta + 0.15, yb - 0.6, tb + 0.15, 0.5, '#b9b6ad', '#d2cfc6');
+      wallSeg(B, x0, U.z + s * (U.wall + 0.5 + (U.fill - U.wall - 0.5) / 2), x1, U.z + s * (U.wall + 0.5 + (U.fill - U.wall - 0.5) / 2), ya - 0.6, ta, yb - 0.6, tb, U.fill - U.wall - 0.5, '#a9a69c', Math.abs(xm - U.x) < 4.6 ? '#7d7a72' : '#86b24e');
+      wallSeg(B, x0, U.z + s * 3.85, x1, U.z + s * 3.85, ya - 0.5, ya + 0.15, yb - 0.5, yb + 0.15, 0.7, '#c4c0b6', '#cfcbc0');
+      if (ta - ya > 1.2 && Math.abs(xm - U.x) > 4.8) fence(at(xm), x0, U.z + s * (U.wall + 0.4), ta + 0.15, x1, U.z + s * (U.wall + 0.4), tb + 0.15, 1.0, '#7d8a80');
+      // lights on the wall faces, and a dark band of damp at the foot
+      if (Math.round(x0) % 8 === 0 && ta - ya > 2.5) at(xm).litB.box(xm, ya + 3.0, U.z + s * (U.wall - 0.02), 1.2, 0.12, 0.08, '#ffffff', { ao: 0 });
+      B.box(xm, (ya + yb) / 2 + 0.45, U.z + s * (U.wall - 0.005), step, 0.3, 0.01, '#8f8c84', { ao: 0 });
+    }
+  }
+  // the bridge: a deck following the cross street's slope, parapets with a rail, a name plate
+  const B = at(U.x).body;
+  const z0 = U.z - U.cut - 0.3, z1 = U.z + U.cut + 0.3;
+  for (let za = z0; za < z1 - 0.01; za += 1) {
+    const zb = Math.min(z1, za + 1), ya = cy(za), yb = cy(zb);
+    wallSeg(B, U.x, za, U.x, zb, ya - 1.0, ya - 0.01, yb - 1.0, yb - 0.01, 9.2, '#b3b0a7', '#9a978f');
+    for (const s of [-1, 1]) {
+      wallSeg(B, U.x + s * 4.4, za, U.x + s * 4.4, zb, ya - 0.02, ya + 0.95, yb - 0.02, yb + 0.95, 0.4, '#c9c6bd', '#d6d3ca');
+      wallSeg(B, U.x + s * 4.4, za, U.x + s * 4.4, zb, ya + 0.95, ya + 1.1, yb + 0.95, yb + 1.1, 0.12, '#8a9096', '#8a9096');
+    }
+  }
+  for (const s of [-1, 1]) B.box(U.x + s * 4.62, cy(U.z) + 0.5, U.z, 0.04, 0.3, 1.2, '#2f6a4a', { ao: 0 });
+  raiseSkyline(U.x - 5, z0, U.x + 5, z1, cy(U.z) + 2);
 }
