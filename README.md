@@ -23,6 +23,7 @@ Tests and style studies, not used by the game yet.
 | `nurse.glb` | Nurse (first version, older style) | 22 joints |
 | `ribbon.glb` | Red Ribbon Girl | 22 joints |
 | `anime.glb` | Pink Anime Girl | 22 joints |
+| `japanhouse.glb` | Japanese House (minka with shoji doors, veranda and garden) | none (static) |
 | `island.glb` | Forest Island diorama | none (static) |
 
 No animations yet; the rig is ready for them.
