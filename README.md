@@ -42,6 +42,7 @@ Static scenes, no skeleton.
 
 | File | Asset |
 |---|---|
+| `japanshops.glb` | Japanese Shopping Street (eight shops, arch, poles, vending machines) |
 | `island.glb` | Forest Island diorama |
 
 No animations yet; the character rigs are ready for them.
