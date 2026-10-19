@@ -27,6 +27,7 @@ Static scenes, no skeleton.
 | `japanshrine.glb` | Japanese Shrine (torii, lanterns, lion-dogs, fountain, main hall) |
 | `japanalley.glb` | Japanese Alley (back alley of plaster shophouses, after a low-poly reference) |
 | `catstall.glb` | Cat Sushi Stall (yatai cart with a cat chef on a cobblestone plaza) |
+| `danchi.glb` | Japanese Housing Complex (two apartment blocks with balconies, courtyard, far block) |
 
 ## Experimental
 
@@ -45,7 +46,6 @@ Static scenes, no skeleton.
 | File | Asset |
 |---|---|
 | `japanshops.glb` | Japanese Shopping Street (eight shops, arch, poles, vending machines) |
-| `danchi.glb` | Japanese Housing Complex (two apartment blocks with balconies, courtyard, far block) |
 | `island.glb` | Forest Island diorama |
 
 No animations yet; the character rigs are ready for them.
