@@ -43,6 +43,7 @@ Static scenes, no skeleton.
 | File | Asset |
 |---|---|
 | `japanshops.glb` | Japanese Shopping Street (eight shops, arch, poles, vending machines) |
+| `japanalley.glb` | Japanese Alley (back alley of plaster shophouses, after a low-poly reference) |
 | `island.glb` | Forest Island diorama |
 
 No animations yet; the character rigs are ready for them.
