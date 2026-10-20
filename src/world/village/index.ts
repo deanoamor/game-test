@@ -304,7 +304,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
   await step(0.55, 'Terraces and retaining walls…');
   buildTownGround(atGround);
   await step(0.62, 'Pavements, poles and wires…');
-  streets(at, atlas, r, trees, occ, taken);
+  streets(at, atlas, r, trees, occ, taken, (x, z, pad) => lots.some((l) => Math.abs(x - l.x) < l.w / 2 + pad && Math.abs(z - l.z) < l.d / 2 + pad));
   outskirts(at, atlas, r, trees);
   await step(0.72, 'Filling the empty lots…');
   fillEmpty(occ, at, atlas, r, trees);
@@ -340,7 +340,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
 // ---------------------------------------------------------------------------------------------
 // pavements, the crossing, poles and wires, lamps and everything on the pavement
 // ---------------------------------------------------------------------------------------------
-function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, trees: TreeField, occ: Occupancy, taken: Taken) {
+function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, trees: TreeField, occ: Occupancy, taken: Taken, nearBuilding: (x: number, z: number, pad: number) => boolean) {
   const take = (x: number, z: number, rad = 0.6) => { taken.push({ x, z, r: rad }); };
   const pave = (x0: number, x1: number, z0: number, z1: number, curbSide: 'n' | 's' | 'e' | 'w') => {
     const ctx = at((x0 + x1) / 2);
@@ -523,7 +523,12 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
   bins(at(-24), -22.9, Y_N + RAISE + 0.02, BACK_N - BACK_HALF - 0.9);
   for (const x of [-48, 30]) for (let k = 0; k < 2; k++) cone(at(x), x + k * 0.9, Y_S + 0.05, BACK_S - 0.8);
   // trees on the pavement corners
-  for (const [x, z, kind] of [[-9.4, nIn - WALK - 0.3, 'jacaranda'], [9.6, nIn - WALK - 0.5, 'sakura'], [-58, sIn + WALK + 0.4, 'jacaranda'], [58, nIn - WALK - 0.3, 'jacaranda'], [100, sIn + WALK + 0.3, 'sakura']] as const) { trees.add(kind, x, z, 0.85, SW); take(x, z, 1.2); }
+  for (const [x, z, kind] of [[-9.4, nIn - WALK - 0.3, 'jacaranda'], [9.6, nIn - WALK - 0.5, 'sakura'], [-58, sIn + WALK + 0.4, 'jacaranda'], [58, nIn - WALK - 0.3, 'jacaranda'], [100, sIn + WALK + 0.3, 'sakura']] as const) {
+    // only where the crown is clear of the buildings (not under an awning or into a wall)
+    if (nearBuilding(x, z, 2.2)) continue;
+    trees.add(kind, x, z, 0.85, SW);
+    take(x, z, 1.2);
+  }
   void wireSpan;
 }
 
