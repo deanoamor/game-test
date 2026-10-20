@@ -116,7 +116,7 @@ export class Drone {
     this.clampGoal();
     this.yawGoal = MathUtils.degToRad(p.yaw);
     this.pitchGoal = MathUtils.degToRad(p.pitch);
-    this.distGoal = p.dist;
+    this.distGoal = Math.min(p.dist, this.maxDist);
     this.flying = true;
     if (instant) {
       this.target.set(p.x, heightAt(p.x, p.z), p.z);

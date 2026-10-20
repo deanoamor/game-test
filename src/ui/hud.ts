@@ -1,7 +1,7 @@
 import { Color } from 'three';
 import { clamp, smoothstep } from '../util/rng';
 import { EXPRESSWAY, IC, IC_RAMP, PADDY, SHRINE, VILLAGE, getRoads, heightAt, placeAt, type Place } from '../world/config';
-import { WORLDS, goToWorld, inRect, mapView, placesIn, type Exit, type WorldDef } from '../world/worlds';
+import { WORLDS, goToWorld, inRect, mapView, placesIn, type Exit, type WorldDef } from '../worlds';
 import { groundColor } from '../world/terrain';
 import type { Drone } from '../camera/drone';
 

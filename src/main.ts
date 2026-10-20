@@ -4,7 +4,7 @@ import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
 import { POND, SHRINE } from './world/config';
-import { currentWorld, inRect, keepArea } from './world/worlds';
+import { currentWorld, inRect, keepArea } from './worlds';
 import { buildVillage } from './world/village';
 import { DaylightRig } from './world/daylight';
 import { TreeField, growForest } from './world/forest';
@@ -37,10 +37,8 @@ async function main() {
   const world = currentWorld();
   const keep = keepArea(world);
   const drone = new Drone(renderer.domElement);
-  if (world.bounds) {
-    drone.bounds = { ...world.bounds };
-    drone.maxDist = 160;
-  }
+  if (world.bounds) drone.bounds = { ...world.bounds };
+  drone.maxDist = world.maxDist;
   const hud = new Hud(drone, world);
   const PLACES = hud.places;
   const progress = (f: number, msg: string) => hud.setProgress(f, msg);
