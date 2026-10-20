@@ -46,7 +46,7 @@ export class NightGlow {
       glows.forEach((g, i) => {
         m.compose(new Vector3(g.x, g.y + 0.04, g.z), q, new Vector3(g.r, 1, g.r));
         mesh.setMatrixAt(i, m);
-        mesh.setColorAt(i, col.set(g.color).multiplyScalar(0.3 * g.k));
+        mesh.setColorAt(i, col.set(g.color).multiplyScalar(0.22 * g.k));
       });
       this.pools = mesh;
       this.group.add(mesh);
@@ -83,6 +83,6 @@ export class NightGlow {
         l.userData.k = n.g.k;
       });
     }
-    for (const l of this.lights) l.intensity = this.night * 3.5 * ((l.userData.k as number) ?? 1);
+    for (const l of this.lights) l.intensity = this.night * 2 * ((l.userData.k as number) ?? 1);
   }
 }

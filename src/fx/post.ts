@@ -97,7 +97,7 @@ export class Post {
   /** Bloom reacts to the time of day: a small glow in daylight, strong glow from windows and signs at night. */
   setLook(night: number, bloomStrength: number) {
     this.bloom.strength = bloomStrength;
-    this.bloom.threshold = 2.2 - night * 1.15;
+    this.bloom.threshold = 2.2 - night * 0.85;
     this.grade.uniforms.uTint.value = [1 + night * -0.04, 1 + night * 0.0, 1 + night * 0.08];
     this.grade.uniforms.uSat.value = 1.14 + night * 0.08;
   }

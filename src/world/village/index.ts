@@ -598,10 +598,10 @@ function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas, ground: Ctx): Vill
     group,
     glows: [...chunks.values()].flatMap((c) => c.glow),
     update(night: number) {
-      litA.emissiveIntensity = 0.05 + night * 1.6;
-      litB.emissiveIntensity = 0.04 + night * 0.9;
-      sign.emissiveIntensity = 0.3 + night * 1.9;
-      neon.color.setScalar(0.55 + night * 1.1);
+      litA.emissiveIntensity = 0.05 + night * 0.95;
+      litB.emissiveIntensity = 0.04 + night * 0.65;
+      sign.emissiveIntensity = 0.3 + night * 0.9;
+      neon.color.setScalar(0.5 + night * 0.7);
     },
   };
 }
