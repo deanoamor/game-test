@@ -67,7 +67,7 @@ export class Post {
     this.ao.updateGtaoMaterial({ radius: 3.5, distanceExponent: 1.4, thickness: 3, scale: 1.0, samples: 12, distanceFallOff: 1, screenSpaceRadius: false });
     this.ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 8 });
     this.composer.addPass(this.ao);
-    this.bloom = new UnrealBloomPass(new Vector2(w, h), 0.35, 0.6, 1.4);
+    this.bloom = new UnrealBloomPass(new Vector2(w, h), 0.35, 0.35, 1.4);
     this.composer.addPass(this.bloom);
     this.blurH = new ShaderPass(new ShaderMaterial({ ...BLUR, uniforms: { ...BLUR.uniforms, uDir: { value: new Vector2(1, 0) }, uRes: { value: new Vector2(w, h) } } }));
     this.blurV = new ShaderPass(new ShaderMaterial({ ...BLUR, uniforms: { ...BLUR.uniforms, uDir: { value: new Vector2(0, 1) }, uRes: { value: new Vector2(w, h) } } }));

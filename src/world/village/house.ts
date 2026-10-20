@@ -309,6 +309,8 @@ function shopFront(ctx: Ctx, spec: HouseSpec, atlas: SignAtlas) {
   wallBox(B, f, hw, hd, 0, y0 + 0.35, gw + 0.2, 0.7, 0.12, 0.07, dk(spec.trim, 0.8));
   wallBox(B, f, hw, hd, 0, y0 + 2.45, gw + 0.2, 0.14, 0.12, 0.07, dk(spec.trim, 0.8));
   wallQuad(ctx.litA, f, hw, hd, -0.6, y0 + 0.72, gw - 1.6, 1.62, '#ffe0a0', 0.04);
+  // the shop's light spills out over the pavement
+  ctx.glow.push({ x: -0.6, y: 0, z: hd + 1.2, h: 1.8, r: Math.min(4.5, gw * 0.6 + 1), color: pickGlow(shop.awning[0]), k: 0.9 });
   for (let k = -2; k <= 2; k++) wallBox(B, f, hw, hd, -0.6 + k * (gw - 1.6) * 0.25, y0 + 1.55, 0.06, 1.7, 0.06, 0.07, dk(spec.trim, 0.8), 0);
   // the glass door at the right
   const du = gw / 2 - 0.62;
@@ -416,4 +418,10 @@ function outsideStairs(ctx: Ctx, spec: HouseSpec, base: number, fh: number) {
   // the upstairs door on the side wall
   const f: Face = s > 0 ? '+x' : '-x';
   wallBox(B, f, spec.w / 2, spec.d / 2, zTop - 0.6, top + 1.05, 0.9, 2.0, 0.08, 0.05, '#7a8088');
+}
+
+/** A shop's light: warm, tinted a little by its awning. */
+function pickGlow(awning: string): string {
+  const c = new Color('#ffcf8a').lerp(new Color(awning), 0.45);
+  return `#${c.getHexString()}`;
 }

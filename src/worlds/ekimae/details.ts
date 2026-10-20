@@ -34,6 +34,7 @@ export function ekimaeDetails(k: DetailKit) {
   pavementLife(k);
   crossStreet(k);
   lampBanners(k);
+  neonBlades(k);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -147,6 +148,7 @@ function izakaya(k: DetailKit) {
       c.litA.blob(0, 2.08, 0, 0.2, 0.28, 0.2, '#e0402e', { detail: 1 });
       c.body.disc(0, 2.38, 0, 0.13, 0.05, 'y', '#1a1a1a', 10);
       c.body.disc(0, 1.79, 0, 0.13, 0.05, 'y', '#1a1a1a', 10);
+      c.glow.push({ x: 0, y: 0, z: 0.3, h: 2.0, r: 2.6, color: '#ff8a5a', k: 1 });
     });
   }
   if (k.free(-12.0, N_FRONT + 0.15, 0.4)) {
@@ -253,4 +255,33 @@ function lampBanners(k: DetailKit) {
       c.body.box(0, 3.3, side * 0.33, 0.035, 0.1, 0.52, '#c84a72', { ao: 0 });
     });
   });
+}
+
+/** Upright neon blade signs sticking out from the shop fronts above the awnings, lit in their own colours at night. */
+function neonBlades(k: DetailKit) {
+  const { atlas } = k;
+  // [x along the street, which side, the sign, the colour of its tube]
+  const blades: [number, 'n' | 's', string, string][] = [
+    [-15.0, 'n', 'karaoke', '#d07aff'], [-6.6, 'n', 'yakitori', '#ff4a6a'], [25.8, 'n', 'sushi', '#4ad8ff'],
+    [-6.8, 's', 'beer', '#ffd23a'], [-19.6, 's', 'gyoza', '#ff7a3a'], [22.4, 's', 'sake', '#5a9aff'],
+  ];
+  for (const [x, side, name, tube] of blades) {
+    const wall = side === 'n' ? N_IN - WALK : S_IN + WALK;
+    const out = side === 'n' ? 1 : -1;
+    // turned so that the sign's faces look along the street
+    k.put(x, SW, wall + out * 0.72, 90, (c) => {
+      const cell = atlas.get(name), w = 0.5, h = Math.min(1.7, w / cell.aspect);
+      const y = 4.4;
+      c.body.box(0, y, 0, 0.62, h + 0.14, 0.1, '#1e1f24', { ao: 0 });
+      for (const dy of [h / 2 - 0.1, -h / 2 + 0.1]) c.body.box(0, y + dy, out * -0.48, 0.05, 0.05, 0.5, '#5a5e64', { ao: 0 });
+      board(c, cell, 0, y, 0, w, h, '#1e1f24');
+      // the neon tube round the edge, on both faces
+      for (const f of [0.065, -0.065]) {
+        c.neon.box(0, y + h / 2 + 0.035, f, w + 0.1, 0.035, 0.02, tube, { ao: 0 });
+        c.neon.box(0, y - h / 2 - 0.035, f, w + 0.1, 0.035, 0.02, tube, { ao: 0 });
+        for (const sx of [-1, 1]) c.neon.box(sx * (w / 2 + 0.05), y, f, 0.035, h + 0.1, 0.02, tube, { ao: 0 });
+      }
+      c.glow.push({ x: 0, y: 0, z: 0, h: 3.6, r: 3.2, color: tube, k: 0.9 });
+    });
+  }
 }

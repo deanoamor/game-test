@@ -1,4 +1,4 @@
-import { Color, Group, Mesh, MeshStandardMaterial } from 'three';
+import { Color, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import { GeoBuilder, type V3 } from '../../util/builder';
 import { pick, rng, yieldUI } from '../../util/rng';
 import { EXPRESSWAY, IC_RAMP, PADDY, PLATFORMS, POND, STAIRS, TERRACES, WATER_Y, heightAt, rampY, roadNear } from '../config';
@@ -6,7 +6,7 @@ import type { TreeField } from '../forest';
 import { raiseSkyline } from '../skyline';
 import type { SignAtlas } from '../signs';
 import { apartmentBlock, konbini, officeBlock, supermarket } from './buildings';
-import { appendCtx, newCtx, type Ctx } from './frame';
+import { appendCtx, newCtx, type Ctx, type Glow } from './frame';
 import { Occupancy, fillEmpty } from './fillers';
 import { buildPaddies, buildTownGround, wallSeg } from './ground';
 import { buildGasStation } from './gas';
@@ -58,7 +58,7 @@ export type Taken = { x: number; z: number; r: number }[];
 
 interface Lot { x: number; z: number; yaw: number; w: number; d: number; y: number; ctx: Ctx; height: number }
 
-export interface VillageBuild { group: Group; update(night: number): void }
+export interface VillageBuild { group: Group; glows: Glow[]; update(night: number): void }
 
 export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (f: number, label: string) => void = () => {}, details: ((kit: DetailKit) => void)[] = []): Promise<VillageBuild> {
   // the town is built in steps, letting the loading screen repaint in between
@@ -573,9 +573,10 @@ function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas, ground: Ctx): Vill
   const win = new MeshStandardMaterial({ vertexColors: true, roughness: 0.15, metalness: 0.4, envMapIntensity: 1.4 });
   const litA = new MeshStandardMaterial({ vertexColors: true, roughness: 0.3, emissive: new Color('#ffcf7a'), emissiveIntensity: 0 });
   const litB = new MeshStandardMaterial({ vertexColors: true, roughness: 0.3, emissive: new Color('#e6f4ff'), emissiveIntensity: 0 });
+  const neon = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
   const sign = new MeshStandardMaterial({ map: atlas.texture, emissiveMap: atlas.texture, emissive: new Color('#ffffff'), emissiveIntensity: 0.3, roughness: 0.55, alphaTest: 0.4, side: 2 });
   // regroup every chunk's triangles into 40 m cells, so the camera and the shadow pass skip what they cannot see
-  const kinds: [keyof Omit<Ctx, 'r'>, MeshStandardMaterial, boolean, string][] = [['body', body, true, 'Buildings'], ['win', win, false, 'Windows'], ['litA', litA, false, 'Lit windows'], ['litB', litB, false, 'Lit windows 2'], ['sign', sign, false, 'Signs']];
+  const kinds: [keyof Omit<Ctx, 'r' | 'glow'>, MeshStandardMaterial | MeshBasicMaterial, boolean, string][] = [['body', body, true, 'Buildings'], ['win', win, false, 'Windows'], ['litA', litA, false, 'Lit windows'], ['litB', litB, false, 'Lit windows 2'], ['sign', sign, false, 'Signs'], ['neon', neon, false, 'Neon']];
   for (const [part, mat, shadow, name] of kinds) {
     const cells = GeoBuilder.splitByCell([...chunks.values()].map((c) => c[part]), 40);
     for (const [k, geo] of cells) {
@@ -595,10 +596,12 @@ function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas, ground: Ctx): Vill
   }
   return {
     group,
+    glows: [...chunks.values()].flatMap((c) => c.glow),
     update(night: number) {
-      litA.emissiveIntensity = 0.05 + night * 1.2;
-      litB.emissiveIntensity = 0.04 + night * 1.0;
-      sign.emissiveIntensity = 0.3 + night * 0.9;
+      litA.emissiveIntensity = 0.05 + night * 1.6;
+      litB.emissiveIntensity = 0.04 + night * 1.4;
+      sign.emissiveIntensity = 0.3 + night * 1.9;
+      neon.color.setScalar(0.55 + night * 1.1);
     },
   };
 }

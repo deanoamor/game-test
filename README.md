@@ -30,7 +30,8 @@ never a void. Up close the crossing has its own details (`src/worlds/ekimae/deta
 manholes and patched asphalt, a red postbox, a green phone, a notice board, nobori flags and red
 lanterns at the izakaya, a delivery scooter, pigeons, a cat, lamp banners and utility cabinets. The crossing has working traffic signals (`src/world/signals.ts`): the main street and the cross street take turns
 (green, yellow, all-red). Cars on both streets stop at the line on red, queue behind each other without ever
-overlapping, and wait while the junction is still taken (`src/world/traffic.ts`, tested in `tests/traffic.test.ts`). Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
+overlapping, and wait while the junction is still taken (`src/world/traffic.ts`, tested in `tests/traffic.test.ts`). At night every lamp, lit shop front, konbini and vending machine throws a pool of light on the ground and the six
+nearest the camera are real lights (`src/world/nightglow.ts`); neon blade signs glow in their own colours. Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
 right) switches to the full map, `Hoshi Town (full map)`, which is kept as it was; links take `#world=ekimae` or
 `#world=full`.
 

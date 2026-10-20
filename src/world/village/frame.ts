@@ -15,10 +15,17 @@ export interface Ctx {
   litA: GeoBuilder;
   litB: GeoBuilder;
   sign: GeoBuilder;
+  /** Neon tubes: their own colour, bright at night. */
+  neon: GeoBuilder;
+  /** Lights that brighten their surroundings at night (pools of light on the ground, the nearest ones as real lights). */
+  glow: Glow[];
   r: () => number;
 }
 
-export const newCtx = (r: () => number): Ctx => ({ body: new GeoBuilder(), win: new GeoBuilder(), litA: new GeoBuilder(), litB: new GeoBuilder(), sign: new GeoBuilder(), r });
+/** A source of light at night: where it stands (its foot on the ground), how far its pool reaches, its colour. */
+export interface Glow { x: number; y: number; z: number; h: number; r: number; color: string; k: number }
+
+export const newCtx = (r: () => number): Ctx => ({ body: new GeoBuilder(), win: new GeoBuilder(), litA: new GeoBuilder(), litB: new GeoBuilder(), sign: new GeoBuilder(), neon: new GeoBuilder(), glow: [], r });
 
 export function appendCtx(dst: Ctx, src: Ctx, x: number, y: number, z: number, yaw: number) {
   dst.body.appendTransformed(src.body, x, y, z, yaw);
@@ -26,6 +33,9 @@ export function appendCtx(dst: Ctx, src: Ctx, x: number, y: number, z: number, y
   dst.litA.appendTransformed(src.litA, x, y, z, yaw);
   dst.litB.appendTransformed(src.litB, x, y, z, yaw);
   dst.sign.appendTransformed(src.sign, x, y, z, yaw);
+  dst.neon.appendTransformed(src.neon, x, y, z, yaw);
+  const a = (yaw * Math.PI) / 180, cs = Math.cos(a), sn = Math.sin(a);
+  for (const g of src.glow) dst.glow.push({ ...g, x: x + g.x * cs + g.z * sn, y: y + g.y, z: z - g.x * sn + g.z * cs });
 }
 
 export const dk = (hex: string, k: number): Color => new Color(hex).multiplyScalar(k);

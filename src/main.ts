@@ -13,6 +13,7 @@ import { buildRoads } from './world/roads';
 import { Clouds, SkyDome } from './world/sky';
 import { SignAtlas } from './world/signs';
 import { buildTerrain } from './world/terrain';
+import { NightGlow } from './world/nightglow';
 import { Signals } from './world/signals';
 import { Traffic } from './world/traffic';
 import { buildWater } from './world/water';
@@ -79,6 +80,9 @@ async function main() {
     water.mesh.visible = inRect(keep, POND.x, POND.z, POND.radius + 30);
   }
   scene.add(village.group);
+  // the lights of the town at night: pools of light, and real lights near the camera
+  const glow = new NightGlow(keep ? village.glows.filter((g) => inRect(keep, g.x, g.z, 10)) : village.glows);
+  scene.add(glow.group);
   scene.add(buildRoads());
   const windU = { value: 0 };
   scene.add(trees.build(windU, keep ? (x, z) => inRect(keep, x, z, 90) : undefined));
@@ -194,6 +198,7 @@ async function main() {
     if (playing) applyHour(hour + (dt / dayLength) * 24);
     drone.update(dt);
     light.follow(drone.target);
+    glow.update(dt, light.state.night, drone.target);
     windU.value += dt;
     water.uniforms.uTime.value += dt;
     clouds.step(dt);

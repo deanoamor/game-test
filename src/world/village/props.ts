@@ -73,6 +73,8 @@ export function vendingMachine(ctx: Ctx, atlas: SignAtlas, x: number, y: number,
   sg.quad([-0.4, 0.45, 0.402], [0.4, 0.45, 0.402], [0.4, 1.75, 0.402], [-0.4, 1.75, 0.402], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [[c.u0, c.v0], [c.u1, c.v0], [c.u1, c.v1], [c.u0, c.v1]]);
   ctx.body.appendTransformed(tmp, x, y, z, yaw);
   ctx.sign.appendTransformed(sg, x, y, z, yaw);
+  const a = (yaw * Math.PI) / 180;
+  ctx.glow.push({ x: x + Math.sin(a) * 0.9, y, z: z + Math.cos(a) * 0.9, h: 1.2, r: 1.9, color: kind === 'vendRed' ? '#ffd8d0' : '#d8ecff', k: 0.8 });
 }
 
 /** A silver guardrail made of posts and two pipes along the line from (x0,z) to (x1,z). */
@@ -310,6 +312,7 @@ export function doubleLamp(ctx: Ctx, x: number, y: number, z: number) {
     B.box(x + s * 0.55, y + 3.38, z, 0.22, 0.06, 0.22, '#c8322e', { ao: 0 });
   }
   B.box(x, y + 2.6, z + 0.09, 0.3, 0.9, 0.03, '#2a5ea8', { ao: 0 }); // a little street name plate
+  ctx.glow.push({ x, y, z, h: 3.6, r: 5.5, color: '#ffd9a0', k: 1 });
 }
 
 /** A black classic street lamp. */
@@ -320,6 +323,7 @@ export function classicLamp(ctx: Ctx, x: number, y: number, z: number) {
   ctx.litA.box(x, y + 4.25, z, 0.32, 0.42, 0.32, '#fff4dc', { ao: 0 });
   B.frustum(x, y + 4.46, z, 0.3, 0.06, 0.2, 4, '#2a2c30', { rotate: 0.5 });
   B.box(x, y + 4.03, z, 0.36, 0.05, 0.36, '#2a2c30', { ao: 0 });
+  ctx.glow.push({ x, y, z, h: 4.2, r: 5, color: '#ffe2b0', k: 0.9 });
 }
 
 /** A sign on a pole, any picture from the atlas (pedestrian crossing, no entry, arrows, parking...). */
