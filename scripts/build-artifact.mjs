@@ -28,5 +28,8 @@ ${js}
 `;
 fs.mkdirSync('dist-artifact', { recursive: true });
 fs.writeFileSync('dist-artifact/index.html', out);
+// the same file is committed in play/, so the game also runs straight from the repository on GitHub Pages
+fs.mkdirSync('play', { recursive: true });
+fs.writeFileSync('play/index.html', out);
 fs.rmSync(dir, { recursive: true, force: true });
 console.log('dist-artifact/index.html', (out.length / 1e6).toFixed(2), 'MB');

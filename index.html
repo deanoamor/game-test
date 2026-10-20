@@ -72,6 +72,7 @@
     window.addEventListener('unhandledrejection', function (e) { show((e.reason && e.reason.message) || String(e.reason)); });
   })();
 </script>
-<script type="module" src="/src/main.ts"></script>
+<!-- on a static host (GitHub Pages) the TypeScript source cannot run: go to the built single-file game instead -->
+<script type="module" src="./src/main.ts" onerror="location.replace('./play/')"></script>
 </body>
 </html>

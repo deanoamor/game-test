@@ -27,8 +27,12 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # production build in dist/
 npm test           # tests of the world layout
-node scripts/build-artifact.mjs   # one single HTML file with the shrine model inside (dist-artifact/index.html)
+node scripts/build-artifact.mjs   # one single HTML file with the shrine model inside (dist-artifact/ and play/index.html)
 ```
+
+On GitHub Pages (or any static host) the root page cannot run the TypeScript sources, so it forwards to `play/`, the
+ready-built single-file game committed in the repository. Run `node scripts/build-artifact.mjs` before pushing to update
+it.
 
 ## Controls
 
