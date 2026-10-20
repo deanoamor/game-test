@@ -46,7 +46,7 @@ export class NightGlow {
       glows.forEach((g, i) => {
         m.compose(new Vector3(g.x, g.y + 0.04, g.z), q, new Vector3(g.r, 1, g.r));
         mesh.setMatrixAt(i, m);
-        mesh.setColorAt(i, col.set(g.color).multiplyScalar(0.4 * g.k));
+        mesh.setColorAt(i, col.set(g.color).multiplyScalar(0.3 * g.k));
       });
       this.pools = mesh;
       this.group.add(mesh);
@@ -79,7 +79,7 @@ export class NightGlow {
         if (!n) { l.userData.k = 0; return; }
         l.position.set(n.g.x, n.g.y + n.g.h, n.g.z);
         l.color.set(n.g.color);
-        l.distance = n.g.r * 1.6;
+        l.distance = Math.min(8, n.g.r * 1.6);
         l.userData.k = n.g.k;
       });
     }

@@ -25,7 +25,7 @@ export function konbini(r: () => number, atlas: SignAtlas, w = 14, d = 11): Ctx 
   // the glass front with mullions and an automatic door
   const gy = 0.3, gh = 2.7;
   wallQuad(ctx.litB, '+z', hw, hd, 0, gy, w - 1.0, gh, '#dff2fa', 0.04);
-  ctx.glow.push({ x: 0, y: 0, z: hd + 2.5, h: 2.2, r: 8, color: '#e6f4ff', k: 1.1 });
+  ctx.glow.push({ x: 0, y: 0, z: hd + 1.6, h: 2.4, r: 4.2, color: '#dceeff', k: 0.45 });
   for (let k = 0; k <= 6; k++) wallBox(B, '+z', hw, hd, -(w - 1.0) / 2 + (k * (w - 1.0)) / 6, gy + gh / 2, 0.08, gh, 0.08, 0.06, '#9aa0a6', 0);
   wallBox(B, '+z', hw, hd, 0, gy + gh + 0.05, w - 0.9, 0.1, 0.1, 0.06, '#9aa0a6', 0);
   // shelves seen through the glass
