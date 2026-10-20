@@ -395,6 +395,47 @@ export class SignAtlas {
       }
       green('hwSpeed', 1664, 1024, 384, 128, [['80', 14, 70], ['km/h', 86, 26]]);
     }
+    // the gas station: its brand fascia, the price tower, a SELF flag and the car wash
+    {
+      {
+        const x = 1024, y = 1280;
+        const grd = g.createLinearGradient(x, y, x + 512, y);
+        grd.addColorStop(0, '#e8501e'); grd.addColorStop(1, '#f2a33a');
+        g.fillStyle = grd; g.fillRect(x, y, 512, 128);
+        g.fillStyle = '#ffffff'; g.fillRect(x, y + 98, 512, 14);
+        text('ほしエネ', x - 120, y + 4, 512, 92, '#ffffff', 70);
+        text('HOSHI ENERGY', x + 140, y + 10, 372, 80, '#ffffff', 40);
+        reg('gasBrand', x, y, 512, 128);
+      }
+      {
+        const x = 1664, y = 1152;
+        g.fillStyle = '#1a1a1a'; g.fillRect(x, y, 256, 256);
+        g.fillStyle = '#e8501e'; g.fillRect(x, y, 256, 56);
+        text('ほしエネ', x, y + 2, 256, 52, '#ffffff', 40);
+        const rows: [string, string, string][] = [['レギュラー', '168', '#d8322e'], ['ハイオク', '179', '#f2c230'], ['軽油', '148', '#2f9a4a']];
+        rows.forEach(([n, pr, c], k) => {
+          const yy = y + 66 + k * 62;
+          g.fillStyle = c; g.fillRect(x + 8, yy, 120, 52);
+          text(n, x + 8, yy, 120, 52, '#ffffff', 26);
+          text(pr, x + 128, yy, 128, 52, '#ffe14a', 50);
+        });
+        reg('gasPrice', x, y, 256, 256);
+      }
+      {
+        const x = 1920, y = 1152;
+        g.fillStyle = '#2a7ad8'; g.fillRect(x, y, 128, 256);
+        g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.strokeRect(x + 8, y + 8, 112, 240);
+        text('セルフ', x, y, 128, 256, '#ffffff', 50, true);
+        reg('selfFlag', x, y, 128, 256);
+      }
+      {
+        const x = 1920, y = 1408;
+        g.fillStyle = '#2a9bd6'; g.fillRect(x, y, 128, 128);
+        text('洗車', x, y + 8, 128, 70, '#ffffff', 50);
+        text('CAR WASH', x, y + 78, 128, 40, '#ffffff', 20);
+        reg('carWash', x, y, 128, 128);
+      }
+    }
     this.texture = new CanvasTexture(cv);
     this.texture.colorSpace = SRGBColorSpace;
     this.texture.anisotropy = 8;

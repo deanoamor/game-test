@@ -10,7 +10,8 @@ with open corridors and laundry; offices with roof billboards), a konbini and a 
 street with pavements, tactile strips, curbs and gutters, a signalled crossing with traffic lights, back lanes with red
 paint and 止まれ, utility poles with transformers and wires, double red lamps, green-white guard pipes, vending
 machines, hydrants, cones, convex mirrors, road signs and moving traffic. Below the town the cross street runs on to the Hoshinomachi IC, crossing on a short bridge over the road that links the
-west and east lanes through a concrete underpass. At the IC: a toll plaza with ETC and
+west and east lanes through a concrete underpass; by that road stands a self-service gas station with a branded
+canopy, pump islands, a kiosk, a car wash and a price tower. At the IC: a toll plaza with ETC and
 general booths under green canopies, and ramps up to an elevated four-lane expressway on piers, with sound walls, a
 median, lights, green sign gantries and fast traffic, cut through the hills at both ends. Around the town: stepped rice paddies, a koi pond, wooded hills on both sides, and
 a forest-covered mountain with a shrine reached by a stone path and red torii gates. No lot is left bare: every free patch becomes a coin car park, a yatai food stall, a pocket park with swings, bicycle
@@ -96,7 +97,7 @@ e2e/shots.mjs            screenshots with Playwright (npm run dev -- --port 5300
 | ![Stairs up a terrace wall](docs/preview-stairs.jpg) | ![The konbini](docs/preview-konbini.jpg) |
 | ![Coin parking, a pocket park and a roadside shrine](docs/preview-fillers.jpg) | ![The rice paddies](docs/preview-paddies.jpg) |
 | ![The hillside at night](docs/preview-night.jpg) | ![The expressway and the toll plaza](docs/preview-expressway.jpg) |
-| ![The underpass under the cross street](docs/preview-underpass.jpg) | |
+| ![The underpass under the cross street](docs/preview-underpass.jpg) | ![The gas station](docs/preview-gas.jpg) |
 
 ---
 

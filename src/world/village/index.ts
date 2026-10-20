@@ -9,6 +9,7 @@ import { apartmentBlock, konbini, officeBlock, supermarket } from './buildings';
 import { appendCtx, newCtx, type Ctx } from './frame';
 import { Occupancy, fillEmpty } from './fillers';
 import { buildPaddies, buildTownGround, wallSeg } from './ground';
+import { buildGasStation } from './gas';
 import { buildExpressway, buildUnderpass } from './highway';
 import { buildHouse, type HouseSpec } from './house';
 import {
@@ -279,6 +280,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
   fillEmpty(occ, at, atlas, r, trees);
   buildExpressway(at, atlas);
   buildUnderpass(at);
+  buildGasStation(at, atlas, r);
   // the stair alleys: a lamp at the top and the bottom of each flight, pots along one side
   for (const st of STAIRS) {
     const yU = heightAt(st.x, st.z - 0.5), yL = heightAt(st.x, st.z + 9);

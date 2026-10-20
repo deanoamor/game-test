@@ -26,6 +26,8 @@ export function icRampY(x: number): number {
   const t = clamp((Math.abs(x) - IC.x1) / (IC_RAMP.end - IC.x1), 0, 1);
   return IC.y + (EXPRESSWAY.y - IC.y) * (t * t * (3 - 2 * t));
 }
+/** The gas station on the south side of the frontage road, west of the underpass (on levelled ground). */
+export const GAS = { x0: -64, x1: -33, z0: 130.6, z1: 152, y: 2.08 };
 export const SHRINE = { x: 66, z: -78, radius: 24, height: 50 };
 
 /**
@@ -112,6 +114,8 @@ function baseHeight(x: number, z: number): number {
   // the expressway cuts through the hills; the toll plaza and its ramps sit on levelled ground
   const de = Math.abs(z - EXPRESSWAY.z);
   if (de < 24) h = Math.min(h, EXPRESSWAY.y - 1.2 + Math.max(0, de - EXPRESSWAY.half - 3) * 0.9);
+  const gd = Math.max(GAS.x0 - x, x - GAS.x1, GAS.z0 - z, z - GAS.z1);
+  if (gd < 7) h = lerp(h, GAS.y - 0.3, 1 - smoothstep(0, 7, gd));
   const dr = Math.abs(z - IC_RAMP.z);
   if (dr < 12) h = Math.min(h, icRampY(x) - 0.45 + Math.max(0, dr - IC_RAMP.half - 1) * 0.7);
   return h;
@@ -297,6 +301,7 @@ export const PLACES: Place[] = [
   { key: 'slope', name: 'Hoshi Slope', jp: '星坂', x: 0, z: 64, radius: 12, dist: 34, pitch: 20, yaw: 160 },
   { key: 'stairs', name: 'Stone Steps', jp: '石段', x: 34, z: 72, radius: 9, dist: 30, pitch: 52, yaw: 0 },
   { key: 'hillside', name: 'Hillside Terraces', jp: '段々の町', x: -30, z: 60, radius: 6, dist: 130, pitch: 17, yaw: 32 },
+  { key: 'gas', name: 'Gas Station', jp: 'ガソリンスタンド', x: -48, z: 141, radius: 12, dist: 40, pitch: 30, yaw: 20 },
   { key: 'ic', name: 'Hoshi IC', jp: '星の町IC', x: 0, z: 180, radius: 16, dist: 80, pitch: 30, yaw: 24 },
   { key: 'town', name: 'Hoshi Town', jp: '星の町', x: 0, z: 46, radius: 110, dist: 190, pitch: 42, yaw: 16 },
   { key: 'paddies', name: 'Rice Paddies', jp: '田んぼ', x: PADDY.x, z: PADDY.z, radius: 34, dist: 80, pitch: 32, yaw: -28 },
