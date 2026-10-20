@@ -28,6 +28,8 @@ export function icRampY(x: number): number {
 }
 /** The gas station beside the road to the toll, on its west side just before the plaza (on levelled ground). */
 export const GAS = { x0: -26.4, x1: -5.0, z0: 141.2, z1: 172.2, y: 1.75 };
+/** The junior high school on the plateau of the east hill (levelled ground), reached by a road from the main street. */
+export const SCHOOL = { x0: 168, x1: 236, z0: 62, z1: 118, y: 27 };
 export const SHRINE = { x: 66, z: -78, radius: 24, height: 50 };
 
 /**
@@ -114,6 +116,8 @@ function baseHeight(x: number, z: number): number {
   // the expressway cuts through the hills; the toll plaza and its ramps sit on levelled ground
   const de = Math.abs(z - EXPRESSWAY.z);
   if (de < 24) h = Math.min(h, EXPRESSWAY.y - 1.2 + Math.max(0, de - EXPRESSWAY.half - 3) * 0.9);
+  const sd = Math.max(SCHOOL.x0 - x, x - SCHOOL.x1, SCHOOL.z0 - z, z - SCHOOL.z1);
+  if (sd < 12) h = lerp(h, SCHOOL.y - 0.05, 1 - smoothstep(0, 12, sd));
   const gd = Math.max(GAS.x0 - x, x - GAS.x1, GAS.z0 - z, z - GAS.z1);
   if (gd < 7) h = lerp(h, GAS.y - 0.3, 1 - smoothstep(0, 7, gd));
   const dr = Math.abs(z - IC_RAMP.z);
@@ -141,6 +145,7 @@ const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: 
   { name: 'back south', width: 4.6, pts: [[-112, 84], [-60, 84], [0, 84], [60, 84], [92, 84]] },
   { name: 'west lane', width: 4.6, pts: [[-62, 8], [-62, 44], [-62, 84], [-62, 106], [-60, 118], [-53, 125.6], [-44, 127]] },
   { name: 'east lane', width: 4.6, pts: [[62, 8], [62, 44], [62, 84], [62, 106], [64, 118], [71, 125.6], [80, 127]] },
+  { name: 'school road', width: 6, pts: [[152, 44], [159, 51], [163, 64], [165, 79], [169.5, 90]] },
   { name: 'frontage', width: 7, bump: (x) => DIP(x), pts: [[-48, 127], [-20, 127], [0, 127], [40, 127], [83, 127]] },
   { name: 'shrine path', width: 4.2, even: true, pts: [[0, 2], [0, -8], [4, -26], [20, -42], [42, -52], [58, -56], [66, -62], [66, -66]] },
 ];
@@ -302,6 +307,7 @@ export function slopeAt(x: number, z: number, d = 2): number {
 /** How much forest grows here: 0 (none) to 1 (dense). */
 export function forestDensity(x: number, z: number, h = heightAt(x, z)): number {
   if (h < 0.8 || h > 110) return 0;
+  if (x > SCHOOL.x0 - 6 && x < SCHOOL.x1 + 6 && z > SCHOOL.z0 - 6 && z < SCHOOL.z1 + 6) return 0;
   if (Math.abs(z - EXPRESSWAY.z) < EXPRESSWAY.half + 7 || (Math.abs(z - IC_RAMP.z) < IC_RAMP.half + 12 && Math.abs(x) < IC_RAMP.end + 40)) return 0;
   const dv = villageDist(x, z);
   if (dv < 2) return 0;
@@ -336,6 +342,7 @@ export const PLACES: Place[] = [
   { key: 'stairs', name: 'Stone Steps', jp: '石段', x: 34, z: 72, radius: 9, dist: 30, pitch: 52, yaw: 0 },
   { key: 'hillside', name: 'Hillside Terraces', jp: '段々の町', x: -30, z: 60, radius: 6, dist: 130, pitch: 17, yaw: 32 },
   { key: 'gas', name: 'Gas Station', jp: 'ガソリンスタンド', x: -16, z: 157, radius: 12, dist: 42, pitch: 30, yaw: 70 },
+  { key: 'school', name: 'Hoshigaoka School', jp: '星ヶ丘中学校', x: 202, z: 90, radius: 30, dist: 95, pitch: 34, yaw: 300 },
   { key: 'ic', name: 'Hoshi IC', jp: '星の町IC', x: 0, z: 180, radius: 16, dist: 80, pitch: 30, yaw: 24 },
   { key: 'town', name: 'Hoshi Town', jp: '星の町', x: 0, z: 46, radius: 110, dist: 190, pitch: 42, yaw: 16 },
   { key: 'paddies', name: 'Rice Paddies', jp: '田んぼ', x: PADDY.x, z: PADDY.z, radius: 34, dist: 80, pitch: 32, yaw: -28 },

@@ -13,7 +13,10 @@ machines, hydrants, cones, convex mirrors, road signs and moving traffic. Below 
 west and east lanes through a concrete underpass; beside it, just before the toll, stands a self-service gas station with a branded
 canopy, pump islands, a kiosk, a car wash and a price tower. At the IC: a toll plaza with ETC and
 general booths under green canopies, and ramps up to an elevated four-lane expressway on piers, with sound walls, a
-median, lights, green sign gantries and fast traffic, cut through the hills at both ends. Around the town: stepped rice paddies, a koi pond, wooded hills on both sides, and
+median, lights, green sign gantries and fast traffic, cut through the hills at both ends. Up on the plateau of the east hill, where the main street climbs out of town, stands Hoshigaoka Junior High: a
+four-storey school building with balconies, a clock tower and banners, a gym with an arched roof, a 25 m pool, a
+schoolyard with a running track, goals and a backstop, flagpoles, a gate with its name plate and cherry trees along the
+fence. Around the town: stepped rice paddies, a koi pond, wooded hills on both sides, and
 a forest-covered mountain with a shrine reached by a stone path and red torii gates. No lot is left bare: every free patch becomes a coin car park, a yatai food stall, a pocket park with swings, bicycle
 parking, a vending machine corner with a green phone box, a little roadside shrine, a vegetable garden or a nook of
 pots and bikes. Day turns to night: windows, shop
@@ -103,6 +106,7 @@ e2e/perf.mjs             load time and draw calls / triangles per frame from a f
 | ![Coin parking, a pocket park and a roadside shrine](docs/preview-fillers.jpg) | ![The rice paddies](docs/preview-paddies.jpg) |
 | ![The hillside at night](docs/preview-night.jpg) | ![The expressway and the toll plaza](docs/preview-expressway.jpg) |
 | ![The underpass under the cross street](docs/preview-underpass.jpg) | ![The gas station](docs/preview-gas.jpg) |
+| ![The school on the hill](docs/preview-school.jpg) | |
 
 ---
 

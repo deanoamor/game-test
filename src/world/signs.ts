@@ -15,7 +15,7 @@ export class SignAtlas {
   readonly wideNames: string[] = [];
 
   constructor() {
-    const W = 2048, H = 1536;
+    const W = 2048, H = 2048;
     const cv = document.createElement('canvas');
     cv.width = W;
     cv.height = H;
@@ -434,6 +434,49 @@ export class SignAtlas {
         text('洗車', x, y + 8, 128, 70, '#ffffff', 50);
         text('CAR WASH', x, y + 78, 128, 40, '#ffffff', 20);
         reg('carWash', x, y, 128, 128);
+      }
+    }
+    // the school on the hill: its name plate at the gate, the clock, and the banners hanging from the roof
+    {
+      {
+        const x = 0, y = 1536;
+        g.fillStyle = '#f4f2ea'; g.fillRect(x, y, 128, 384);
+        g.strokeStyle = '#5a4a3a'; g.lineWidth = 8; g.strokeRect(x + 6, y + 6, 116, 372);
+        text('星ヶ丘中学校', x, y, 128, 384, '#1a1a1a', 52, true);
+        reg('schoolPlaque', x, y, 128, 384);
+      }
+      {
+        const x = 128, y = 1536;
+        g.fillStyle = '#ffffff'; g.fillRect(x, y, 128, 384);
+        text('祝県大会出場野球部', x, y, 128, 384, '#c8322e', 40, true);
+        reg('schoolBanner', x, y, 128, 384);
+      }
+      {
+        const x = 256, y = 1536;
+        g.fillStyle = '#ffffff'; g.fillRect(x, y, 128, 384);
+        text('祝全国大会吹奏楽部', x, y, 128, 384, '#1f4fa8', 40, true);
+        reg('schoolBanner2', x, y, 128, 384);
+      }
+      {
+        const x = 384, y = 1536, cx = x + 64, cy = y + 64;
+        g.fillStyle = '#2a2c32'; g.fillRect(x, y, 128, 128);
+        g.fillStyle = '#ffffff'; g.beginPath(); g.arc(cx, cy, 58, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = '#1a1a1a'; g.lineWidth = 4;
+        for (let k = 0; k < 12; k++) {
+          const a = (k / 12) * Math.PI * 2;
+          g.beginPath(); g.moveTo(cx + Math.cos(a) * 46, cy + Math.sin(a) * 46); g.lineTo(cx + Math.cos(a) * 54, cy + Math.sin(a) * 54); g.stroke();
+        }
+        g.lineWidth = 6; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 22, cy - 22); g.stroke();
+        g.lineWidth = 4; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx - 4, cy - 44); g.stroke();
+        reg('clock', x, y, 128, 128);
+      }
+      {
+        const x = 512, y = 1536;
+        g.fillStyle = '#1f5e3a'; g.fillRect(x, y, 512, 128);
+        g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.strokeRect(x + 8, y + 8, 496, 112);
+        text('星ヶ丘中学校', x, y + 4, 512, 80, '#ffffff', 60);
+        text('HOSHIGAOKA JUNIOR HIGH SCHOOL', x, y + 80, 512, 40, '#ffffff', 22);
+        reg('schoolName', x, y, 512, 128);
       }
     }
     this.texture = new CanvasTexture(cv);
