@@ -1,6 +1,7 @@
 import { Color } from 'three';
 import type { GeoBuilder, V3 } from '../../util/builder';
 import type { SignAtlas } from '../signs';
+import { lampFaces, type SignalGroup } from '../signals';
 import { buildVehicle, type VehicleKind } from '../vehicles';
 import { dk, newCtx, type Ctx } from './frame';
 
@@ -267,25 +268,34 @@ export function cone(ctx: Ctx, x: number, y: number, z: number) {
 }
 
 /** A traffic light: a pole, an arm over the road with a three-lamp head, and a walk signal. `yaw` points the lamps. */
-export function trafficLight(ctx: Ctx, x: number, y: number, z: number, yaw: number, arm: number, phase: 'red' | 'green') {
+/** A signal pole with its arm over the road and a walk signal on the pole. Its lamps are drawn dark; their lit faces go
+ *  to the signal cycle (src/world/signals.ts) for `group`, the street whose traffic it shows. */
+export function trafficLight(ctx: Ctx, x: number, y: number, z: number, yaw: number, arm: number, group: SignalGroup) {
   const tmp = newCtx(ctx.r);
   const B = tmp.body;
   B.box(0, 2.9, 0, 0.18, 5.8, 0.18, '#a9adb1', { ao: 0.1 });
   B.box(arm / 2, 5.5, 0, arm, 0.12, 0.12, '#a9adb1', { ao: 0 });
   B.box(arm - 0.2, 5.3, 0.15, 1.4, 0.42, 0.3, '#5a6066', { ao: 0.05 });
-  const lamps: [string, boolean][] = [['#2fd07a', phase === 'green'], ['#f2c230', false], ['#ff4a3a', phase === 'red']];
-  lamps.forEach(([c, on], i) => {
+  const lit = (kind: Parameters<typeof lampFaces>[1], draw: (b: GeoBuilder) => void) => {
+    const b = new (B.constructor as new () => GeoBuilder)();
+    draw(b);
+    lampFaces(group, kind).appendTransformed(b, x, y, z, yaw);
+  };
+  const lamps: ['green' | 'yellow' | 'red', string][] = [['green', '#2fd07a'], ['yellow', '#f2c230'], ['red', '#ff4a3a']];
+  lamps.forEach(([kind, c], i) => {
     const lx = arm - 0.65 + i * 0.45;
-    (on ? tmp.litA : B).disc(lx, 5.3, 0.31, 0.16, 0.04, 'z', on ? c : dk(c, 0.4), 12);
+    B.disc(lx, 5.3, 0.31, 0.16, 0.04, 'z', dk(c, 0.35), 12);
+    lit(kind, (b) => b.disc(lx, 5.3, 0.325, 0.155, 0.02, 'z', dk(c, 1.6), 12));
     B.box(lx, 5.48, 0.38, 0.36, 0.04, 0.16, '#4a5056', { ao: 0 });
   });
   // the walk signal on the pole: red man above, green man below
   B.box(0.0, 2.6, 0.22, 0.36, 0.8, 0.22, '#5a6066', { ao: 0.05 });
-  (phase === 'red' ? tmp.litA : B).box(0.0, 2.8, 0.34, 0.24, 0.26, 0.02, phase === 'red' ? '#ff4a3a' : '#5a2a28', { ao: 0 });
-  (phase === 'green' ? tmp.litA : B).box(0.0, 2.42, 0.34, 0.24, 0.26, 0.02, phase === 'green' ? '#2fd07a' : '#1f4a34', { ao: 0 });
+  B.box(0.0, 2.8, 0.34, 0.24, 0.26, 0.02, '#5a2a28', { ao: 0 });
+  B.box(0.0, 2.42, 0.34, 0.24, 0.26, 0.02, '#1f4a34', { ao: 0 });
+  lit('walkRed', (b) => b.box(0.0, 2.8, 0.352, 0.22, 0.24, 0.01, dk('#ff4a3a', 1.5), { ao: 0 }));
+  lit('walkGreen', (b) => b.box(0.0, 2.42, 0.352, 0.22, 0.24, 0.01, dk('#2fd07a', 1.5), { ao: 0 }));
   B.box(0, 1.2, 0.12, 0.2, 0.3, 0.12, '#e8e8e8', { ao: 0 }); // the push button box
   ctx.body.appendTransformed(tmp.body, x, y, z, yaw);
-  ctx.litA.appendTransformed(tmp.litA, x, y, z, yaw);
 }
 
 /** A red street lamp post with two hanging lanterns, as on old shopping streets. */

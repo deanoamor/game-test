@@ -416,10 +416,10 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
     const cz = MAIN_Z + sz * (MAIN_HALF + 1.9);
     for (let k = 0; k < 7; k++) stripe(-CROSS_HALF + 0.25 + k * 0.95, cz - 1.4, -CROSS_HALF + 0.7 + k * 0.95, cz + 1.4);
   }
-  trafficLight(X, xC - 0.4, SW, nIn - 0.4, -90, 6.5, 'green');
-  trafficLight(X, -xC + 0.4, SW, sIn + 0.4, 90, 6.5, 'green');
-  trafficLight(X, -xC + 0.4, SW, nIn - 0.4, 0, 4.5, 'red');
-  trafficLight(X, xC - 0.4, SW, sIn + 0.4, 180, 4.5, 'red');
+  trafficLight(X, xC - 0.4, SW, nIn - 0.4, -90, 6.5, 'main');
+  trafficLight(X, -xC + 0.4, SW, sIn + 0.4, 90, 6.5, 'main');
+  trafficLight(X, -xC + 0.4, SW, nIn - 0.4, 0, 4.5, 'cross');
+  trafficLight(X, xC - 0.4, SW, sIn + 0.4, 180, 4.5, 'cross');
   for (const [x, z, yaw] of [[-xC + 0.3, nIn - 1.6, 0], [xC - 0.3, sIn + 1.6, 180], [xC - 0.3, nIn - 1.6, 0], [-xC + 0.3, sIn + 1.6, 180]] as const) { signPole(X, atlas, 'pedCross', x, SW, z, yaw, 2.6, 0.7); take(x, z, 0.4); }
   for (const [x, z] of [[xC - 0.4, nIn - 0.4], [-xC + 0.4, sIn + 0.4], [-xC + 0.4, nIn - 0.4], [xC - 0.4, sIn + 0.4]]) take(x, z, 0.5);
   // the back lanes meet the cross street: red paint, a stop line, 止まれ, a triangle sign, a mirror
@@ -515,7 +515,6 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
       c.sign.quadFacing([x, SW + 5.8, parkTop + 0.8 - 0.95], [x, SW + 5.8, parkTop + 0.8 + 0.95], [x, SW + 7.0, parkTop + 0.8 + 0.95], [x, SW + 7.0, parkTop + 0.8 - 0.95], [side, 0, 0], [1, 1, 1], [[uL, cell.v0], [uR, cell.v0], [uR, cell.v1], [uL, cell.v1]]);
     }
   }
-  parkedVehicle(at(28), 'truck', '#f4f4f0', 28.5, Y_M + 0.05, MAIN_Z + 2.0, 180);
   parkedVehicle(at(-12), 'kei', '#f4f4ee', -36.0, Y_N + 0.05, BACK_N + 0.6, 180);
   // the back lanes: lamps, a mirror, a vending machine by a tiled wall, cones
   for (const x of [-90, -40, 16, 44, 90]) classicLamp(at(x), x, heightAt(x, BACK_N - BACK_HALF - 0.4) + 0.05, BACK_N - BACK_HALF - 0.4);

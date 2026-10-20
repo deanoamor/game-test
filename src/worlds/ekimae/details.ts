@@ -8,8 +8,8 @@ import { boxes, pot, shrub } from '../../world/village/props';
 
 /**
  * World 1's own details: the camera is close to the street here, so the crossing gets what you would see standing on
- * it. Road paint (lane arrows, stop lines, crosswalk-ahead diamonds), manholes and patched asphalt; signal push
- * buttons; a red postbox, a green phone, a koban-style notice board; nobori flags, red lanterns and crates at the
+ * it. Road paint (lane arrows, stop lines, crosswalk-ahead diamonds), manholes and patched asphalt;
+ * a red postbox, a green phone, a koban-style notice board; nobori flags, red lanterns and crates at the
  * izakaya, a planter at the café, a delivery scooter at the ramen shop; pigeons, a cat, shop-street
  * banners on the lamps, pots and utility cabinets along the cross street.
  *
@@ -28,7 +28,6 @@ const crossRoadY = (z: number) => rampY(z) + 0.075;
 export function ekimaeDetails(k: DetailKit) {
   roadPaint(k);
   manholes(k);
-  signalButtons(k);
   cornerShop(k);
   izakaya(k);
   ramenFront(k);
@@ -97,18 +96,6 @@ function manholes(k: DetailKit) {
   for (const [x, z] of [[-26, MAIN_Z + 3.2], [9, MAIN_Z - 3.3]]) k.put(x, Y_M + 0.06, z, 0, (c) => { c.body.box(0, 0.01, 0, 0.42, 0.02, 0.42, '#6a6c70', { ao: 0 }); c.body.box(0, 0.022, 0, 0.3, 0.01, 0.3, '#56585c', { ao: 0 }); });
   for (const [x, z, w, d] of [[-29, MAIN_Z - 1.0, 2.4, 1.3], [25, MAIN_Z + 2.6, 1.6, 2.0], [-9.5, MAIN_Z + 0.4, 1.1, 0.9]]) k.put(x, Y_M + 0.06, z, 0, (c) => c.body.box(0, 0.005, 0, w, 0.01, d, '#34363b', { ao: 0 }));
   k.put(-1.9, crossRoadY(21) - 0.01, 21, 0, (c) => c.body.box(0, 0.005, 0, 1.4, 0.01, 2.6, '#34363b', { ao: 0 }));
-}
-
-/** The yellow push-button boxes on the signal poles. */
-function signalButtons(k: DetailKit) {
-  const xC = CROSS_HALF + CROSS_WALK;
-  for (const [x, z, yaw] of [[xC - 0.4, N_IN - 0.4, 180], [-xC + 0.4, S_IN + 0.4, 0], [-xC + 0.4, N_IN - 0.4, 90], [xC - 0.4, S_IN + 0.4, -90]] as const) {
-    k.put(x, SW, z, yaw, (c) => {
-      c.body.box(0, 1.15, 0.13, 0.2, 0.3, 0.12, '#f2c230', { ao: 0 });
-      c.body.box(0, 1.2, 0.195, 0.08, 0.08, 0.02, '#e8e4d8', { ao: 0 });
-      c.litB.box(0, 1.07, 0.195, 0.12, 0.04, 0.012, '#ff6a3a', { ao: 0 });
-    });
-  }
 }
 
 // ---------------------------------------------------------------------------------------------------------------

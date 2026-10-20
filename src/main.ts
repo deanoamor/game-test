@@ -13,6 +13,7 @@ import { buildRoads } from './world/roads';
 import { Clouds, SkyDome } from './world/sky';
 import { SignAtlas } from './world/signs';
 import { buildTerrain } from './world/terrain';
+import { Signals } from './world/signals';
 import { Traffic } from './world/traffic';
 import { buildWater } from './world/water';
 
@@ -81,7 +82,10 @@ async function main() {
   scene.add(buildRoads());
   const windU = { value: 0 };
   scene.add(trees.build(windU, keep ? (x, z) => inRect(keep, x, z, 90) : undefined));
-  const traffic = new Traffic();
+  // the signals at the crossing, and the traffic that keeps to them
+  const signals = new Signals();
+  scene.add(signals.group);
+  const traffic = new Traffic(signals);
   scene.add(traffic.group);
 
   progress(0.61, 'Drawing the map…');
@@ -193,7 +197,8 @@ async function main() {
     windU.value += dt;
     water.uniforms.uTime.value += dt;
     clouds.step(dt);
-    traffic.step(dt);
+    if (!params.has('shot')) signals.step(dt);
+    traffic.step(params.has('shot') ? 0 : dt);
     sky.update(drone.camera, light.state.sky);
     if (light.shadowDirty) { renderer.shadowMap.needsUpdate = true; light.shadowDirty = false; }
     // the tilt-shift band follows the view: sharp where the drone looks
@@ -234,7 +239,9 @@ async function main() {
   requestAnimationFrame(loop);
 
   (window as unknown as Record<string, unknown>).__game = {
-    drone, scene, renderer, light, post, hud,
+    drone, scene, renderer, light, post, hud, signals, traffic,
+    /** Run the signals and the traffic ahead by `seconds` (for tests). */
+    simulate: (seconds: number) => { for (let t = 0; t < seconds; t += 1 / 30) { signals.step(1 / 30); traffic.step(1 / 30); } },
     flyTo: (key: string, instant = true) => { const p = PLACES.find((q) => q.key === key); if (p) drone.flyTo(p, instant); },
     setHour: (h: number) => { playing = false; applyHour(h); },
     setQuality: applyQuality,
