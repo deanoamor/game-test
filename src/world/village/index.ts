@@ -477,7 +477,8 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
     take(x + 0.5, z, 1.3);
     if (t < 0.3) { vendingMachine(c, atlas, x, SW, z, north ? 0 : 180, r() < 0.5 ? 'vendRed' : 'vendBlue'); bins(c, x + 0.9, SW, z); }
     else if (t < 0.55) { pot(c, x, SW, z, k); pot(c, x + 0.6, SW, z + 0.1, k + 1); shrub(c, 'flower', x + 1.3, SW, z, 0.7, k); }
-    else if (t < 0.75) { bicycle(c, x, SW, z + (north ? -0.4 : 0.4), 0, pick(r, ['#4f7fd9', '#d94f4f', '#7fb8b0', '#e0b341'])); bicycle(c, x + 0.8, SW, z + (north ? -0.4 : 0.4), 0, pick(r, ['#9a9a9a', '#2a2a2a', '#f4f4ee'])); }
+    // no bicycles on the pavement: a pair of pots instead (the dice are still thrown, so the rest of the town stays put)
+    else if (t < 0.75) { pick(r, [0, 1]); pick(r, [0, 1]); pot(c, x, SW, z, k + 2); pot(c, x + 0.55, SW, z, k + 3); }
     else if (t < 0.88) boxes(c, x, SW, z, 3);
     else aBoard(c, atlas, pick(r, ['menu', 'cafeMenu', 'sale']), x, SW, z + (north ? 0.6 : -0.6), north ? 0 : 180);
   }

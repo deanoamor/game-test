@@ -4,13 +4,13 @@ import { rampY } from '../../world/config';
 import { STREET, type DetailKit } from '../../world/village';
 import type { Ctx } from '../../world/village/frame';
 import { bench, board, nobori } from '../../world/village/fillers';
-import { bicycle, boxes, pot, shrub } from '../../world/village/props';
+import { boxes, pot, shrub } from '../../world/village/props';
 
 /**
  * World 1's own details: the camera is close to the street here, so the crossing gets what you would see standing on
  * it. Road paint (lane arrows, stop lines, crosswalk-ahead diamonds), manholes and patched asphalt; signal push
  * buttons; a red postbox, a green phone, a koban-style notice board; nobori flags, red lanterns and crates at the
- * izakaya, a planter at the café, a delivery scooter at the ramen shop; parked bicycles, pigeons, a cat, shop-street
+ * izakaya, a planter at the café, a delivery scooter at the ramen shop; pigeons, a cat, shop-street
  * banners on the lamps, pots and utility cabinets along the cross street.
  *
  * Coordinates are the town's: the main street runs along x at z = 44, the cross street along z at x = 0.
@@ -185,7 +185,8 @@ function izakaya(k: DetailKit) {
 function ramenFront(k: DetailKit) {
   const { atlas } = k;
   for (const x of [26.8, 33.0]) if (k.free(x, N_FRONT + 0.7, 0.3)) k.put(x, SW, N_FRONT + 0.7, 0, (c) => nobori(c, atlas.get('ramenBanner'), 0, 0, 2.5));
-  if (k.free(28.3, N_FRONT + 0.8, 0.8)) k.put(28.3, SW, N_FRONT + 0.8, 90, scooter);
+  // the scooter waits on the road by the curb, not on the pavement
+  k.put(28.3, Y_M + 0.05, N_IN + 0.55, 90, scooter);
 }
 
 /** A delivery scooter with its box (along local +z). */
@@ -206,18 +207,6 @@ function scooter(c: Ctx) {
 
 function pavementLife(k: DetailKit) {
   const { r } = k;
-  // bicycles parked against the shop fronts, slightly askew
-  const bikes = (x0: number, n: number, z: number) => {
-    for (let i = 0; i < n; i++) {
-      const x = x0 + i * 0.75;
-      if (!k.free(x, z, 0.3)) continue;
-      const col = ['#4f7fd9', '#d94f4f', '#9a9a9a', '#2a2a2a', '#f4f4ee', '#7fb8b0', '#e0b341'][Math.floor(r() * 7)];
-      k.put(x, SW, z, 0, (c) => bicycle(c, 0, 0, 0, (r() - 0.5) * 14, col));
-    }
-  };
-  bikes(-29.5, 4, N_FRONT + 0.75);
-  bikes(-20.0, 3, S_FRONT - 0.75);
-  bikes(24.0, 3, S_FRONT - 0.75);
   // a bench and an ashtray stand at the konbini corner
   if (k.free(-15.6, S_FRONT - 0.3, 1.0)) k.put(-15.6, SW, S_FRONT - 0.3, 180, (c) => bench(c.body, 0, 0, 0, '#4a6a8a'));
   // pots and crates by doorways
@@ -272,8 +261,6 @@ function crossStreet(k: DetailKit) {
       k.put(x, crossWalkY(z), z, 0, (c) => pot(c, 0, 0, 0, Math.floor(r() * 5)));
     }
   }
-  // a bicycle by the cross street's south arm
-  k.put(-edge + 0.1, crossWalkY(66), 66, 90, (c) => bicycle(c, 0, 0, 0, 90, '#d94f4f'));
 }
 
 /** Shop-street banners hung from the street lamps, facing the road. */

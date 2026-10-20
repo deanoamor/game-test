@@ -28,7 +28,7 @@ zoom, start view and exits), listed in `src/worlds/index.ts`; the town they are 
 crossing and the first lots along each street, seen close up like a game camera: you can move within it, behind an invisible barrier, and around it a ring of the real town is still built as scenery, so its edge is
 never a void. Up close the crossing has its own details (`src/worlds/ekimae/details.ts`): lane arrows, stop lines and ◇ marks,
 manholes and patched asphalt, signal push buttons, a red postbox, a green phone, a notice board, nobori flags and red
-lanterns at the izakaya, a delivery scooter, parked bikes, pigeons, a cat, lamp banners and utility cabinets. Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
+lanterns at the izakaya, a delivery scooter, pigeons, a cat, lamp banners and utility cabinets. Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
 right) switches to the full map, `Hoshi Town (full map)`, which is kept as it was; links take `#world=ekimae` or
 `#world=full`.
 
