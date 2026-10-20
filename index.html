@@ -64,6 +64,14 @@
   <div id="fps"></div>
 </div>
 <div id="loading"><div class="box"><h1>HOSHI NO KUNI</h1><h2>星の国</h2><div class="bar"><i id="bar"></i></div><p id="loadMsg">Shaping the land…</p></div></div>
+<script>
+  // any error while loading shows on the loading screen instead of leaving it frozen
+  (function () {
+    var show = function (m) { var el = document.getElementById('loadMsg'), ld = document.getElementById('loading'); if (el && ld && !ld.classList.contains('done')) el.textContent = 'Error: ' + m; };
+    window.addEventListener('error', function (e) { show(e.message || 'script error'); });
+    window.addEventListener('unhandledrejection', function (e) { show((e.reason && e.reason.message) || String(e.reason)); });
+  })();
+</script>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

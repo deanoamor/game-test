@@ -2,6 +2,7 @@ import { ACESFilmicToneMapping, PCFSoftShadowMap, PMREMGenerator, Scene, SRGBCol
 import { Drone } from './camera/drone';
 import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
+import { yieldUI } from './util/rng';
 import { PLACES } from './world/config';
 import { buildVillage } from './world/village';
 import { DaylightRig } from './world/daylight';
@@ -15,7 +16,7 @@ import { Traffic } from './world/traffic';
 import { buildWater } from './world/water';
 
 const params = new URLSearchParams(location.search);
-const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+const nextFrame = yieldUI;
 
 async function main() {
   const host = document.getElementById('app')!;
@@ -51,7 +52,7 @@ async function main() {
   progress(0.4, 'Building the village…');
   await nextFrame();
   const atlas = new SignAtlas();
-  const village = buildVillage(trees, atlas);
+  const village = await buildVillage(trees, atlas, (f, msg) => progress(0.4 + f * 0.2, msg));
   scene.add(village.group);
   scene.add(buildRoads());
   const windU = { value: 0 };
@@ -59,6 +60,9 @@ async function main() {
   const traffic = new Traffic();
   scene.add(traffic.group);
 
+  progress(0.61, 'Drawing the map…');
+  await nextFrame();
+  hud.paintBase();
   progress(0.62, 'Placing landmarks…');
   const marks = await loadLandmarks((n, total, name) => progress(0.62 + (n / total) * 0.3, `Landmark: ${name}`));
   scene.add(marks.group);

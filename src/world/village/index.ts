@@ -1,6 +1,6 @@
 import { Color, Group, Mesh, MeshStandardMaterial } from 'three';
 import { GeoBuilder, type V3 } from '../../util/builder';
-import { pick, rng } from '../../util/rng';
+import { pick, rng, yieldUI } from '../../util/rng';
 import { EXPRESSWAY, IC_RAMP, PADDY, PLATFORMS, POND, STAIRS, TERRACES, WATER_Y, heightAt, rampY, roadNear } from '../config';
 import type { TreeField } from '../forest';
 import { raiseSkyline } from '../skyline';
@@ -42,7 +42,9 @@ interface Lot { x: number; z: number; yaw: number; w: number; d: number; y: numb
 
 export interface VillageBuild { group: Group; update(night: number): void }
 
-export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
+export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (f: number, label: string) => void = () => {}): Promise<VillageBuild> {
+  // the town is built in steps, letting the loading screen repaint in between
+  const step = async (f: number, label: string) => { onStep(f, label); await yieldUI(); };
   const r = rng(77777);
   const chunks = new Map<number, Ctx>();
   const at = (x: number): Ctx => {
@@ -237,6 +239,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
   const alley = (zb: number): [number, number][] => STAIRS.filter((s) => s.z === zb).map((s) => [s.x - s.w / 2 - 0.35, s.x + s.w / 2 + 0.35]);
   const upAlleys = alley(TERRACES[0].z1), downAlleys = alley(TERRACES[1].z1);
 
+  await step(0.05, 'Main street…');
   // the main street, north side: the sushi shop, an izakaya and a café by the crossing; the ramen shop further east
   rowFill({
     front: MAIN_Z - MAIN_HALF - WALK, yaw: 0, depth: 12, y: SW, ground: Y_M, yard: TERRACES[0].z1 + 0.1, kind: 'main', skip: [...mainSkip, ...upAlleys],
@@ -248,6 +251,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
       return null;
     },
   });
+  await step(0.2, 'Konbini and supermarket…');
   // the main street, south side: the convenience store and the supermarket stand back behind their car parks
   rowFill({
     front: MAIN_Z + MAIN_HALF + WALK, yaw: 180, depth: 12, y: SW, ground: Y_M, yard: TERRACES[1].z1 - 0.4, kind: 'main', skip: [...mainSkip, ...downAlleys],
@@ -257,6 +261,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
       return null;
     },
   });
+  await step(0.35, 'Back lanes…');
   // the back lanes
   rowFill({ front: BACK_N + BACK_HALF + 2.4, yaw: 180, depth: 9.5, y: Y_N + 0.12, ground: Y_N, kind: 'back', skip: [...backSkip, ...upAlleys] });
   rowFill({ front: BACK_N - BACK_HALF - 2.4, yaw: 0, depth: 8.5, y: Y_N + RAISE + 0.12, ground: Y_N + RAISE, raised: PLATFORMS[0].z1, kind: 'back', skip: backSkip });
@@ -274,10 +279,14 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
     occ.mark(st.x - st.w / 2 - 0.4, za, st.x + st.w / 2 + 0.4, zb);
   }
 
+  await step(0.55, 'Terraces and retaining walls…');
   buildTownGround(at);
+  await step(0.62, 'Pavements, poles and wires…');
   streets(at, atlas, r, trees, occ);
   outskirts(at, atlas, r, trees);
+  await step(0.72, 'Filling the empty lots…');
   fillEmpty(occ, at, atlas, r, trees);
+  await step(0.8, 'Expressway and toll gate…');
   buildExpressway(at, atlas);
   buildUnderpass(at);
   buildGasStation(at, atlas, r);
@@ -290,6 +299,7 @@ export function buildVillage(trees: TreeField, atlas: SignAtlas): VillageBuild {
     const [za, zb] = st.z === TERRACES[0].z1 ? [BACK_N + BACK_HALF + 2.6, st.z - 1.2] : [st.z + 9.6, BACK_S - BACK_HALF - 0.3];
     for (let z = za; z < zb - 0.4; z += 0.9) if (r() < 0.6) pot(at(st.x), side, heightAt(side, z), z, Math.floor(r() * 5));
   }
+  await step(0.9, 'Putting the town together…');
   return assemble(chunks, atlas);
 }
 

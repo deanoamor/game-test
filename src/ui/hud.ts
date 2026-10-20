@@ -19,7 +19,8 @@ export class Hud {
   onMapClick?: (x: number, z: number) => void;
 
   constructor(private drone: Drone) {
-    this.base = this.paintMap();
+    // the map is painted once the world exists (see paintBase); until then a blank one
+    this.base = document.createElement('canvas');
     const list = $('places');
     PLACES.forEach((p, i) => {
       const b = document.createElement('button');
@@ -160,6 +161,11 @@ export class Hud {
     g.fill();
     g.strokeStyle = '#fff';
     g.stroke();
+  }
+
+  /** Paint the minimap's ground, roads and places (after the world is built). */
+  paintBase() {
+    this.base = this.paintMap();
   }
 
   setProgress(f: number, msg: string) {

@@ -17,3 +17,11 @@ export const smoothstep = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 export const pick = <T,>(r: () => number, list: readonly T[]): T => list[Math.floor(r() * list.length) % list.length];
+
+/** Let the page repaint (to show progress): the next animation frame, or a short timeout when frames are paused (hidden tab). */
+export const yieldUI = () => new Promise<void>((resolve) => {
+  let done = false;
+  const go = () => { if (!done) { done = true; resolve(); } };
+  requestAnimationFrame(go);
+  setTimeout(go, 40);
+});
