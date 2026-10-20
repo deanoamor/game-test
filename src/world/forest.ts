@@ -94,7 +94,8 @@ export class TreeField {
     this.count++;
   }
 
-  build(windUniform: { value: number }): Group {
+  /** The trees as instanced meshes; `keep` leaves out the ones a zone does not need. */
+  build(windUniform: { value: number }, keep: (x: number, z: number) => boolean = () => true): Group {
     const g = new Group();
     g.name = 'Trees';
     for (const [kind, items] of this.list) {
@@ -115,6 +116,7 @@ export class TreeField {
       const p = new Vector3();
       for (const it of items) {
         p.setFromMatrixPosition(it.m);
+        if (!keep(p.x, p.z)) continue;
         const key = `${Math.floor(p.x / 100)},${Math.floor(p.z / 100)}`;
         let a = cells.get(key);
         if (!a) cells.set(key, (a = []));

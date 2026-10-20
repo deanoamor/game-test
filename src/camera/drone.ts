@@ -39,7 +39,7 @@ export class Drone {
     window.addEventListener('pointerup', (e) => this.up(e));
     dom.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.distGoal = clamp(this.distGoal * Math.exp(e.deltaY * 0.0011), 10, 520);
+      this.distGoal = clamp(this.distGoal * Math.exp(e.deltaY * 0.0011), 10, this.maxDist);
       this.flying = false;
     }, { passive: false });
     this.update(0);
@@ -67,7 +67,7 @@ export class Drone {
     if (!this.drag) return;
     if (this.touches.size === 2) {
       const d = this.pinchDistance();
-      if (this.pinch > 0 && d > 0) this.distGoal = clamp(this.distGoal * (this.pinch / d), 10, 520);
+      if (this.pinch > 0 && d > 0) this.distGoal = clamp(this.distGoal * (this.pinch / d), 10, this.maxDist);
       this.pinch = d;
       return;
     }
@@ -95,14 +95,25 @@ export class Drone {
     if (this.touches.size === 0) this.drag = null;
   }
 
+  /** The invisible barrier: where the point the drone looks at may go (the whole map unless a zone sets it). */
+  bounds = { x0: -HALF + 20, z0: -HALF + 20, x1: HALF - 20, z1: HALF - 20 };
+  /** How far the drone may pull back. */
+  maxDist = 520;
+  /** Pressing against the barrier, for the exits: the point the drone would have gone to. */
+  pushed = { x: 0, z: 0, t: 0 };
+
   private clampGoal() {
-    this.goal.x = clamp(this.goal.x, -HALF + 20, HALF - 20);
-    this.goal.z = clamp(this.goal.z, -HALF + 20, HALF - 20);
+    const b = this.bounds;
+    const x = this.goal.x, z = this.goal.z;
+    this.goal.x = clamp(x, b.x0, b.x1);
+    this.goal.z = clamp(z, b.z0, b.z1);
+    if (x !== this.goal.x || z !== this.goal.z) this.pushed = { x, z, t: performance.now() };
   }
 
   /** Fly to a named place (smooth), or jump there at once. */
   flyTo(p: Place, instant = false) {
     this.goal.set(p.x, 0, p.z);
+    this.clampGoal();
     this.yawGoal = MathUtils.degToRad(p.yaw);
     this.pitchGoal = MathUtils.degToRad(p.pitch);
     this.distGoal = p.dist;
@@ -147,8 +158,8 @@ export class Drone {
     if (k.has('KeyE')) this.yawGoal -= 1.4 * dt;
     if (k.has('KeyR')) this.pitchGoal = clamp(this.pitchGoal + 0.8 * dt, 0.14, 1.5);
     if (k.has('KeyF')) this.pitchGoal = clamp(this.pitchGoal - 0.8 * dt, 0.14, 1.5);
-    if (k.has('Equal') || k.has('NumpadAdd')) this.distGoal = clamp(this.distGoal * Math.exp(-1.2 * dt), 10, 520);
-    if (k.has('Minus') || k.has('NumpadSubtract')) this.distGoal = clamp(this.distGoal * Math.exp(1.2 * dt), 10, 520);
+    if (k.has('Equal') || k.has('NumpadAdd')) this.distGoal = clamp(this.distGoal * Math.exp(-1.2 * dt), 10, this.maxDist);
+    if (k.has('Minus') || k.has('NumpadSubtract')) this.distGoal = clamp(this.distGoal * Math.exp(1.2 * dt), 10, this.maxDist);
 
     const a = 1 - Math.exp(-dt * (this.flying ? 2.6 : 9));
     this.yaw += (this.yawGoal - this.yaw) * a;

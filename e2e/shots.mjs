@@ -17,7 +17,7 @@ page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 page.on('response', (r) => { if (r.status() >= 400) errs.push(r.status() + ' ' + r.url()); });
 const t0 = Date.now();
 for (const [view, hour, extra] of SHOTS) {
-  const qs = `?shot=1&pause=1&q=${Q}&t=${hour}&view=${view}${extra ? '&' + extra : ''}${process.env.HUD ? '' : '&hud=0'}`;
+  const qs = `?shot=1&pause=1&world=${process.env.WORLD || 'full'}&q=${Q}&t=${hour}&view=${view}${extra ? '&' + extra : ''}${process.env.HUD ? '' : '&hud=0'}`;
   await page.goto(URL + qs);
   await page.waitForFunction(() => window.__game && window.__game.frames() > 2, null, { timeout: 240000 });
   await page.waitForTimeout(600);

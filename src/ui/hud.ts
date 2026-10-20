@@ -1,6 +1,7 @@
 import { Color } from 'three';
 import { clamp, smoothstep } from '../util/rng';
-import { EXPRESSWAY, HALF, IC, IC_RAMP, PLACES, PADDY, SHRINE, VILLAGE, getRoads, heightAt, placeAt } from '../world/config';
+import { EXPRESSWAY, IC, IC_RAMP, PADDY, SHRINE, VILLAGE, getRoads, heightAt, placeAt, type Place } from '../world/config';
+import { WORLDS, goToWorld, inRect, mapView, placesIn, type Exit, type WorldDef } from '../world/worlds';
 import { groundColor } from '../world/terrain';
 import type { Drone } from '../camera/drone';
 
@@ -17,10 +18,29 @@ export class Hud {
   onPlay?: (playing: boolean) => void;
   onQuality?: (q: string) => void;
   onMapClick?: (x: number, z: number) => void;
+  /** The places listed for this world. */
+  readonly places: Place[];
+  private view: { cx: number; cz: number; half: number };
+  private exit: Exit | null = null;
 
-  constructor(private drone: Drone) {
+  constructor(private drone: Drone, private world: WorldDef) {
     // the map is painted once the world exists (see paintBase); until then a blank one
     this.base = document.createElement('canvas');
+    this.view = mapView(world);
+    this.places = placesIn(world);
+    const PLACES = this.places;
+    $('worldName').textContent = world.bounds ? `${world.name} · ${world.jp}` : 'Hoshi no Kuni · 星の国';
+    // the worlds menu: going to another world loads it afresh
+    const sel = $<HTMLSelectElement>('world');
+    for (const w of WORLDS) {
+      const o = document.createElement('option');
+      o.value = w.key;
+      o.textContent = w.name;
+      o.selected = w.key === world.key;
+      sel.appendChild(o);
+    }
+    sel.onchange = () => goToWorld(sel.value);
+    $('exitGo').onclick = () => { if (this.exit?.to) goToWorld(this.exit.to); };
     const list = $('places');
     PLACES.forEach((p, i) => {
       const b = document.createElement('button');
@@ -48,8 +68,9 @@ export class Hud {
     $<HTMLSelectElement>('quality').onchange = (e) => this.onQuality?.((e.target as HTMLSelectElement).value);
     this.mini.addEventListener('pointerdown', (e) => {
       const r = this.mini.getBoundingClientRect();
-      const x = ((e.clientX - r.left) / r.width) * HALF * 2 - HALF;
-      const z = ((e.clientY - r.top) / r.height) * HALF * 2 - HALF;
+      const v = this.view;
+      const x = v.cx - v.half + ((e.clientX - r.left) / r.width) * v.half * 2;
+      const z = v.cz - v.half + ((e.clientY - r.top) / r.height) * v.half * 2;
       this.onMapClick?.(x, z);
     });
   }
@@ -57,6 +78,7 @@ export class Hud {
   /** The static map: terrain colours, water, the city grid, the mountain road. */
   private paintMap(): HTMLCanvasElement {
     const n = 210;
+    const { cx: VX, cz: VZ, half: HALF } = this.view;
     const cv = document.createElement('canvas');
     cv.width = cv.height = n;
     const g = cv.getContext('2d')!;
@@ -64,7 +86,7 @@ export class Hud {
     const c = new Color();
     for (let j = 0; j < n; j++) {
       for (let i = 0; i < n; i++) {
-        const x = (i / n) * HALF * 2 - HALF, z = (j / n) * HALF * 2 - HALF;
+        const x = VX - HALF + (i / n) * HALF * 2, z = VZ - HALF + (j / n) * HALF * 2;
         const h = heightAt(x, z);
         const slope = Math.hypot(heightAt(x + 4, z) - heightAt(x - 4, z), heightAt(x, z + 4) - heightAt(x, z - 4)) / 8;
         groundColor(x, z, h, 1 / Math.sqrt(1 + slope * slope), c);
@@ -81,7 +103,7 @@ export class Hud {
     g.putImageData(img, 0, 0);
     // the roads, the village ground and the shrine
     const s = n / (HALF * 2);
-    const px = (x: number) => (x + HALF) * s, pz = (z: number) => (z + HALF) * s;
+    const px = (x: number) => (x - VX + HALF) * s, pz = (z: number) => (z - VZ + HALF) * s;
     g.fillStyle = 'rgba(200,196,182,0.55)';
     g.fillRect(px(-HALF), pz(VILLAGE.cz - VILLAGE.hz), px(HALF) - px(-HALF), (VILLAGE.hz + 30) * s);
     for (const r of getRoads()) {
@@ -105,6 +127,22 @@ export class Hud {
     g.beginPath();
     g.arc(px(SHRINE.x), pz(SHRINE.z), 3, 0, Math.PI * 2);
     g.fill();
+    // a zone: the land past the barrier dimmed, the barrier drawn, the exits marked
+    const b = this.world.bounds;
+    if (b) {
+      g.fillStyle = 'rgba(10,16,34,0.42)';
+      g.fillRect(0, 0, n, pz(b.z0));
+      g.fillRect(0, pz(b.z1), n, n - pz(b.z1));
+      g.fillRect(0, pz(b.z0), px(b.x0), pz(b.z1) - pz(b.z0));
+      g.fillRect(px(b.x1), pz(b.z0), n - px(b.x1), pz(b.z1) - pz(b.z0));
+      g.strokeStyle = 'rgba(255,143,180,0.9)';
+      g.lineWidth = 1.5;
+      g.setLineDash([4, 3]);
+      g.strokeRect(px(b.x0), pz(b.z0), px(b.x1) - px(b.x0), pz(b.z1) - pz(b.z0));
+      g.setLineDash([]);
+      g.fillStyle = '#ffd27a';
+      for (const e of this.world.exits) g.fillRect(px(e.at.x0), pz(e.at.z0), Math.max(3, (e.at.x1 - e.at.x0) * s), Math.max(3, (e.at.z1 - e.at.z0) * s));
+    }
     return cv;
   }
 
@@ -138,7 +176,8 @@ export class Hud {
       g.fillStyle = `rgba(8,14,40,${night * 0.45})`;
       g.fillRect(0, 0, W, W);
     }
-    const sx = ((t.x + HALF) / (HALF * 2)) * W, sz = ((t.z + HALF) / (HALF * 2)) * W;
+    const { cx: VX, cz: VZ, half: HALF } = this.view;
+    const sx = ((t.x - VX + HALF) / (HALF * 2)) * W, sz = ((t.z - VZ + HALF) / (HALF * 2)) * W;
     const yaw = this.drone.yaw;
     const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
     const reach = clamp(this.drone.dist * 1.1, 40, 700) / (HALF * 2) * W;
@@ -161,6 +200,19 @@ export class Hud {
     g.fill();
     g.strokeStyle = '#fff';
     g.stroke();
+    // at an exit (the drone pushed against the barrier there): offer the way on
+    const pushedRecently = performance.now() - this.drone.pushed.t < 1500;
+    const ex = this.world.exits.find((e) => inRect(e.at, t.x, t.z, 1.5)) ?? (pushedRecently ? this.world.exits.find((e) => inRect(e.at, this.drone.pushed.x, this.drone.pushed.z, 6)) : undefined) ?? null;
+    if (ex !== this.exit) {
+      this.exit = ex;
+      const box = $('exit');
+      box.classList.toggle('on', !!ex);
+      if (ex) {
+        $('exitName').textContent = `${ex.name} · ${ex.jp}`;
+        $('exitNote').textContent = ex.to ? 'The next area — it loads when you go on.' : 'The next area is not built yet.';
+        $<HTMLButtonElement>('exitGo').disabled = !ex.to;
+      }
+    }
   }
 
   /** Paint the minimap's ground, roads and places (after the world is built). */

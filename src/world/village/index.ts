@@ -54,6 +54,9 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
     if (!c) chunks.set(k, (c = newCtx(r)));
     return c;
   };
+  // the town's ground (terraces, ramps, walls) goes into meshes of its own: a zone keeps all of it as scenery
+  const ground = newCtx(r);
+  const atGround = (): Ctx => ground;
   const lots: Lot[] = [];
   const occ = new Occupancy();
 
@@ -281,7 +284,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
   }
 
   await step(0.55, 'Terraces and retaining walls…');
-  buildTownGround(at);
+  buildTownGround(atGround);
   await step(0.62, 'Pavements, poles and wires…');
   streets(at, atlas, r, trees, occ);
   outskirts(at, atlas, r, trees);
@@ -303,7 +306,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
     for (let z = za; z < zb - 0.4; z += 0.9) if (r() < 0.6) pot(at(st.x), side, heightAt(side, z), z, Math.floor(r() * 5));
   }
   await step(0.9, 'Putting the town together…');
-  return assemble(chunks, atlas);
+  return assemble(chunks, atlas, ground);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -523,7 +526,7 @@ function outskirts(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tr
 }
 
 /** One mesh per kind of surface for every chunk of the town. */
-function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas): VillageBuild {
+function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas, ground: Ctx): VillageBuild {
   const group = new Group();
   group.name = 'Town';
   const body = new MeshStandardMaterial({ vertexColors: true, roughness: 0.84, metalness: 0.02 });
@@ -542,6 +545,13 @@ function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas): VillageBuild {
       m.name = `${name} ${k}`;
       group.add(m);
     }
+  }
+  for (const [k, geo] of GeoBuilder.splitByCell([ground.body], 40)) {
+    const m = new Mesh(geo, body);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    m.name = `Town ground ${k}`;
+    group.add(m);
   }
   return {
     group,

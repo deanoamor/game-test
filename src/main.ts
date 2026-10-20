@@ -1,9 +1,10 @@
-import { ACESFilmicToneMapping, PCFSoftShadowMap, PMREMGenerator, Scene, SRGBColorSpace, WebGLRenderer, Vector3, Color, type Mesh } from 'three';
+import { ACESFilmicToneMapping, Box3, PCFSoftShadowMap, PMREMGenerator, Scene, SRGBColorSpace, WebGLRenderer, Vector3, Color, Group, type Mesh } from 'three';
 import { Drone } from './camera/drone';
 import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
-import { PLACES } from './world/config';
+import { POND, SHRINE } from './world/config';
+import { currentWorld, inRect, keepArea } from './world/worlds';
 import { buildVillage } from './world/village';
 import { DaylightRig } from './world/daylight';
 import { TreeField, growForest } from './world/forest';
@@ -32,8 +33,16 @@ async function main() {
   host.appendChild(renderer.domElement);
 
   const scene = new Scene();
+  // the world: a zone of the town (with its scenery ring and invisible barrier) or the full map
+  const world = currentWorld();
+  const keep = keepArea(world);
   const drone = new Drone(renderer.domElement);
-  const hud = new Hud(drone);
+  if (world.bounds) {
+    drone.bounds = { ...world.bounds };
+    drone.maxDist = 160;
+  }
+  const hud = new Hud(drone, world);
+  const PLACES = hud.places;
   const progress = (f: number, msg: string) => hud.setProgress(f, msg);
 
   progress(0.04, 'Shaping the land…');
@@ -53,10 +62,24 @@ async function main() {
   await nextFrame();
   const atlas = new SignAtlas();
   const village = await buildVillage(trees, atlas, (f, msg) => progress(0.4 + f * 0.2, msg));
+  // a zone draws only its own area and the scenery ring in detail: the buildings and props beyond are left out
+  // (the town's ground is kept everywhere, so there are no holes); trees reach a little further, the land is all there
+  if (keep) {
+    const box = new Box3();
+    for (const m of [...village.group.children] as Mesh[]) {
+      if (m.name.startsWith('Town ground')) continue;
+      box.copy(m.geometry.boundingBox!);
+      if (box.max.x < keep.x0 || box.min.x > keep.x1 || box.max.z < keep.z0 || box.min.z > keep.z1) {
+        village.group.remove(m);
+        m.geometry.dispose();
+      }
+    }
+    water.mesh.visible = inRect(keep, POND.x, POND.z, POND.radius + 30);
+  }
   scene.add(village.group);
   scene.add(buildRoads());
   const windU = { value: 0 };
-  scene.add(trees.build(windU));
+  scene.add(trees.build(windU, keep ? (x, z) => inRect(keep, x, z, 90) : undefined));
   const traffic = new Traffic();
   scene.add(traffic.group);
 
@@ -64,7 +87,9 @@ async function main() {
   await nextFrame();
   hud.paintBase();
   progress(0.62, 'Placing landmarks…');
-  const marks = await loadLandmarks((n, total, name) => progress(0.62 + (n / total) * 0.3, `Landmark: ${name}`));
+  const marks = !keep || inRect(keep, SHRINE.x, SHRINE.z, 40)
+    ? await loadLandmarks((n, total, name) => progress(0.62 + (n / total) * 0.3, `Landmark: ${name}`))
+    : { group: new Group(), glow: [] as { emissiveIntensity: number }[] };
   scene.add(marks.group);
 
   const sky = new SkyDome();
@@ -72,6 +97,7 @@ async function main() {
   const clouds = new Clouds();
   scene.add(clouds.mesh);
   const light = new DaylightRig(scene, renderer);
+  if (keep) light.fogScale = 1.7;
 
   // a soft sky reflection for the glass
   {
@@ -144,7 +170,7 @@ async function main() {
   const start = params.get('view');
   const startPlace = PLACES.find((p) => p.key === start);
   if (startPlace) drone.flyTo(startPlace, true);
-  else drone.flyTo(PLACES[0], true);
+  else drone.flyTo(world.start, true);
   if (params.has('yaw')) drone.setView(params.has('tx') ? Number(params.get('tx')) : drone.target.x, params.has('tz') ? Number(params.get('tz')) : drone.target.z, Number(params.get('yaw')), Number(params.get('pitch') ?? 45), Number(params.get('dist') ?? drone.dist));
   if (params.get('hud') === '0') hud.setHud(false);
 

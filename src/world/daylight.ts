@@ -56,6 +56,8 @@ export class DaylightRig {
   private shadowKey = '';
   /** True when the shadow map needs drawing again (the light or the area it covers has moved). */
   shadowDirty = true;
+  /** Thicker haze in a zone, so its scenery ring fades into the distance. */
+  fogScale = 1;
 
   constructor(private scene: Scene, private renderer: WebGLRenderer) {
     this.sun.castShadow = true;
@@ -136,7 +138,7 @@ export class DaylightRig {
     this.hemi.groundColor.copy(ca);
     this.hemi.intensity = lerp(a.hemiI, b.hemiI, t);
     mix(a.fog, b.fog, this.fog.color);
-    this.fog.density = lerp(a.fogD, b.fogD, t) * 0.9;
+    this.fog.density = lerp(a.fogD, b.fogD, t) * 0.9 * this.fogScale;
     this.renderer.toneMappingExposure = lerp(a.exposure, b.exposure, t);
     this.state.bloom = lerp(a.bloom, b.bloom, t);
     this.scene.environmentIntensity = 0.12 + 0.5 * this.state.day;

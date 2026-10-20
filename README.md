@@ -22,6 +22,13 @@ parking, a vending machine corner with a green phone box, a little roadside shri
 pots and bikes. Day turns to night: windows, shop
 signs and lamps light up.
 
+**Semi-open world.** The town is split into worlds (zones) that you move between with a loading screen, so only one
+zone is drawn in detail at a time (`src/world/worlds.ts`). The first is **Ekimae Crossing** (駅前交差点): you can move
+within it, behind an invisible barrier, and around it a ring of the real town is still built as scenery, so its edge is
+never a void. Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
+right) switches to the full map, `Hoshi Town (full map)`, which is kept as it was; links take `#world=ekimae` or
+`#world=full`.
+
 This is the **world only**. Characters come next. (The earlier big-city version is kept in the git history: commit
 `fb057cc`, tag `city-world`.)
 
