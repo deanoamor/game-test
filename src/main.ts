@@ -86,8 +86,20 @@ async function main() {
   }
 
   const post = new Post(renderer, scene, drone.camera, host.clientWidth, host.clientHeight);
+  // the render resolution: the screen's pixel density, but never more pixels than the quality allows (a HiDPI laptop
+  // panel at 150-200 % would otherwise draw 2-3 times the pixels of a desktop monitor), times a dynamic scale that
+  // drops when frames are slow and climbs back when they are quick
+  let quality = (params.get('q') as Quality) ?? 'medium';
+  const MAX_PIXELS: Record<Quality, number> = { low: 1.1e6, medium: 1.8e6, high: 2.2e6 };
+  let dynScale = 1;
+  const pixelRatio = () => {
+    const w = host.clientWidth, h = host.clientHeight;
+    const cap = Math.min(window.devicePixelRatio, 1.5, Math.sqrt(MAX_PIXELS[quality] / Math.max(1, w * h)));
+    return params.has('shot') ? 1 : Math.max(0.5, cap * dynScale);
+  };
   const resize = () => {
     const w = host.clientWidth, h = host.clientHeight;
+    renderer.setPixelRatio(pixelRatio());
     renderer.setSize(w, h);
     drone.resize(w, h);
     post.resize(w, h);
@@ -98,7 +110,6 @@ async function main() {
   // ---- state ----
   let hour = Number(params.get('t') ?? 11.5);
   let playing = !params.has('pause') && !params.has('shot');
-  let quality = (params.get('q') as Quality) ?? 'medium';
   const dayLength = 360; // seconds for a whole day
   const applyQuality = (q: Quality) => {
     quality = q;
@@ -108,6 +119,7 @@ async function main() {
     (light.sun.shadow as unknown as { map: unknown }).map = null;
     light.shadowDirty = true;
     (document.getElementById('quality') as HTMLSelectElement).value = q;
+    resize();
   };
   const applyHour = (h: number) => {
     hour = ((h % 24) + 24) % 24;
@@ -144,7 +156,7 @@ async function main() {
   let frames = 0;
   let manual = params.has('q');
   let autoClock = 0, autoFrames = 0, autoSteps = 0;
-  let ratio = renderer.getPixelRatio();
+  let dynClock = 0, dynFrames = 0;
   const loop = (now: number) => {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
@@ -172,10 +184,22 @@ async function main() {
           autoSteps++;
           if (quality === 'high') applyQuality('medium');
           else if (quality === 'medium') applyQuality('low');
-          else { ratio = Math.max(0.6, ratio * 0.75); renderer.setPixelRatio(ratio); resize(); }
+          else { dynScale = Math.max(0.6, dynScale * 0.8); resize(); }
         } else autoSteps = 3;
         autoClock = 0;
         autoFrames = 0;
+      }
+    }
+    // dynamic resolution, whatever the quality: below ~40 fps draw fewer pixels, above ~57 fps go back up
+    if (!params.has('shot') && frames > 30) {
+      dynClock += dt;
+      dynFrames++;
+      if (dynClock > 1.5) {
+        const fps = dynFrames / dynClock;
+        const next = fps < 40 ? Math.max(0.55, dynScale * 0.85) : fps > 57 ? Math.min(1, dynScale * 1.08) : dynScale;
+        if (Math.abs(next - dynScale) > 0.01) { dynScale = next; resize(); }
+        dynClock = 0;
+        dynFrames = 0;
       }
     }
     requestAnimationFrame(loop);

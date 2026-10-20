@@ -57,7 +57,8 @@ export class Post {
   quality: Quality = 'medium';
 
   constructor(renderer: WebGLRenderer, scene: Scene, camera: PerspectiveCamera, w: number, h: number) {
-    const target = new WebGLRenderTarget(w, h, { type: HalfFloatType, samples: 4 });
+    // no multisampling: SMAA smooths the edges at a fraction of the cost (MSAA x4 on a HiDPI screen is very heavy)
+    const target = new WebGLRenderTarget(w, h, { type: HalfFloatType, samples: 0 });
     this.composer = new EffectComposer(renderer, target);
     this.composer.addPass(new RenderPass(scene, camera));
     this.ao = new GTAOPass(scene, camera, w, h);
