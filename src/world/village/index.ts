@@ -1,5 +1,5 @@
 import { Color, Group, Mesh, MeshStandardMaterial } from 'three';
-import type { GeoBuilder, V3 } from '../../util/builder';
+import { GeoBuilder, type V3 } from '../../util/builder';
 import { pick, rng } from '../../util/rng';
 import { EXPRESSWAY, IC_RAMP, PADDY, PLATFORMS, POND, STAIRS, TERRACES, WATER_Y, heightAt, rampY, roadNear } from '../config';
 import type { TreeField } from '../forest';
@@ -518,20 +518,17 @@ function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas): VillageBuild {
   const litA = new MeshStandardMaterial({ vertexColors: true, roughness: 0.3, emissive: new Color('#ffcf7a'), emissiveIntensity: 0 });
   const litB = new MeshStandardMaterial({ vertexColors: true, roughness: 0.3, emissive: new Color('#e6f4ff'), emissiveIntensity: 0 });
   const sign = new MeshStandardMaterial({ map: atlas.texture, emissiveMap: atlas.texture, emissive: new Color('#ffffff'), emissiveIntensity: 0.3, roughness: 0.55, alphaTest: 0.4, side: 2 });
-  for (const [k, ctx] of chunks) {
-    const add = (b: GeoBuilder, mat: MeshStandardMaterial, shadow: boolean, name: string) => {
-      if (b.triangles === 0) return;
-      const m = new Mesh(b.toGeometry(), mat);
+  // regroup every chunk's triangles into 40 m cells, so the camera and the shadow pass skip what they cannot see
+  const kinds: [keyof Omit<Ctx, 'r'>, MeshStandardMaterial, boolean, string][] = [['body', body, true, 'Buildings'], ['win', win, false, 'Windows'], ['litA', litA, false, 'Lit windows'], ['litB', litB, false, 'Lit windows 2'], ['sign', sign, false, 'Signs']];
+  for (const [part, mat, shadow, name] of kinds) {
+    const cells = GeoBuilder.splitByCell([...chunks.values()].map((c) => c[part]), 40);
+    for (const [k, geo] of cells) {
+      const m = new Mesh(geo, mat);
       m.castShadow = shadow;
       m.receiveShadow = true;
       m.name = `${name} ${k}`;
       group.add(m);
-    };
-    add(ctx.body, body, true, 'Buildings');
-    add(ctx.win, win, false, 'Windows');
-    add(ctx.litA, litA, false, 'Lit windows');
-    add(ctx.litB, litB, false, 'Lit windows 2');
-    add(ctx.sign, sign, false, 'Signs');
+    }
   }
   return {
     group,

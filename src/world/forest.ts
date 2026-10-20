@@ -110,18 +110,30 @@ export class TreeField {
               transformed.x += sway; transformed.z += sway * 0.6;
             #endif`);
       };
-      const mesh = new InstancedMesh(geo, mat, items.length);
-      items.forEach((it, i) => {
-        mesh.setMatrixAt(i, it.m);
-        mesh.setColorAt(i, it.c);
-      });
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.computeBoundingSphere();
-      mesh.name = `Trees ${kind}`;
-      g.add(mesh);
+      // one instanced mesh per 100 m cell, so the trees off screen (and outside the shadow area) are skipped
+      const cells = new Map<string, typeof items>();
+      const p = new Vector3();
+      for (const it of items) {
+        p.setFromMatrixPosition(it.m);
+        const key = `${Math.floor(p.x / 100)},${Math.floor(p.z / 100)}`;
+        let a = cells.get(key);
+        if (!a) cells.set(key, (a = []));
+        a.push(it);
+      }
+      for (const [key, list] of cells) {
+        const mesh = new InstancedMesh(geo, mat, list.length);
+        list.forEach((it, i) => {
+          mesh.setMatrixAt(i, it.m);
+          mesh.setColorAt(i, it.c);
+        });
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.computeBoundingSphere();
+        mesh.name = `Trees ${kind} ${key}`;
+        g.add(mesh);
+      }
     }
     return g;
   }

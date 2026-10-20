@@ -86,6 +86,7 @@ src/world/landmarks.ts   the shrine model       src/world/sky.ts   src/world/day
 src/ui/hud.ts            the HUD and the minimap
 tests/world.test.ts      determinism, flat village, roads, places
 e2e/shots.mjs            screenshots with Playwright (npm run dev -- --port 5300 first)
+e2e/perf.mjs             load time and draw calls / triangles per frame from a few views
 ```
 
 ## Previews

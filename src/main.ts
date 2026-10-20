@@ -20,12 +20,14 @@ const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()
 async function main() {
   const host = document.getElementById('app')!;
   const renderer = new WebGLRenderer({ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: params.has('shot') });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, params.has('shot') ? 1 : 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, params.has('shot') ? 1 : 1.5));
   renderer.setSize(host.clientWidth, host.clientHeight);
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFSoftShadowMap;
+  // the shadow map is drawn only when the sun or the area it covers moves (see the loop)
+  renderer.shadowMap.autoUpdate = false;
   host.appendChild(renderer.domElement);
 
   const scene = new Scene();
@@ -100,6 +102,7 @@ async function main() {
     light.sun.shadow.mapSize.set(q === 'low' ? 2048 : 4096, q === 'low' ? 2048 : 4096);
     light.sun.shadow.map?.dispose();
     (light.sun.shadow as unknown as { map: unknown }).map = null;
+    light.shadowDirty = true;
     (document.getElementById('quality') as HTMLSelectElement).value = q;
   };
   const applyHour = (h: number) => {
@@ -149,6 +152,7 @@ async function main() {
     clouds.step(dt);
     traffic.step(dt);
     sky.update(drone.camera, light.state.sky);
+    if (light.shadowDirty) { renderer.shadowMap.needsUpdate = true; light.shadowDirty = false; }
     // the tilt-shift band follows the view: sharp where the drone looks
     post.setTiltShift(0.5, quality === 'low' ? 0 : 2.6 * Math.min(1.6, 1 + Math.max(0, drone.dist - 150) / 400));
     hud.update(dt, hour, light.state.night);
@@ -195,6 +199,7 @@ async function main() {
       return { triangles: Math.round(tris), meshes, trees: trees.count };
     },
     terrain: terrain as Mesh,
+    loadSeconds: performance.now() / 1000,
   };
 }
 

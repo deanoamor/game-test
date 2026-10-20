@@ -51,6 +51,11 @@ export class DaylightRig {
   fog = new FogExp2('#d3e9f8', 0.0007);
   state: Daylight;
   private target = new Vector3();
+  /** The direction the shadows are cast from: it moves in small steps, and the shadow map is redrawn only on a step. */
+  private shadowDir = new Vector3(0, 1, 0);
+  private shadowKey = '';
+  /** True when the shadow map needs drawing again (the light or the area it covers has moved). */
+  shadowDirty = true;
 
   constructor(private scene: Scene, private renderer: WebGLRenderer) {
     this.sun.castShadow = true;
@@ -68,15 +73,23 @@ export class DaylightRig {
     this.setHour(12);
   }
 
-  /** Where the shadow camera looks (follows the drone, snapped to its texel grid so shadows do not crawl). */
+  /**
+   * Where the shadow camera looks: it follows the drone in 8 m steps (a whole number of shadow texels, so the shadows do
+   * not crawl); the shadow area is wide enough that the view never runs off it between steps.
+   */
   follow(target: Vector3) {
     const texel = (this.sun.shadow.camera.right - this.sun.shadow.camera.left) / this.sun.shadow.mapSize.x;
-    this.target.set(Math.round(target.x / texel) * texel, target.y, Math.round(target.z / texel) * texel);
+    const grid = texel * Math.round(8 / texel);
+    const x = Math.round(target.x / grid) * grid, z = Math.round(target.z / grid) * grid, y = Math.round(target.y / 4) * 4;
+    if (x !== this.target.x || z !== this.target.z || y !== this.target.y) {
+      this.target.set(x, y, z);
+      this.shadowDirty = true;
+    }
     this.place();
   }
 
   private place() {
-    const d = this.state.sky.sunDir;
+    const d = this.shadowDir;
     this.sun.position.copy(this.target).addScaledVector(d, 420);
     this.sun.target.position.copy(this.target);
     this.moon.position.copy(this.target).addScaledVector(d, -420);
@@ -108,6 +121,14 @@ export class DaylightRig {
     this.sun.color.copy(s.sunColor);
     this.sun.intensity = sunI * smoothstep(-0.02, 0.12, elev);
     this.sun.castShadow = elev > 0.02;
+    // the shadows step with the sun every 0.02 h (72 s of game time)
+    const key = `${Math.round(h / 0.02)}:${this.sun.castShadow}`;
+    if (key !== this.shadowKey) {
+      this.shadowKey = key;
+      const ts = ((Math.round(h / 0.02) * 0.02 - 6) / 12) * Math.PI;
+      this.shadowDir.set(Math.cos(ts), Math.sin(ts) * 0.95, Math.sin(ts) * 0.38).normalize();
+      this.shadowDirty = true;
+    }
     this.moon.intensity = 0.8 * night;
     ca.set(a.hemiSky).lerp(cb.set(b.hemiSky), t);
     this.hemi.color.copy(ca);

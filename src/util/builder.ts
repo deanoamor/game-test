@@ -3,20 +3,61 @@ import { BufferGeometry, Color, Float32BufferAttribute, IcosahedronGeometry } fr
 export type V3 = [number, number, number];
 
 const tmp = new Color();
+// colour strings are parsed once (a town has a few hundred colours and hundreds of thousands of boxes)
+const rgbCache = new Map<string | number, [number, number, number]>();
 const rgb = (c: string | number | Color): [number, number, number] => {
-  tmp.set(c as never);
-  return [tmp.r, tmp.g, tmp.b];
+  if (c instanceof Color) return [c.r, c.g, c.b];
+  let v = rgbCache.get(c);
+  if (!v) {
+    tmp.set(c as never);
+    rgbCache.set(c, (v = [tmp.r, tmp.g, tmp.b]));
+  }
+  return [v[0], v[1], v[2]];
 };
+
+/** A growable array of floats (doubling a typed array), much faster to fill than a plain number[]. */
+export class Floats {
+  a: Float32Array;
+  n = 0;
+  constructor(cap = 96) { this.a = new Float32Array(cap); }
+  get length() { return this.n; }
+  reserve(k: number) {
+    if (this.n + k <= this.a.length) return;
+    let c = this.a.length * 2;
+    while (c < this.n + k) c *= 2;
+    const b = new Float32Array(c);
+    b.set(this.a.subarray(0, this.n));
+    this.a = b;
+  }
+  push3(x: number, y: number, z: number) {
+    this.reserve(3);
+    const a = this.a, n = this.n;
+    a[n] = x; a[n + 1] = y; a[n + 2] = z;
+    this.n = n + 3;
+  }
+  push2(x: number, y: number) {
+    this.reserve(2);
+    this.a[this.n] = x; this.a[this.n + 1] = y;
+    this.n += 2;
+  }
+  pushAll(o: Floats) {
+    this.reserve(o.n);
+    this.a.set(o.a.subarray(0, o.n), this.n);
+    this.n += o.n;
+  }
+  /** A tight copy of the filled part. */
+  data() { return this.a.slice(0, this.n); }
+}
 
 /**
  * Collects flat-shaded, vertex-coloured triangles, so a whole district becomes one mesh. Colours are linear.
  * Boxes get a soft "ambient occlusion" gradient: their sides are darker at the bottom.
  */
 export class GeoBuilder {
-  pos: number[] = [];
-  nor: number[] = [];
-  col: number[] = [];
-  uv: number[] = [];
+  pos = new Floats();
+  nor = new Floats();
+  col = new Floats();
+  uv = new Floats(64);
   withUv = false;
 
   get triangles() { return this.pos.length / 9; }
@@ -28,13 +69,14 @@ export class GeoBuilder {
     let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
     const l = Math.hypot(nx, ny, nz) || 1;
     nx /= l; ny /= l; nz /= l;
-    this.pos.push(...a, ...b, ...c);
-    this.nor.push(nx, ny, nz, nx, ny, nz, nx, ny, nz);
-    this.col.push(...ca, ...cb, ...cc);
+    const P = this.pos, C = this.col, N = this.nor;
+    P.push3(a[0], a[1], a[2]); P.push3(b[0], b[1], b[2]); P.push3(c[0], c[1], c[2]);
+    N.push3(nx, ny, nz); N.push3(nx, ny, nz); N.push3(nx, ny, nz);
+    C.push3(ca[0], ca[1], ca[2]); C.push3(cb[0], cb[1], cb[2]); C.push3(cc[0], cc[1], cc[2]);
     if (uvs) {
       this.withUv = true;
-      this.uv.push(uvs[0][0], uvs[0][1], uvs[1][0], uvs[1][1], uvs[2][0], uvs[2][1]);
-    } else this.uv.push(0, 0, 0, 0, 0, 0);
+      this.uv.push2(uvs[0][0], uvs[0][1]); this.uv.push2(uvs[1][0], uvs[1][1]); this.uv.push2(uvs[2][0], uvs[2][1]);
+    } else { this.uv.reserve(6); this.uv.a.fill(0, this.uv.n, this.uv.n + 6); this.uv.n += 6; }
   }
 
   /** A quad a-b-c-d (counter-clockwise from the front) with one colour per corner. */
@@ -223,32 +265,80 @@ export class GeoBuilder {
   appendTransformed(o: GeoBuilder, dx: number, dy: number, dz: number, yaw = 0) {
     const a = (yaw * Math.PI) / 180;
     const cs = Math.cos(a), sn = Math.sin(a);
-    for (let i = 0; i < o.pos.length; i += 3) {
-      const x = o.pos[i], y = o.pos[i + 1], z = o.pos[i + 2];
-      this.pos.push(dx + x * cs + z * sn, dy + y, dz - x * sn + z * cs);
-      const nx = o.nor[i], nz = o.nor[i + 2];
-      this.nor.push(nx * cs + nz * sn, o.nor[i + 1], -nx * sn + nz * cs);
+    const OP = o.pos.a, ON = o.nor.a;
+    this.pos.reserve(o.pos.n);
+    this.nor.reserve(o.nor.n);
+    for (let i = 0; i < o.pos.n; i += 3) {
+      const x = OP[i], y = OP[i + 1], z = OP[i + 2];
+      this.pos.push3(dx + x * cs + z * sn, dy + y, dz - x * sn + z * cs);
+      const nx = ON[i], nz = ON[i + 2];
+      this.nor.push3(nx * cs + nz * sn, ON[i + 1], -nx * sn + nz * cs);
     }
-    this.col.push(...o.col);
-    this.uv.push(...o.uv);
+    this.col.pushAll(o.col);
+    this.uv.pushAll(o.uv);
     this.withUv ||= o.withUv;
   }
 
   /** Append another builder translated by (dx, dy, dz). */
   append(o: GeoBuilder, dx = 0, dy = 0, dz = 0) {
-    for (let i = 0; i < o.pos.length; i += 3) this.pos.push(o.pos[i] + dx, o.pos[i + 1] + dy, o.pos[i + 2] + dz);
-    this.nor.push(...o.nor);
-    this.col.push(...o.col);
-    this.uv.push(...o.uv);
+    for (let i = 0; i < o.pos.n; i += 3) this.pos.push3(o.pos.a[i] + dx, o.pos.a[i + 1] + dy, o.pos.a[i + 2] + dz);
+    this.nor.pushAll(o.nor);
+    this.col.pushAll(o.col);
+    this.uv.pushAll(o.uv);
     this.withUv ||= o.withUv;
+  }
+
+  /**
+   * The triangles of several builders sorted into square cells of `size` metres by their centres, one geometry per cell,
+   * so each cell can be culled on its own. Two passes: count, then fill typed arrays.
+   */
+  static splitByCell(builders: GeoBuilder[], size: number): Map<string, BufferGeometry> {
+    const counts = new Map<string, number>();
+    const keys: string[][] = [];
+    for (const b of builders) {
+      const P = b.pos.a, ks: string[] = [];
+      for (let t = 0, n = b.triangles; t < n; t++) {
+        const p = t * 9;
+        const k = `${Math.floor((P[p] + P[p + 3] + P[p + 6]) / 3 / size)},${Math.floor((P[p + 2] + P[p + 5] + P[p + 8]) / 3 / size)}`;
+        ks.push(k);
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+      }
+      keys.push(ks);
+    }
+    const withUv = builders.some((b) => b.withUv);
+    const out = new Map<string, { pos: Float32Array; nor: Float32Array; col: Float32Array; uv: Float32Array | null; n: number }>();
+    for (const [k, c] of counts) out.set(k, { pos: new Float32Array(c * 9), nor: new Float32Array(c * 9), col: new Float32Array(c * 9), uv: withUv ? new Float32Array(c * 6) : null, n: 0 });
+    builders.forEach((b, bi) => {
+      const ks = keys[bi];
+      for (let t = 0; t < ks.length; t++) {
+        const o = out.get(ks[t])!, p = t * 9, q = o.n * 9;
+        o.pos.set(b.pos.a.subarray(p, p + 9), q);
+        o.nor.set(b.nor.a.subarray(p, p + 9), q);
+        o.col.set(b.col.a.subarray(p, p + 9), q);
+        if (o.uv) o.uv.set(b.uv.a.subarray(t * 6, t * 6 + 6), o.n * 6);
+        o.n++;
+      }
+    });
+    const geos = new Map<string, BufferGeometry>();
+    for (const [k, o] of out) {
+      const g = new BufferGeometry();
+      g.setAttribute('position', new Float32BufferAttribute(o.pos, 3));
+      g.setAttribute('normal', new Float32BufferAttribute(o.nor, 3));
+      g.setAttribute('color', new Float32BufferAttribute(o.col, 3));
+      if (o.uv) g.setAttribute('uv', new Float32BufferAttribute(o.uv, 2));
+      g.computeBoundingSphere();
+      g.computeBoundingBox();
+      geos.set(k, g);
+    }
+    return geos;
   }
 
   toGeometry(): BufferGeometry {
     const g = new BufferGeometry();
-    g.setAttribute('position', new Float32BufferAttribute(this.pos, 3));
-    g.setAttribute('normal', new Float32BufferAttribute(this.nor, 3));
-    g.setAttribute('color', new Float32BufferAttribute(this.col, 3));
-    if (this.withUv) g.setAttribute('uv', new Float32BufferAttribute(this.uv, 2));
+    g.setAttribute('position', new Float32BufferAttribute(this.pos.data(), 3));
+    g.setAttribute('normal', new Float32BufferAttribute(this.nor.data(), 3));
+    g.setAttribute('color', new Float32BufferAttribute(this.col.data(), 3));
+    if (this.withUv) g.setAttribute('uv', new Float32BufferAttribute(this.uv.data(), 2));
     g.computeBoundingSphere();
     g.computeBoundingBox();
     return g;

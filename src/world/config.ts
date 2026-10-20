@@ -218,16 +218,50 @@ function joinEnds(all: RoadPath[]): RoadPath[] {
 export const getRoad = (name: string): RoadPath => getRoads().find((r) => r.name === name)!;
 
 /** Distance to the nearest road and that road's height there. */
-export function roadNear(x: number, z: number, only?: (name: string) => boolean): { d: number; y: number; width: number } {
-  let best = Infinity, by = 0, bw = 0;
-  for (const r of getRoads()) {
-    if (only && !only(r.name)) continue;
-    if (x < r.box[0] || x > r.box[2] || z < r.box[1] || z > r.box[3]) continue;
+/** The road samples bucketed into 8 m cells, so a lookup only visits the samples around a point. */
+const CELL = 8;
+let grid: Map<number, number[]> | null = null;
+const cellKey = (i: number, j: number) => (i + 2048) * 4096 + (j + 2048);
+function roadGrid(): Map<number, number[]> {
+  if (grid) return grid;
+  grid = new Map();
+  getRoads().forEach((r, ri) => {
     for (let i = 0; i < r.len; i++) {
-      const dx = x - r.x[i], dz = z - r.z[i];
-      const d = dx * dx + dz * dz;
-      if (d < best) { best = d; by = r.y[i]; bw = r.width; }
+      const k = cellKey(Math.floor(r.x[i] / CELL), Math.floor(r.z[i] / CELL));
+      let a = grid!.get(k);
+      if (!a) grid!.set(k, (a = []));
+      a.push(ri, i);
     }
+  });
+  return grid;
+}
+
+/** Distance to the nearest road sample (within about 32 m; Infinity beyond) and that road's height there. */
+export function roadNear(x: number, z: number, only?: (name: string) => boolean): { d: number; y: number; width: number } {
+  const roads = getRoads(), g = roadGrid();
+  // far from every road (outside all their boxes): nothing to find
+  let near = false;
+  for (const r of roads) if (x >= r.box[0] && x <= r.box[2] && z >= r.box[1] && z <= r.box[3] && (!only || only(r.name))) { near = true; break; }
+  if (!near) return { d: Infinity, y: 0, width: 0 };
+  const ci = Math.floor(x / CELL), cj = Math.floor(z / CELL);
+  let best = Infinity, by = 0, bw = 0;
+  // rings of cells outwards; stop once the nearest sample found is closer than anything a further ring could hold
+  for (let ring = 0; ring <= 4; ring++) {
+    for (let i = ci - ring; i <= ci + ring; i++) {
+      for (let j = cj - ring; j <= cj + ring; j++) {
+        if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== ring) continue;
+        const a = g.get(cellKey(i, j));
+        if (!a) continue;
+        for (let k = 0; k < a.length; k += 2) {
+          const r = roads[a[k]];
+          if (only && !only(r.name)) continue;
+          const s = a[k + 1], dx = x - r.x[s], dz = z - r.z[s];
+          const d = dx * dx + dz * dz;
+          if (d < best) { best = d; by = r.y[s]; bw = r.width; }
+        }
+      }
+    }
+    if (best < (ring * CELL) * (ring * CELL)) break;
   }
   return { d: Math.sqrt(best), y: by, width: bw };
 }

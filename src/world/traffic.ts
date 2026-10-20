@@ -1,4 +1,4 @@
-import { Color, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3 } from 'three';
+import { Color, Group, InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, Quaternion, Vector3 } from 'three';
 import { pick, rng } from '../util/rng';
 import { EXPRESSWAY, getRoad } from './config';
 import { buildVehicle, type VehicleKind } from './vehicles';
@@ -14,6 +14,11 @@ export class Traffic {
   private q = new Quaternion();
   private up = new Vector3(0, 1, 0);
   private road = getRoad('main');
+  // moving cars do not cast into the (cached) shadow map: each gets a soft dark patch under it instead
+  private shadows!: InstancedMesh;
+  private sm = new Matrix4();
+  private sq = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
+  private static SIZE: Partial<Record<VehicleKind, [number, number]>> = { car: [4.6, 2.1], kei: [3.8, 1.9], van: [5.0, 2.2], truck: [7.2, 2.7], bus: [10.5, 2.9] };
 
   constructor() {
     const r = rng(808);
@@ -26,7 +31,7 @@ export class Traffic {
       const town = counts[kind] ?? 0, n = town + (fast[kind] ?? 0);
       if (n === 0) continue;
       const mesh = new InstancedMesh(buildVehicle(kind).toGeometry(), mat, n);
-      mesh.castShadow = true;
+      mesh.castShadow = false;
       mesh.receiveShadow = true;
       mesh.frustumCulled = false;
       mesh.name = `Traffic ${kind}`;
@@ -43,13 +48,24 @@ export class Traffic {
       }
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
+    this.shadows = new InstancedMesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ color: '#1a1c22', transparent: true, opacity: 0.32, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), this.cars.length);
+    this.shadows.frustumCulled = false;
+    this.shadows.name = 'Traffic shadows';
+    this.group.add(this.shadows);
     this.step(0);
+  }
+
+  private shadowAt(n: number, c: Lane, x: number, y: number, z: number, yaw: number) {
+    const [l, w] = Traffic.SIZE[c.kind] ?? [4.4, 2];
+    const q = new Quaternion().setFromAxisAngle(this.up, yaw).multiply(this.sq);
+    this.sm.compose(new Vector3(x, y + 0.07, z), q, new Vector3(l, w, 1));
+    this.shadows.setMatrixAt(n, this.sm);
   }
 
   step(dt: number) {
     const R = this.road;
     const total = R.len - 1; // samples are 2 m apart
-    for (const c of this.cars) {
+    this.cars.forEach((c, n) => {
       if (c.highway) {
         // a straight run along the deck, wrapping round at the ends of the map; eastbound keeps to the north half
         const L = EXPRESSWAY.x1 - EXPRESSWAY.x0;
@@ -59,7 +75,8 @@ export class Traffic {
         this.q.setFromAxisAngle(this.up, c.dir > 0 ? 0 : Math.PI);
         this.m.compose(new Vector3(x, EXPRESSWAY.y + 0.04, z), this.q, new Vector3(1, 1, 1));
         this.meshes.get(c.kind)!.setMatrixAt(c.index, this.m);
-        continue;
+        this.shadowAt(n, c, x, EXPRESSWAY.y, z, c.dir > 0 ? 0 : Math.PI);
+        return;
       }
       c.s += (c.speed * c.dir * dt) / 2;
       if (c.s > total) c.s -= total;
@@ -73,7 +90,9 @@ export class Traffic {
       this.q.setFromAxisAngle(this.up, yaw);
       this.m.compose(new Vector3(x, y + 0.08, z + lane), this.q, new Vector3(1, 1, 1));
       this.meshes.get(c.kind)!.setMatrixAt(c.index, this.m);
-    }
+      this.shadowAt(n, c, x, y, z + lane, yaw);
+    });
     this.meshes.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
+    if (this.shadows) this.shadows.instanceMatrix.needsUpdate = true;
   }
 }
