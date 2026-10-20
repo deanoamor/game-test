@@ -135,7 +135,7 @@ function build(x0: number, z0: number, x1: number, z1: number, at: (x: number) =
 // ---------------------------------------------------------------------------------------------
 
 /** A picture on both faces of a thin board centred at (x, y, z), facing ±z. */
-function board(ctx: Ctx, c: Cell, x: number, y: number, z: number, w: number, h: number, frame = '#e8e8e2', both = true) {
+export function board(ctx: Ctx, c: Cell, x: number, y: number, z: number, w: number, h: number, frame = '#e8e8e2', both = true) {
   ctx.body.box(x, y, z, w + 0.1, h + 0.1, 0.06, frame, { ao: 0 });
   for (const side of both ? [1, -1] : [1]) {
     const zz = z + 0.035 * side;
@@ -145,7 +145,7 @@ function board(ctx: Ctx, c: Cell, x: number, y: number, z: number, w: number, h:
 }
 
 /** A nobori: a tall vertical flag on a pole. */
-function nobori(ctx: Ctx, c: Cell, x: number, z: number, h = 2.6) {
+export function nobori(ctx: Ctx, c: Cell, x: number, z: number, h = 2.6) {
   ctx.body.box(x, h / 2, z, 0.04, h, 0.04, '#d8d8d8', { ao: 0 });
   ctx.body.box(x + 0.25, h - 0.05, z, 0.5, 0.03, 0.03, '#d8d8d8', { ao: 0 });
   const w = 0.5, fh = w / c.aspect;
@@ -156,7 +156,7 @@ function nobori(ctx: Ctx, c: Cell, x: number, z: number, h = 2.6) {
   }
 }
 
-function bench(B: GeoBuilder, x: number, z: number, yawDeg = 0, color = '#8a5a3a') {
+export function bench(B: GeoBuilder, x: number, z: number, yawDeg = 0, color = '#8a5a3a') {
   B.box(x, 0.42, z, 1.6, 0.06, 0.42, color, { yaw: yawDeg, ao: 0 });
   B.box(x, 0.7, z - 0.2 * Math.cos((yawDeg * Math.PI) / 180), 1.6, 0.32, 0.05, color, { yaw: yawDeg, ao: 0 });
   for (const s of [-0.65, 0.65]) {

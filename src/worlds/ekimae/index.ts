@@ -1,4 +1,5 @@
 import type { Rect, WorldDef } from '../types';
+import { ekimaeDetails } from './details';
 
 /**
  * World 1: Ekimae Crossing, where the main street (along x, z = 44) meets the cross street (along z, x = 0). It covers
@@ -24,4 +25,5 @@ export const ekimae: WorldDef = {
     { name: 'Back Lane North', jp: '裏通り 北', at: { x0: -5, z0: BOUNDS.z0 - 1, x1: 5, z1: BOUNDS.z0 + 3 }, to: null },
     { name: 'Hoshi Slope South', jp: '星坂 南', at: { x0: -5, z0: BOUNDS.z1 - 3, x1: 5, z1: BOUNDS.z1 + 1 }, to: null },
   ],
+  details: ekimaeDetails,
 };

@@ -4,7 +4,7 @@ import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
 import { POND, SHRINE } from './world/config';
-import { currentWorld, inRect, keepArea } from './worlds';
+import { WORLDS, currentWorld, inRect, keepArea } from './worlds';
 import { buildVillage } from './world/village';
 import { DaylightRig } from './world/daylight';
 import { TreeField, growForest } from './world/forest';
@@ -60,7 +60,9 @@ async function main() {
   progress(0.4, 'Building the village…');
   await nextFrame();
   const atlas = new SignAtlas();
-  const village = await buildVillage(trees, atlas, (f, msg) => progress(0.4 + f * 0.2, msg));
+  // every world's own details go into the town (the full map shows them too)
+  const details = WORLDS.flatMap((w) => (w.details ? [w.details] : []));
+  const village = await buildVillage(trees, atlas, (f, msg) => progress(0.4 + f * 0.2, msg), details);
   // a zone draws only its own area and the scenery ring in detail: the buildings and props beyond are left out
   // (the town's ground is kept everywhere, so there are no holes); trees reach a little further, the land is all there
   if (keep) {

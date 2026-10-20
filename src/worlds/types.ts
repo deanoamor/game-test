@@ -1,4 +1,5 @@
 import type { Place } from '../world/config';
+import type { DetailKit } from '../world/village';
 
 export interface Rect { x0: number; z0: number; x1: number; z1: number }
 
@@ -25,4 +26,6 @@ export interface WorldDef {
   /** The view you arrive with. */
   start: Place;
   exits: Exit[];
+  /** The world's own details, added to the town where it stands (they show on the full map too). */
+  details?: (kit: DetailKit) => void;
 }

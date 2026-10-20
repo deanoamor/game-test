@@ -39,11 +39,28 @@ const ROOFS = ['#3e4856', '#4a3f3a', '#35465a', '#52463f', '#3b4a40', '#2f3a46',
 const TRIMS = ['#8a8f96', '#f2efe6', '#6b5a48', '#7a838c', '#4a5560', '#a89a86'];
 const AWNINGS: [string, string][] = [['#c8322e', '#f4f4f0'], ['#17a39a', '#e8f6f4'], ['#3b9a3a', '#f6f2e0'], ['#1f5ea8', '#f4f4f0'], ['#e8a030', '#fff6e0'], ['#7a2db8', '#f4f0f8'], ['#5a3a24', '#e8dcc0'], ['#2a2c32', '#f2c230']];
 
+/** The street grid around the crossing, for the worlds that add their own details to it. */
+export const STREET = { Y_M, SW, MAIN_Z, MAIN_HALF, WALK, CROSS_HALF, CROSS_WALK, BACK_N, BACK_S, BACK_HALF };
+
+/** What a world's details are given: the town's chunks, the sign atlas, the trees, dice of their own, and the spots
+ *  on the pavements already taken by the town's street furniture. */
+export interface DetailKit {
+  at: (x: number) => Ctx;
+  atlas: SignAtlas;
+  trees: TreeField;
+  r: () => number;
+  /** Build something around a local origin with `fn`, then set it down at (x, y, z) turned by `yaw` (0 = +z, 90 = +x). */
+  put(x: number, y: number, z: number, yaw: number, fn: (c: Ctx) => void): void;
+  /** Whether nothing of the town's street furniture stands within `rad` of (x, z). */
+  free(x: number, z: number, rad?: number): boolean;
+}
+export type Taken = { x: number; z: number; r: number }[];
+
 interface Lot { x: number; z: number; yaw: number; w: number; d: number; y: number; ctx: Ctx; height: number }
 
 export interface VillageBuild { group: Group; update(night: number): void }
 
-export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (f: number, label: string) => void = () => {}): Promise<VillageBuild> {
+export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (f: number, label: string) => void = () => {}, details: ((kit: DetailKit) => void)[] = []): Promise<VillageBuild> {
   // the town is built in steps, letting the loading screen repaint in between
   const step = async (f: number, label: string) => { onStep(f, label); await yieldUI(); };
   const r = rng(77777);
@@ -59,6 +76,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
   const atGround = (): Ctx => ground;
   const lots: Lot[] = [];
   const occ = new Occupancy();
+  const taken: Taken = [];
 
   // ---------------------------------------------------------------------------------------------
   // recipes: a shop-house, a house, and their dice
@@ -286,7 +304,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
   await step(0.55, 'Terraces and retaining walls…');
   buildTownGround(atGround);
   await step(0.62, 'Pavements, poles and wires…');
-  streets(at, atlas, r, trees, occ);
+  streets(at, atlas, r, trees, occ, taken);
   outskirts(at, atlas, r, trees);
   await step(0.72, 'Filling the empty lots…');
   fillEmpty(occ, at, atlas, r, trees);
@@ -305,6 +323,16 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
     const [za, zb] = st.z === TERRACES[0].z1 ? [BACK_N + BACK_HALF + 2.6, st.z - 1.2] : [st.z + 9.6, BACK_S - BACK_HALF - 0.3];
     for (let z = za; z < zb - 0.4; z += 0.9) if (r() < 0.6) pot(at(st.x), side, heightAt(side, z), z, Math.floor(r() * 5));
   }
+  // the worlds' own details, with dice of their own (so the town itself comes out the same)
+  if (details.length) {
+    await step(0.86, 'Street details…');
+    const kit: DetailKit = {
+      at, atlas, trees, r: rng(4242),
+      put(x, y, z, yaw, fn) { const c = newCtx(kit.r); fn(c); appendCtx(at(x), c, x, y, z, yaw); },
+      free: (x, z, rad = 0.8) => taken.every((t) => Math.hypot(t.x - x, t.z - z) > t.r + rad),
+    };
+    for (const d of details) d(kit);
+  }
   await step(0.9, 'Putting the town together…');
   return assemble(chunks, atlas, ground);
 }
@@ -312,7 +340,8 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
 // ---------------------------------------------------------------------------------------------
 // pavements, the crossing, poles and wires, lamps and everything on the pavement
 // ---------------------------------------------------------------------------------------------
-function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, trees: TreeField, occ: Occupancy) {
+function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, trees: TreeField, occ: Occupancy, taken: Taken) {
+  const take = (x: number, z: number, rad = 0.6) => { taken.push({ x, z, r: rad }); };
   const pave = (x0: number, x1: number, z0: number, z1: number, curbSide: 'n' | 's' | 'e' | 'w') => {
     const ctx = at((x0 + x1) / 2);
     const B = ctx.body;
@@ -380,7 +409,8 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
   for (const sx of [-1, 1]) {
     const cx = sx * (CROSS_HALF + 1.9);
     for (let k = 0; k < 8; k++) stripe(cx - 1.4, nIn + 0.3 + k * 0.95, cx + 1.4, nIn + 0.75 + k * 0.95);
-    stripe(sx * (CROSS_HALF + 3.7) - 0.15, sx > 0 ? nIn + 0.2 : MAIN_Z, sx * (CROSS_HALF + 3.7) + 0.15, sx > 0 ? MAIN_Z : sIn - 0.2);
+    // the stop lines, in the lane coming up to the crossing (traffic keeps left: eastbound in the north lane)
+    stripe(sx * (CROSS_HALF + 3.7) - 0.15, sx < 0 ? nIn + 0.2 : MAIN_Z, sx * (CROSS_HALF + 3.7) + 0.15, sx < 0 ? MAIN_Z : sIn - 0.2);
   }
   for (const sz of [-1, 1]) {
     const cz = MAIN_Z + sz * (MAIN_HALF + 1.9);
@@ -390,7 +420,8 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
   trafficLight(X, -xC + 0.4, SW, sIn + 0.4, 90, 6.5, 'green');
   trafficLight(X, -xC + 0.4, SW, nIn - 0.4, 0, 4.5, 'red');
   trafficLight(X, xC - 0.4, SW, sIn + 0.4, 180, 4.5, 'red');
-  for (const [x, z, yaw] of [[-xC + 0.3, nIn - 1.6, 0], [xC - 0.3, sIn + 1.6, 180], [xC - 0.3, nIn - 1.6, 0], [-xC + 0.3, sIn + 1.6, 180]] as const) signPole(X, atlas, 'pedCross', x, SW, z, yaw, 2.6, 0.7);
+  for (const [x, z, yaw] of [[-xC + 0.3, nIn - 1.6, 0], [xC - 0.3, sIn + 1.6, 180], [xC - 0.3, nIn - 1.6, 0], [-xC + 0.3, sIn + 1.6, 180]] as const) { signPole(X, atlas, 'pedCross', x, SW, z, yaw, 2.6, 0.7); take(x, z, 0.4); }
+  for (const [x, z] of [[xC - 0.4, nIn - 0.4], [-xC + 0.4, sIn + 0.4], [-xC + 0.4, nIn - 0.4], [xC - 0.4, sIn + 0.4]]) take(x, z, 0.5);
   // the back lanes meet the cross street: red paint, a stop line, 止まれ, a triangle sign, a mirror
   for (const lz of [BACK_N, BACK_S]) for (const sx of [-1, 1]) {
     const c = at(sx * 8);
@@ -405,7 +436,7 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
 
   // utility poles with wires along both pavements and the back lanes
   type Pole = { x: number; z: number; w: ReturnType<typeof utilityPole> };
-  const line = (xs: number[], z: number, y: number | null, tr: number) => xs.map((x, k): Pole => ({ x, z, w: utilityPole(at(x), y ?? heightAt(x, z) + 0.05, z, 0, { transformer: k % tr === 1 }) }));
+  const line = (xs: number[], z: number, y: number | null, tr: number) => xs.map((x, k): Pole => { take(x, z, 0.5); return { x, z, w: utilityPole(at(x), y ?? heightAt(x, z) + 0.05, z, 0, { transformer: k % tr === 1 }) }; });
   const xsN = [-104, -82, -56, -34, -12, 12, 34, 56, 80, 104];
   const xsS = [-94, -70, -46, -22, 22, 46, 70, 94];
   const lines: Pole[][] = [line(xsN, nIn - 0.45, SW, 3), line(xsS, sIn + 0.45, SW, 4), line([-100, -76, -50, -26, -8, 8, 26, 50, 76, 100], BACK_N + BACK_HALF + 0.5, null, 3), line([-100, -76, -50, -26, -8, 8, 26, 50, 76], BACK_S - BACK_HALF - 0.5, null, 3)];
@@ -423,6 +454,7 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
   for (const x of [-112, -92, -70, -44, -24, 24, 44, 68, 92, 112]) {
     doubleLamp(at(x), x + 6, SW, curbN);
     doubleLamp(at(x), x - 5, SW, curbS);
+    take(x + 6, curbN, 0.5); take(x - 5, curbS, 0.5);
   }
   for (const [a, b] of [[-108, -66], [-58, -9], [9, 58], [66, 108]]) {
     for (let x = a; x < b - 3; x += 6.4) {
@@ -430,8 +462,9 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
       if (r() < 0.6 && !(x > 6 && x < 22) && !(x > -50 && x < -26)) guardPipe(at(x + 2), x + 2, curbS + 0.15, x + 5.4, curbS + 0.15, SW, '#4caf50');
     }
   }
-  for (const x of [-86, -40, 18, 74]) hydrant(at(x), x, SW, curbN - 0.6);
-  for (const x of [-64, 40, 98]) hydrant(at(x), x, SW, curbS + 0.6);
+  for (const x of [-86, -40, 18, 74]) { hydrant(at(x), x, SW, curbN - 0.6); take(x, curbN - 0.6); }
+  for (const x of [-64, 40, 98]) { hydrant(at(x), x, SW, curbS + 0.6); take(x, curbS + 0.6); }
+  take(-40.5, nIn - 1.4, 0.4);
   for (let k = 0; k < 6; k++) cone(at(-30 + k * 0.8), -30 + k * 0.8, Y_M + 0.05, MAIN_Z - MAIN_HALF + 0.6);
   cone(at(-40), -40.5, SW, nIn - 1.4);
   for (let k = 0; k < 14; k++) {
@@ -441,6 +474,7 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
     const z = north ? nIn - WALK + 0.55 : sIn + WALK - 0.55;
     const c = at(x);
     const t = r();
+    take(x + 0.5, z, 1.3);
     if (t < 0.3) { vendingMachine(c, atlas, x, SW, z, north ? 0 : 180, r() < 0.5 ? 'vendRed' : 'vendBlue'); bins(c, x + 0.9, SW, z); }
     else if (t < 0.55) { pot(c, x, SW, z, k); pot(c, x + 0.6, SW, z + 0.1, k + 1); shrub(c, 'flower', x + 1.3, SW, z, 0.7, k); }
     else if (t < 0.75) { bicycle(c, x, SW, z + (north ? -0.4 : 0.4), 0, pick(r, ['#4f7fd9', '#d94f4f', '#7fb8b0', '#e0b341'])); bicycle(c, x + 0.8, SW, z + (north ? -0.4 : 0.4), 0, pick(r, ['#9a9a9a', '#2a2a2a', '#f4f4ee'])); }
@@ -448,6 +482,7 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
     else aBoard(c, atlas, pick(r, ['menu', 'cafeMenu', 'sale']), x, SW, z + (north ? 0.6 : -0.6), north ? 0 : 180);
   }
   vendingMachine(at(-5), atlas, -7.6, SW, nIn - WALK + 0.5, 0, 'vendBlue');
+  take(-7.6, nIn - WALK + 0.5, 0.8);
   vendingMachine(at(38), atlas, 38.8, SW + 0.0, nIn - WALK - 1.6, 0, 'vendRed');
   bins(at(38), 39.8, SW, nIn - WALK - 1.6);
   busStop(at(-80), atlas, -80, SW, sIn + 1.4, 180);
@@ -488,7 +523,7 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
   bins(at(-24), -22.9, Y_N + RAISE + 0.02, BACK_N - BACK_HALF - 0.9);
   for (const x of [-48, 30]) for (let k = 0; k < 2; k++) cone(at(x), x + k * 0.9, Y_S + 0.05, BACK_S - 0.8);
   // trees on the pavement corners
-  for (const [x, z, kind] of [[-9.4, nIn - WALK - 0.3, 'jacaranda'], [9.6, nIn - WALK - 0.5, 'sakura'], [-58, sIn + WALK + 0.4, 'jacaranda'], [58, nIn - WALK - 0.3, 'jacaranda'], [100, sIn + WALK + 0.3, 'sakura']] as const) trees.add(kind, x, z, 0.85, SW);
+  for (const [x, z, kind] of [[-9.4, nIn - WALK - 0.3, 'jacaranda'], [9.6, nIn - WALK - 0.5, 'sakura'], [-58, sIn + WALK + 0.4, 'jacaranda'], [58, nIn - WALK - 0.3, 'jacaranda'], [100, sIn + WALK + 0.3, 'sakura']] as const) { trees.add(kind, x, z, 0.85, SW); take(x, z, 1.2); }
   void wireSpan;
 }
 
