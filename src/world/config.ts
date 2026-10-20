@@ -291,7 +291,8 @@ export const onBridge = (x: number, z: number) => Math.abs(x - UNDERPASS.x) < 4.
 
 export function naturalHeight(x: number, z: number): number {
   // the school's levelled plateau (3 m wider than the fence): no road cuts into it
-  if (x >= SCHOOL.x0 - 3 && x <= SCHOOL.x1 + 3 && z >= SCHOOL.z0 - 3 && z <= SCHOOL.z1 + 3) return SCHOOL.y - 0.05;
+  // (on the road side, west, it stops just past the fence so the slope down never reaches the pavement)
+  if (x >= SCHOOL.x0 - 0.5 && x <= SCHOOL.x1 + 3 && z >= SCHOOL.z0 - 3 && z <= SCHOOL.z1 + 3) return SCHOOL.y - 0.05;
   const h = baseHeight(x, z);
   // the underpass: a cut at the frontage road's level inside the walls, untouched ground behind them
   const ux = Math.abs(x - UNDERPASS.x), uz = Math.abs(z - UNDERPASS.z);

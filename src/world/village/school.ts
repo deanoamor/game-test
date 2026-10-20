@@ -290,10 +290,17 @@ export function buildSchool(at: (x: number) => Ctx, atlas: SignAtlas, r: () => n
       const x0 = ax + ((bx - ax) * k) / n, z0 = az + ((bz - az) * k) / n, x1 = ax + ((bx - ax) * (k + 1)) / n, z1 = az + ((bz - az) * (k + 1)) / n;
       if (ax === S.x0 && bx === S.x0 && Math.abs((z0 + z1) / 2 - gz) < 3.6) continue;
       // the plateau reaches 3 m past the fence; the wall stands at its edge, down to the natural ground just outside
-      const g0 = naturalHeight(x0 + ox * 4.5, z0 + oz * 4.5), g1 = naturalHeight(x1 + ox * 4.5, z1 + oz * 4.5);
+      // on the west (road) side the wall is a solid block from just behind the pavement to the plateau's edge
+      const west = ax === S.x0 && bx === S.x0;
+      const out = west ? 3.2 : 4.5;
+      const g0 = naturalHeight(x0 + ox * out, z0 + oz * out), g1 = naturalHeight(x1 + ox * out, z1 + oz * out);
       if (y - Math.min(g0, g1) < 0.2) continue;
-      const rn = roadNear((x0 + x1) / 2 + ox * 3.1, (z0 + z1) / 2 + oz * 3.1, (nm) => nm === 'school road');
-      if (rn.d < 6.8) continue; // the road and its pavements come in here
+      const rn = roadNear((x0 + x1) / 2 + ox * (west ? 2.2 : 3.1), (z0 + z1) / 2 + oz * 3.1, (nm) => nm === 'school road');
+      if (rn.d < (west ? 6.4 : 6.8)) continue; // the road and its pavements come in here
+      if (west) {
+        wallSeg(B, x0 - 1.7, z0, x1 - 1.7, z1, Math.min(g0, g1) - 0.6, y + 0.1, Math.min(g0, g1) - 0.6, y + 0.1, 2.6, '#b5b1a7', '#cfcbc1');
+        continue;
+      }
       const e = 3.1, ex0 = x0 + ox * e - (ox ? 0 : 0), ez0 = z0 + oz * e, ex1 = x1 + ox * e, ez1 = z1 + oz * e;
       const sx = ax === bx ? 0 : (k === 0 ? -3.3 : 0) + 0, sx1 = ax === bx ? 0 : (k === n - 1 ? 3.3 : 0);
       const sz = az === bz ? 0 : (k === 0 ? -3.3 : 0), sz1 = az === bz ? 0 : (k === n - 1 ? 3.3 : 0);
