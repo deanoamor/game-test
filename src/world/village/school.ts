@@ -1,10 +1,10 @@
 import { pick } from '../../util/rng';
-import { SCHOOL } from '../config';
+import { SCHOOL, naturalHeight } from '../config';
 import type { TreeField } from '../forest';
 import type { Cell, SignAtlas } from '../signs';
 import { raiseSkyline } from '../skyline';
 import { appendCtx, newCtx, wallBox, type Ctx } from './frame';
-import { fence } from './ground';
+import { fence, wallSeg } from './ground';
 import { airConditioner, windowUnit } from './house';
 import { bicycle, parkedVehicle, shrub } from './props';
 
@@ -265,6 +265,22 @@ export function buildSchool(at: (x: number) => Ctx, atlas: SignAtlas, r: () => n
   for (let z = gz + 10; z < S.z1 - 3; z += 3.2) shrub(ctx, pick(r, ['round', 'flower', 'cone'] as const), S.x0 + 3 + (z % 2) * 3, y, z, 0.8, Math.floor(z));
   // the walk from the car park along the yard to the entrance
   B.box(px1 + 1.2, y + 0.035, (gz + S.z0 + 14) / 2, 2.2, 0.05, gz - S.z0 - 14 + 2.5, '#bdb8ad', { ao: 0 });
+  // a concrete retaining wall wherever the hill outside drops below the plateau (none across the gate)
+  const edges: [number, number, number, number][] = [[S.x0, S.z0, S.x0, S.z1], [S.x1, S.z0, S.x1, S.z1], [S.x0, S.z0, S.x1, S.z0], [S.x0, S.z1, S.x1, S.z1]];
+  for (const [ax, az, bx, bz] of edges) {
+    const L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / 2), ox = ax === bx ? Math.sign(ax - (S.x0 + S.x1) / 2) : 0, oz = az === bz ? Math.sign(az - (S.z0 + S.z1) / 2) : 0;
+    for (let k = 0; k < n; k++) {
+      const x0 = ax + ((bx - ax) * k) / n, z0 = az + ((bz - az) * k) / n, x1 = ax + ((bx - ax) * (k + 1)) / n, z1 = az + ((bz - az) * (k + 1)) / n;
+      if (ax === S.x0 && bx === S.x0 && Math.abs((z0 + z1) / 2 - gz) < 3.6) continue;
+      // the plateau reaches 3 m past the fence; the wall stands at its edge, down to the natural ground just outside
+      const g0 = naturalHeight(x0 + ox * 4.5, z0 + oz * 4.5), g1 = naturalHeight(x1 + ox * 4.5, z1 + oz * 4.5);
+      if (y - Math.min(g0, g1) < 0.2) continue;
+      const e = 3.1, ex0 = x0 + ox * e - (ox ? 0 : 0), ez0 = z0 + oz * e, ex1 = x1 + ox * e, ez1 = z1 + oz * e;
+      const sx = ax === bx ? 0 : (k === 0 ? -3.3 : 0) + 0, sx1 = ax === bx ? 0 : (k === n - 1 ? 3.3 : 0);
+      const sz = az === bz ? 0 : (k === 0 ? -3.3 : 0), sz1 = az === bz ? 0 : (k === n - 1 ? 3.3 : 0);
+      wallSeg(B, ex0 + sx, ez0 + sz, ex1 + sx1, ez1 + sz1, Math.min(g0, g1) - 0.6, y + 0.1, Math.min(g0, g1) - 0.6, y + 0.1, 0.4, '#b5b1a7', '#cfcbc1');
+    }
+  }
   // the fence all round (open at the gate) with cherry trees inside it, and a hedge along the building
   const ring: [number, number][] = [[S.x0, gz + 4.6], [S.x0, S.z1], [S.x1, S.z1], [S.x1, S.z0], [S.x0, S.z0], [S.x0, gz - 4.6]];
   for (let k = 0; k < ring.length - 1; k++) {

@@ -28,8 +28,6 @@ export function icRampY(x: number): number {
 }
 /** The gas station beside the road to the toll, on its west side just before the plaza (on levelled ground). */
 export const GAS = { x0: -26.4, x1: -5.0, z0: 141.2, z1: 172.2, y: 1.75 };
-/** The junior high school on the plateau of the east hill (levelled ground), reached by a road from the main street. */
-export const SCHOOL = { x0: 168, x1: 236, z0: 62, z1: 118, y: 27 };
 export const SHRINE = { x: 66, z: -78, radius: 24, height: 50 };
 
 /**
@@ -130,6 +128,8 @@ export const rawHeight = baseHeight;
 
 /** The roads: smooth paths sampled every 2 m, with a smoothed height so they never jump. */
 export interface RoadPath { name: string; width: number; x: number[]; z: number[]; y: number[]; len: number; box: [number, number, number, number] }
+/** The junior high school on the plateau of the east hill (levelled ground), reached by a road from the main street. */
+export const SCHOOL = { x0: 168, x1: 236, z0: 62, z1: 118, y: 27 };
 /**
  * The underpass south of the town: the frontage road (west lane to east lane) dips into a concrete U-cut and passes
  * under a short bridge that carries the cross street on to the toll plaza.
@@ -138,7 +138,7 @@ export const UNDERPASS = { x: 0, z: 127, half: 31, wall: 4.2, cut: 7.4, fill: 10
 const RISE = (z: number) => (z > TOWN.z1 ? UNDERPASS.rise * (1 - smoothstep(7, 15, Math.abs(z - UNDERPASS.z))) : 0);
 const DIP = (x: number) => -UNDERPASS.depth * (1 - smoothstep(8, 36, Math.abs(x - UNDERPASS.x)));
 
-const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: boolean; bump?: (x: number, z: number) => number }[] = [
+const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: boolean; bump?: (x: number, z: number) => number; endY?: number }[] = [
   { name: 'main', width: 8, pts: [[-152, 44], [-60, 44], [0, 44], [60, 44], [152, 44]] },
   { name: 'cross', width: 7, bump: (_x, z) => RISE(z), pts: [[0, 172.6], [0, 150], [0, 127], [0, 104], [0, 84], [0, 44], [0, 8], [0, 2]] },
   { name: 'back north', width: 4.6, pts: [[-112, 8], [-60, 8], [0, 8], [60, 8], [112, 8]] },
@@ -146,7 +146,7 @@ const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: 
   { name: 'west lane', width: 4.6, pts: [[-62, 8], [-62, 44], [-62, 84], [-62, 106], [-60, 118], [-53, 125.6], [-44, 127]] },
   { name: 'east lane', width: 4.6, pts: [[62, 8], [62, 44], [62, 84], [62, 106], [64, 118], [71, 125.6], [80, 127]] },
   // it carries straight on from the end of the main street, swings up the hill, and runs straight in through the gate
-  { name: 'school road', width: 6, pts: [[147, 44], [152, 44], [157, 45.5], [160.5, 50], [161.5, 60], [160, 72], [159.5, 82], [161.5, 88.5], [165, 90], [169, 90]] },
+  { name: 'school road', width: 6, endY: SCHOOL.y, pts: [[147, 44], [152, 44], [157, 45.5], [160.5, 50], [161.5, 60], [160, 72], [159.5, 82], [161.5, 88.5], [165, 90], [169, 90]] },
   { name: 'frontage', width: 7, bump: (x) => DIP(x), pts: [[-48, 127], [-20, 127], [0, 127], [40, 127], [83, 127]] },
   { name: 'shrine path', width: 4.2, even: true, pts: [[0, 2], [0, -8], [4, -26], [20, -42], [42, -52], [58, -56], [66, -62], [66, -66]] },
 ];
@@ -182,6 +182,11 @@ function buildRoad(def: (typeof ROAD_DEFS)[number]): RoadPath {
     return smooth[i];
   });
   if (def.bump) for (let i = 0; i < y.length; i++) y[i] += def.bump(pts[i][0], pts[i][1]);
+  // a road that must arrive at a given level (the school gate) eases up to it over its last 40 m
+  if (def.endY !== undefined) {
+    const n = y.length - 1, N = Math.min(20, n);
+    for (let k = 0; k <= N; k++) y[n - k] = lerp(y[n - k], def.endY, smoothstep(N, 0, k));
+  }
   // a path that climbs at an even grade from the town's edge to its end (cut into the hillside)
   if (def.even) {
     const i0 = town.indexOf(false), n = y.length - 1;
@@ -285,6 +290,8 @@ export function heightAt(x: number, z: number): number {
 export const onBridge = (x: number, z: number) => Math.abs(x - UNDERPASS.x) < 4.6 && Math.abs(z - UNDERPASS.z) < UNDERPASS.fill + 0.3;
 
 export function naturalHeight(x: number, z: number): number {
+  // the school's levelled plateau (3 m wider than the fence): no road cuts into it
+  if (x >= SCHOOL.x0 - 3 && x <= SCHOOL.x1 + 3 && z >= SCHOOL.z0 - 3 && z <= SCHOOL.z1 + 3) return SCHOOL.y - 0.05;
   const h = baseHeight(x, z);
   // the underpass: a cut at the frontage road's level inside the walls, untouched ground behind them
   const ux = Math.abs(x - UNDERPASS.x), uz = Math.abs(z - UNDERPASS.z);
