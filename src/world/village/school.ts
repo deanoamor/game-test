@@ -236,7 +236,7 @@ export function buildSchool(at: (x: number) => Ctx, atlas: SignAtlas, r: () => n
   const plaque = atlas.get('schoolPlaque');
   ctx.body.box(S.x0 - 0.02, y + 1.3, gz - 4.2, 0.04, 2.0, 0.6, '#5a4a3a', { ao: 0 });
   ctx.sign.quadFacing([S.x0 - 0.05, y + 0.4, gz - 4.45], [S.x0 - 0.05, y + 0.4, gz - 3.95], [S.x0 - 0.05, y + 2.2, gz - 3.95], [S.x0 - 0.05, y + 2.2, gz - 4.45], [-1, 0, 0], [1, 1, 1], [[plaque.u0, plaque.v0], [plaque.u1, plaque.v0], [plaque.u1, plaque.v1], [plaque.u0, plaque.v1]]);
-  B.box(S.x0 + 0.4, y + 0.9, gz + 6.0, 0.15, 1.6, 3.4, RAIL, { ao: 0 });
+  B.box(S.x0 + 0.25, y + 0.9, gz + 6.4, 0.12, 1.6, 3.4, RAIL, { ao: 0 }); // the sliding gate, pushed open along the fence
   B.box(S.x0 + 0.4, y + 0.02, gz, 0.2, 0.02, 7.6, '#8a9096', { ao: 0 });
   const name = atlas.get('schoolName');
   B.box(cx - 1, y + 16.4, S.z0 + 14.2, 7.3, 2.0, 0.12, '#1f5e3a', { ao: 0 });
@@ -246,10 +246,25 @@ export function buildSchool(at: (x: number) => Ctx, atlas: SignAtlas, r: () => n
   B.box(S.x0 + 6, y + 2.2, S.z0 + 17.5, 7.0, 0.08, 2.6, '#a8d0c0', { ao: 0 });
   for (const [px, pz] of [[S.x0 + 2.7, S.z0 + 16.5], [S.x0 + 9.3, S.z0 + 16.5], [S.x0 + 2.7, S.z0 + 18.5], [S.x0 + 9.3, S.z0 + 18.5]]) B.box(px, y + 1.1, pz, 0.08, 2.2, 0.08, RAIL, { ao: 0 });
   for (let k = 0; k < 9; k++) bicycle(ctx, S.x0 + 2.9 + k * 0.75, y, S.z0 + 17.5, 0, pick(r, ['#4f7fd9', '#d94f4f', '#9a9a9a', '#2a2a2a', '#f4f4ee']));
-  // the teachers' car park south of the gate: bays along the fence, cars nosed in
-  B.box(S.x0 + 5.5, y + 0.03, 105, 9, 0.04, 17, '#9a9790', { ao: 0 });
-  for (let k = 0; k <= 5; k++) B.box(S.x0 + 5, y + 0.06, 97.5 + k * 2.8, 5, 0.02, 0.1, '#f4f2ea', { ao: 0 });
-  for (let k = 0; k < 5; k++) if (k !== 2) parkedVehicle(ctx, pick(r, ['car', 'kei', 'keivan'] as const), pick(r, ['#f4f4ee', '#3a4a6a', '#d8d8d0', '#7a2a2e', '#2f2f35']), S.x0 + 5, y + 0.06, 98.9 + k * 2.8, 0);
+  // the teachers' car park right inside the gate: an aisle straight on from the road, four bays either side of it
+  const px0 = S.x0 + 0.8, px1 = S.x0 + 11.6;
+  B.box((px0 + px1) / 2, y + 0.03, gz, px1 - px0, 0.06, 15.4, '#55585e', { ao: 0 });
+  for (const s of [-1, 1]) {
+    const zb = gz + s * 2.5, zc = gz + s * 5.0;
+    B.box((px0 + px1) / 2 + 0.5, y + 0.065, zb, px1 - px0 - 1, 0.02, 0.1, '#f4f2ea', { ao: 0 }); // the aisle edge
+    for (let k = 0; k <= 4; k++) B.box(px0 + 1.4 + k * 2.5, y + 0.065, zc, 0.1, 0.02, 4.9, '#f4f2ea', { ao: 0 });
+    for (let k = 0; k < 4; k++) {
+      const bx = px0 + 2.65 + k * 2.5;
+      B.box(bx, y + 0.12, gz + s * 7.1, 1.4, 0.12, 0.18, '#c9c6bd', { ao: 0.1 }); // a wheel stop at the far end
+      if ((k + (s > 0 ? 1 : 0)) % 4 !== 3) parkedVehicle(ctx, pick(r, ['car', 'kei', 'keivan', 'car'] as const), pick(r, ['#f4f4ee', '#3a4a6a', '#d8d8d0', '#7a2a2e', '#2f2f35', '#5a7a9a']), bx, y + 0.06, gz + s * 5.0, 90);
+    }
+  }
+  // an arrow and a stop line where the aisle meets the walk to the entrance, and a little garden south of the car park
+  B.box(px1 - 0.4, y + 0.07, gz, 0.3, 0.02, 4.4, '#f4f2ea', { ao: 0 });
+  B.box(S.x0 + 6, y + 0.03, (gz + 8 + S.z1) / 2, 10, 0.05, S.z1 - gz - 8.5, '#86b24e', { ao: 0 });
+  for (let z = gz + 10; z < S.z1 - 3; z += 3.2) shrub(ctx, pick(r, ['round', 'flower', 'cone'] as const), S.x0 + 3 + (z % 2) * 3, y, z, 0.8, Math.floor(z));
+  // the walk from the car park along the yard to the entrance
+  B.box(px1 + 1.2, y + 0.035, (gz + S.z0 + 14) / 2, 2.2, 0.05, gz - S.z0 - 14 + 2.5, '#bdb8ad', { ao: 0 });
   // the fence all round (open at the gate) with cherry trees inside it, and a hedge along the building
   const ring: [number, number][] = [[S.x0, gz + 4.6], [S.x0, S.z1], [S.x1, S.z1], [S.x1, S.z0], [S.x0, S.z0], [S.x0, gz - 4.6]];
   for (let k = 0; k < ring.length - 1; k++) {
