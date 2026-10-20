@@ -2,15 +2,17 @@ import { pick } from '../../util/rng';
 import { GAS } from '../config';
 import type { Cell, SignAtlas } from '../signs';
 import { raiseSkyline } from '../skyline';
-import type { Ctx } from './frame';
+import { appendCtx, newCtx, type Ctx } from './frame';
 import { bins, parkedVehicle, vendingMachine } from './props';
 
 /**
  * A Japanese self-service gas station by the frontage road: a levelled concrete lot with a curb and two entrances, a big
  * canopy with an orange brand fascia and a lit underside, three pump islands with dispensers for regular, high-octane
  * and diesel, a kiosk, a drive-through car wash, a price tower by the road, SELF flags and the usual odds and ends.
- * The road is on the north side (-z), so everything faces it.
+ * It is laid out with its road side toward -z on a design lot (G0), then turned and moved onto the real lot (GAS) so
+ * that side faces the road to the toll.
  */
+const G0 = { x0: -64, x1: -33, z0: 130.6, z1: 152 };
 
 /** A picture on a board in the plane z = const, facing ±z. */
 function boardZ(ctx: Ctx, c: Cell, x: number, y: number, z: number, w: number, h: number, s: 1 | -1) {
@@ -20,25 +22,25 @@ function boardZ(ctx: Ctx, c: Cell, x: number, y: number, z: number, w: number, h
 }
 
 export function buildGasStation(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number) {
-  const ctx = at((GAS.x0 + GAS.x1) / 2), B = ctx.body;
-  const y = GAS.y, cx = (GAS.x0 + GAS.x1) / 2, cz = (GAS.z0 + GAS.z1) / 2, W = GAS.x1 - GAS.x0, D = GAS.z1 - GAS.z0;
+  const ctx = newCtx(r), B = ctx.body;
+  const y = 0, cx = (G0.x0 + G0.x1) / 2, cz = (G0.z0 + G0.z1) / 2, W = G0.x1 - G0.x0, D = G0.z1 - G0.z0;
   // the lot: a concrete slab with joints, a curb along the road with two openings, and a strip of planting at the back
   B.box(cx, y - 0.75, cz, W, 1.5, D, '#a9a59b', { ao: 0.1 });
   B.box(cx, y + 0.005, cz, W - 0.1, 0.01, D - 0.1, '#cdcac1', { ao: 0 });
-  for (let x = GAS.x0 + 4; x < GAS.x1; x += 4) B.box(x, y + 0.012, cz, 0.04, 0.01, D - 0.2, '#b0ada4', { ao: 0 });
-  for (let z = GAS.z0 + 4; z < GAS.z1; z += 4) B.box(cx, y + 0.012, z, W - 0.2, 0.01, 0.04, '#b0ada4', { ao: 0 });
+  for (let x = G0.x0 + 4; x < G0.x1; x += 4) B.box(x, y + 0.012, cz, 0.04, 0.01, D - 0.2, '#b0ada4', { ao: 0 });
+  for (let z = G0.z0 + 4; z < G0.z1; z += 4) B.box(cx, y + 0.012, z, W - 0.2, 0.01, 0.04, '#b0ada4', { ao: 0 });
   const gaps: [number, number][] = [[-61, -54], [-42, -35]];
-  let x = GAS.x0;
-  for (const [a, b] of [...gaps, [GAS.x1, GAS.x1]]) {
-    if (a > x) B.box((x + a) / 2, y + 0.1, GAS.z0 + 0.15, a - x, 0.2, 0.3, '#e2ded4', { ao: 0.05 });
+  let x = G0.x0;
+  for (const [a, b] of [...gaps, [G0.x1, G0.x1]]) {
+    if (a > x) B.box((x + a) / 2, y + 0.1, G0.z0 + 0.15, a - x, 0.2, 0.3, '#e2ded4', { ao: 0.05 });
     x = b;
   }
-  B.box(cx, y + 0.2, GAS.z1 - 0.4, W - 0.2, 0.4, 0.8, '#8f8a7e', { ao: 0.1 });
-  for (let x = GAS.x0 + 1; x < GAS.x1 - 0.5; x += 1.4) B.blob(x, y + 0.6, GAS.z1 - 0.4, 0.55, 0.4, 0.45, pick(r, ['#4f9a3f', '#5aa845', '#67b350']), { seed: Math.floor(x * 3) });
+  B.box(cx, y + 0.2, G0.z1 - 0.4, W - 0.2, 0.4, 0.8, '#8f8a7e', { ao: 0.1 });
+  for (let x = G0.x0 + 1; x < G0.x1 - 0.5; x += 1.4) B.blob(x, y + 0.6, G0.z1 - 0.4, 0.55, 0.4, 0.45, pick(r, ['#4f9a3f', '#5aa845', '#67b350']), { seed: Math.floor(x * 3) });
   // painted arrows in and out
   for (const [ax, dir] of [[-57.5, 1], [-38.5, -1]] as const) {
-    B.box(ax, y + 0.02, GAS.z0 + 2.6, 0.35, 0.02, 2.4, '#f4f2ea', { ao: 0 });
-    for (const s of [-1, 1]) B.box(ax + s * 0.35, y + 0.02, GAS.z0 + 2.6 + dir * 1.3, 0.25, 0.02, 0.7, '#f4f2ea', { ao: 0, yaw: s * dir * 40 });
+    B.box(ax, y + 0.02, G0.z0 + 2.6, 0.35, 0.02, 2.4, '#f4f2ea', { ao: 0 });
+    for (const s of [-1, 1]) B.box(ax + s * 0.35, y + 0.02, G0.z0 + 2.6 + dir * 1.3, 0.25, 0.02, 0.7, '#f4f2ea', { ao: 0, yaw: s * dir * 40 });
   }
 
   // the canopy: columns on the islands, a deep roof, the brand fascia all round and lit panels underneath
@@ -116,9 +118,9 @@ export function buildGasStation(at: (x: number) => Ctx, atlas: SignAtlas, r: () 
   for (const s of [-1, 1] as const) boardZ(ctx, atlas.get('gasBrand'), px, y + 7.1, pz + s * 0.21, 2.6, 0.65, s);
   const flag = atlas.get('selfFlag');
   for (const fx of [-63, -52.5, -45, -33.6]) {
-    B.box(fx, y + 1.5, GAS.z0 + 0.5, 0.04, 3.0, 0.04, '#d8d8d8', { ao: 0 });
+    B.box(fx, y + 1.5, G0.z0 + 0.5, 0.04, 3.0, 0.04, '#d8d8d8', { ao: 0 });
     for (const s of [-1, 1] as const) {
-      const fz = GAS.z0 + 0.5 + s * 0.01;
+      const fz = G0.z0 + 0.5 + s * 0.01;
       const xl = s > 0 ? fx + 0.02 : fx + 0.62, xr = s > 0 ? fx + 0.62 : fx + 0.02;
       ctx.sign.quadFacing([xl, y + 1.75, fz], [xr, y + 1.75, fz], [xr, y + 2.95, fz], [xl, y + 2.95, fz], [0, 0, s], [1, 1, 1], [[flag.u0, flag.v0], [flag.u1, flag.v0], [flag.u1, flag.v1], [flag.u0, flag.v1]]);
     }
@@ -126,9 +128,17 @@ export function buildGasStation(at: (x: number) => Ctx, atlas: SignAtlas, r: () 
   // the underground tank lids and a lamp at each entrance
   for (let k = 0; k < 3; k++) B.disc(-60 + k * 1.6, y + 0.02, 143.2, 0.4, 0.03, 'y', '#5a5e64', 12);
   for (const lx of [-62.5, -35.5]) {
-    B.box(lx, y + 3, GAS.z0 + 0.6, 0.15, 6, 0.15, '#8a9096', { ao: 0 });
-    ctx.litB.box(lx, y + 6.05, GAS.z0 + 1.0, 0.4, 0.12, 0.8, '#ffffff', { ao: 0 });
+    B.box(lx, y + 3, G0.z0 + 0.6, 0.15, 6, 0.15, '#8a9096', { ao: 0 });
+    ctx.litB.box(lx, y + 6.05, G0.z0 + 1.0, 0.4, 0.12, 0.8, '#ffffff', { ao: 0 });
   }
-  raiseSkyline(kx - cw / 2, kz - cd / 2, kx + cw / 2, kz + cd / 2, y + ch + 1.5);
-  raiseSkyline(px - 1.5, pz - 1, px + 1.5, pz + 1, y + 8);
+  // turn the design so its road side (-z) faces the road on the +x side of the lot, and move it there
+  const yaw = -90, a = (yaw * Math.PI) / 180, cs = Math.cos(a), sn = Math.sin(a);
+  const dcx = (G0.x0 + G0.x1) / 2, dcz = (G0.z0 + G0.z1) / 2, wcx = (GAS.x0 + GAS.x1) / 2, wcz = (GAS.z0 + GAS.z1) / 2;
+  appendCtx(at(wcx), ctx, wcx - (dcx * cs + dcz * sn), GAS.y, wcz - (-dcx * sn + dcz * cs), yaw);
+  // the two driveways across the verge to the road
+  for (const [a, b] of gaps) {
+    const z0 = a + (wcz - dcx), z1 = b + (wcz - dcx);
+    at(wcx).body.box(GAS.x1 + 0.8, GAS.y - 0.2, (z0 + z1) / 2, 1.7, 0.42, z1 - z0, '#c4c0b6', { ao: 0.05 });
+  }
+  raiseSkyline(GAS.x0, GAS.z0, GAS.x1, GAS.z1, GAS.y + ch + 1.5);
 }

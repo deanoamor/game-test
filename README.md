@@ -10,7 +10,7 @@ with open corridors and laundry; offices with roof billboards), a konbini and a 
 street with pavements, tactile strips, curbs and gutters, a signalled crossing with traffic lights, back lanes with red
 paint and 止まれ, utility poles with transformers and wires, double red lamps, green-white guard pipes, vending
 machines, hydrants, cones, convex mirrors, road signs and moving traffic. Below the town the cross street runs on to the Hoshinomachi IC, crossing on a short bridge over the road that links the
-west and east lanes through a concrete underpass; by that road stands a self-service gas station with a branded
+west and east lanes through a concrete underpass; beside it, just before the toll, stands a self-service gas station with a branded
 canopy, pump islands, a kiosk, a car wash and a price tower. At the IC: a toll plaza with ETC and
 general booths under green canopies, and ramps up to an elevated four-lane expressway on piers, with sound walls, a
 median, lights, green sign gantries and fast traffic, cut through the hills at both ends. Around the town: stepped rice paddies, a koi pond, wooded hills on both sides, and

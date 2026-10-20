@@ -26,8 +26,8 @@ export function icRampY(x: number): number {
   const t = clamp((Math.abs(x) - IC.x1) / (IC_RAMP.end - IC.x1), 0, 1);
   return IC.y + (EXPRESSWAY.y - IC.y) * (t * t * (3 - 2 * t));
 }
-/** The gas station on the south side of the frontage road, west of the underpass (on levelled ground). */
-export const GAS = { x0: -64, x1: -33, z0: 130.6, z1: 152, y: 2.08 };
+/** The gas station beside the road to the toll, on its west side just before the plaza (on levelled ground). */
+export const GAS = { x0: -26.4, x1: -5.0, z0: 141.2, z1: 172.2, y: 1.75 };
 export const SHRINE = { x: 66, z: -78, radius: 24, height: 50 };
 
 /**
@@ -131,7 +131,7 @@ export interface RoadPath { name: string; width: number; x: number[]; z: number[
  * under a short bridge that carries the cross street on to the toll plaza.
  */
 export const UNDERPASS = { x: 0, z: 127, half: 31, wall: 4.2, cut: 7.4, fill: 10.2, depth: 3.4, rise: 1.3 };
-const RISE = (z: number) => (z > TOWN.z1 ? UNDERPASS.rise * (1 - smoothstep(6, 24, Math.abs(z - UNDERPASS.z))) : 0);
+const RISE = (z: number) => (z > TOWN.z1 ? UNDERPASS.rise * (1 - smoothstep(7, 15, Math.abs(z - UNDERPASS.z))) : 0);
 const DIP = (x: number) => -UNDERPASS.depth * (1 - smoothstep(8, 36, Math.abs(x - UNDERPASS.x)));
 
 const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: boolean; bump?: (x: number, z: number) => number }[] = [
@@ -301,7 +301,7 @@ export const PLACES: Place[] = [
   { key: 'slope', name: 'Hoshi Slope', jp: '星坂', x: 0, z: 64, radius: 12, dist: 34, pitch: 20, yaw: 160 },
   { key: 'stairs', name: 'Stone Steps', jp: '石段', x: 34, z: 72, radius: 9, dist: 30, pitch: 52, yaw: 0 },
   { key: 'hillside', name: 'Hillside Terraces', jp: '段々の町', x: -30, z: 60, radius: 6, dist: 130, pitch: 17, yaw: 32 },
-  { key: 'gas', name: 'Gas Station', jp: 'ガソリンスタンド', x: -48, z: 141, radius: 12, dist: 40, pitch: 30, yaw: 20 },
+  { key: 'gas', name: 'Gas Station', jp: 'ガソリンスタンド', x: -16, z: 157, radius: 12, dist: 42, pitch: 30, yaw: 70 },
   { key: 'ic', name: 'Hoshi IC', jp: '星の町IC', x: 0, z: 180, radius: 16, dist: 80, pitch: 30, yaw: 24 },
   { key: 'town', name: 'Hoshi Town', jp: '星の町', x: 0, z: 46, radius: 110, dist: 190, pitch: 42, yaw: 16 },
   { key: 'paddies', name: 'Rice Paddies', jp: '田んぼ', x: PADDY.x, z: PADDY.z, radius: 34, dist: 80, pitch: 32, yaw: -28 },
