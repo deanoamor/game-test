@@ -248,14 +248,14 @@ function roadGrid(): Map<number, number[]> {
 }
 
 /** Distance to the nearest road sample (within about 32 m; Infinity beyond) and that road's height there. */
-export function roadNear(x: number, z: number, only?: (name: string) => boolean): { d: number; y: number; width: number } {
+export function roadNear(x: number, z: number, only?: (name: string) => boolean): { d: number; y: number; width: number; name: string } {
   const roads = getRoads(), g = roadGrid();
   // far from every road (outside all their boxes): nothing to find
   let near = false;
   for (const r of roads) if (x >= r.box[0] && x <= r.box[2] && z >= r.box[1] && z <= r.box[3] && (!only || only(r.name))) { near = true; break; }
-  if (!near) return { d: Infinity, y: 0, width: 0 };
+  if (!near) return { d: Infinity, y: 0, width: 0, name: '' };
   const ci = Math.floor(x / CELL), cj = Math.floor(z / CELL);
-  let best = Infinity, by = 0, bw = 0;
+  let best = Infinity, by = 0, bw = 0, bn = '';
   // rings of cells outwards; stop once the nearest sample found is closer than anything a further ring could hold
   for (let ring = 0; ring <= 4; ring++) {
     for (let i = ci - ring; i <= ci + ring; i++) {
@@ -268,13 +268,13 @@ export function roadNear(x: number, z: number, only?: (name: string) => boolean)
           if (only && !only(r.name)) continue;
           const s = a[k + 1], dx = x - r.x[s], dz = z - r.z[s];
           const d = dx * dx + dz * dz;
-          if (d < best) { best = d; by = r.y[s]; bw = r.width; }
+          if (d < best) { best = d; by = r.y[s]; bw = r.width; bn = r.name; }
         }
       }
     }
     if (best < (ring * CELL) * (ring * CELL)) break;
   }
-  return { d: Math.sqrt(best), y: by, width: bw };
+  return { d: Math.sqrt(best), y: by, width: bw, name: bn };
 }
 
 /** The ground you stand on: the town's terraces, the paddy steps, or the natural ground with the roads cut in. */
@@ -297,12 +297,14 @@ export function naturalHeight(x: number, z: number): number {
   const ux = Math.abs(x - UNDERPASS.x), uz = Math.abs(z - UNDERPASS.z);
   const inCut = ux < UNDERPASS.half && uz < UNDERPASS.cut;
   if (inCut) return roadNear(x, z, (n) => n === 'frontage').y - 0.25;
-  const { d, y, width } = ux < UNDERPASS.half + 4 && uz < 16 ? roadNear(x, z, (n) => n !== 'frontage') : roadNear(x, z);
+  const { d, y, width, name } = ux < UNDERPASS.half + 4 && uz < 16 ? roadNear(x, z, (n) => n !== 'frontage') : roadNear(x, z);
   if (!isFinite(d)) return h;
   // fully cut down for a terrain cell's diagonal (3.6 m) beyond the road edge, so no grid triangle can poke through the
   // road surface on a slope; then blending back into the hillside
   const w = 1 - smoothstep(width * 0.5 + 3.6, width * 0.5 + 11, d);
-  return w > 0 ? lerp(h, y - 0.25, w) : h;
+  // beside the roads that have pavements on the hill the ground is cut deeper, so it stays under the steps
+  const cut = name === 'school road' || (name === 'main' && x > TOWN.x1) ? 0.55 : 0.25;
+  return w > 0 ? lerp(h, y - cut, w) : h;
 }
 
 /** Slope (rise over run) from a short central difference. */

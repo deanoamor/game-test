@@ -1,6 +1,6 @@
 import { toRgb, type GeoBuilder, type V3 } from '../../util/builder';
 import { pick } from '../../util/rng';
-import { SCHOOL, getRoad, naturalHeight } from '../config';
+import { SCHOOL, getRoad, naturalHeight, roadNear } from '../config';
 import type { TreeField } from '../forest';
 import type { Cell, SignAtlas } from '../signs';
 import { raiseSkyline } from '../skyline';
@@ -292,6 +292,8 @@ export function buildSchool(at: (x: number) => Ctx, atlas: SignAtlas, r: () => n
       // the plateau reaches 3 m past the fence; the wall stands at its edge, down to the natural ground just outside
       const g0 = naturalHeight(x0 + ox * 4.5, z0 + oz * 4.5), g1 = naturalHeight(x1 + ox * 4.5, z1 + oz * 4.5);
       if (y - Math.min(g0, g1) < 0.2) continue;
+      const rn = roadNear((x0 + x1) / 2 + ox * 3.1, (z0 + z1) / 2 + oz * 3.1, (nm) => nm === 'school road');
+      if (rn.d < 6.8) continue; // the road and its pavements come in here
       const e = 3.1, ex0 = x0 + ox * e - (ox ? 0 : 0), ez0 = z0 + oz * e, ex1 = x1 + ox * e, ez1 = z1 + oz * e;
       const sx = ax === bx ? 0 : (k === 0 ? -3.3 : 0) + 0, sx1 = ax === bx ? 0 : (k === n - 1 ? 3.3 : 0);
       const sz = az === bz ? 0 : (k === 0 ? -3.3 : 0), sz1 = az === bz ? 0 : (k === n - 1 ? 3.3 : 0);
@@ -322,7 +324,10 @@ export function buildSchoolWalks(at: (x: number) => Ctx) {
   const path: { x: number; z: number; y: number }[] = [];
   const main = getRoad('main'), sch = getRoad('school road');
   for (let i = 0; i < main.len; i++) if (main.x[i] >= 113.9) path.push({ x: main.x[i], z: main.z[i], y: main.y[i] });
-  for (let i = 1; i < sch.len; i++) if (sch.x[i] < 162.5 || sch.z[i] < 85) path.push({ x: sch.x[i], z: sch.z[i], y: sch.y[i] });
+  // all the way to the fence beside the gate
+  for (let i = 1; i < sch.len; i++) if (sch.x[i] < SCHOOL.x0 - 0.3) path.push({ x: sch.x[i], z: sch.z[i], y: sch.y[i] });
+  const end = sch.len - 1;
+  if (path[path.length - 1].x < SCHOOL.x0 - 0.5) path.push({ x: SCHOOL.x0 - 0.4, z: sch.z[end], y: sch.y[end] });
   const half = 4;
   const nrm = (i: number) => {
     const a = path[Math.max(0, i - 1)], b = path[Math.min(path.length - 1, i + 1)];
@@ -331,6 +336,7 @@ export function buildSchoolWalks(at: (x: number) => Ctx) {
   };
   for (const s of [-1, 1]) {
     const pt = (i: number, off: number, y: number): V3 => { const n = nrm(i); return [path[i].x + n.nx * s * off, y, path[i].z + n.nz * s * off]; };
+    let prevEnd = NaN;
     for (let i = 0; i < path.length - 1; i++) {
       const B = at(path[i].x).body;
       const ya = path[i].y + LIFT, yb = path[i + 1].y + LIFT;
@@ -342,6 +348,10 @@ export function buildSchoolWalks(at: (x: number) => Ctx) {
       const grade = Math.abs(yb - ya) / Math.max(0.1, seg);
       const inner = half + GAP, outer = half + GAP + W;
       const n = grade > STEEP ? Math.max(1, Math.ceil(Math.abs(yb - ya) / RISER)) : 1;
+      // close the step where this stretch meets the last one (a flight against a slope, or two flights)
+      const startH = n === 1 ? ya : ya + (yb - ya) * 0.5 / n, endH = n === 1 ? yb : ya + ((yb - ya) * (n - 0.5)) / n;
+      if (!isNaN(prevEnd) && Math.abs(startH - prevEnd) > 0.005) quadFace(B, lin(0, inner, prevEnd), lin(0, outer, prevEnd), lin(0, outer, startH), lin(0, inner, startH), step);
+      prevEnd = endH;
       for (let k = 0; k < n; k++) {
         const t0 = k / n, t1 = (k + 1) / n;
         // a slope follows the road; a flight of steps keeps each tread flat at the level of its upper end
