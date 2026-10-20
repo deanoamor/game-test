@@ -139,14 +139,14 @@ const RISE = (z: number) => (z > TOWN.z1 ? UNDERPASS.rise * (1 - smoothstep(7, 1
 const DIP = (x: number) => -UNDERPASS.depth * (1 - smoothstep(8, 36, Math.abs(x - UNDERPASS.x)));
 
 const ROAD_DEFS: { name: string; width: number; pts: [number, number][]; even?: boolean; bump?: (x: number, z: number) => number; endY?: number }[] = [
-  { name: 'main', width: 8, pts: [[-152, 44], [-60, 44], [0, 44], [60, 44], [152, 44]] },
+  { name: 'main', width: 8, pts: [[-152, 44], [-60, 44], [0, 44], [60, 44], [140, 44]] },
   { name: 'cross', width: 7, bump: (_x, z) => RISE(z), pts: [[0, 172.6], [0, 150], [0, 127], [0, 104], [0, 84], [0, 44], [0, 8], [0, 2]] },
   { name: 'back north', width: 4.6, pts: [[-112, 8], [-60, 8], [0, 8], [60, 8], [112, 8]] },
   { name: 'back south', width: 4.6, pts: [[-112, 84], [-60, 84], [0, 84], [60, 84], [92, 84]] },
   { name: 'west lane', width: 4.6, pts: [[-62, 8], [-62, 44], [-62, 84], [-62, 106], [-60, 118], [-53, 125.6], [-44, 127]] },
   { name: 'east lane', width: 4.6, pts: [[62, 8], [62, 44], [62, 84], [62, 106], [64, 118], [71, 125.6], [80, 127]] },
   // it carries straight on from the end of the main street, swings up the hill, and runs straight in through the gate
-  { name: 'school road', width: 6, endY: SCHOOL.y, pts: [[147, 44], [152, 44], [157, 45.5], [160.5, 50], [161.5, 60], [160, 72], [159.5, 82], [161.5, 88.5], [165, 90], [169, 90]] },
+  { name: 'school road', width: 8, endY: SCHOOL.y, pts: [[140, 44], [146, 44.2], [151.5, 45.6], [156, 48.4], [159.2, 52.6], [160.6, 58], [160.8, 66], [160.2, 75], [160.8, 82], [163, 87], [166, 89.4], [169, 90]] },
   { name: 'frontage', width: 7, bump: (x) => DIP(x), pts: [[-48, 127], [-20, 127], [0, 127], [40, 127], [83, 127]] },
   { name: 'shrine path', width: 4.2, even: true, pts: [[0, 2], [0, -8], [4, -26], [20, -42], [42, -52], [58, -56], [66, -62], [66, -66]] },
 ];

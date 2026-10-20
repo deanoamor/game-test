@@ -86,7 +86,8 @@ export function buildRoads(): Group {
   g.name = 'Roads';
   const b = new GeoBuilder();
   for (const p of getRoads()) {
-    if (p.name === 'main') ribbon(b, p, { center: 'dash', yellowEdges: true });
+    // the school road is the main street carried on up the hill: the same width and markings
+    if (p.name === 'main' || p.name === 'school road') ribbon(b, p, { center: 'dash', yellowEdges: true });
     else if (p.name === 'cross') ribbon(b, p, { center: 'dash', whiteEdges: true });
     else if (p.name === 'shrine path') ribbon(b, p, { stoneFrom: Math.floor(p.len * 0.3), whiteEdges: false, rails: true });
     else ribbon(b, p, { whiteEdges: true });
