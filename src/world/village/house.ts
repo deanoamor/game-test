@@ -231,6 +231,8 @@ export function buildHouse(spec: HouseSpec, r: () => number, atlas: SignAtlas): 
     for (let fl = 0; fl < spec.floors - 1; fl++) {
       const yt = base + (fl + 1) * fh - 0.05;
       for (const f of FACES) {
+        // not over the outside stairs: they climb that side wall
+        if (spec.stairs && f === (spec.stairs === 'right' ? '+x' : '-x')) continue;
         const L = f === '+z' || f === '-z' ? w : d;
         const a = wp(f, 0, 0, hw, hd, -L / 2 - 0.25, yt, 0), b = wp(f, 0, 0, hw, hd, L / 2 + 0.25, yt, 0);
         const c = wp(f, 0, 0, hw, hd, L / 2 + 0.25, yt - 0.42, 0.95), e = wp(f, 0, 0, hw, hd, -L / 2 - 0.25, yt - 0.42, 0.95);

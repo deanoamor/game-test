@@ -11,7 +11,7 @@ import { boxes, pot, shrub } from '../../world/village/props';
  * it. Road paint (lane arrows, stop lines, crosswalk-ahead diamonds), manholes and patched asphalt;
  * a red postbox, a green phone, a koban-style notice board; nobori flags, red lanterns and crates at the
  * izakaya, a planter at the café, a delivery scooter at the ramen shop; pigeons, a cat, shop-street
- * banners on the lamps, pots and utility cabinets along the cross street.
+ * banners on the lamps, utility cabinets along the cross street.
  *
  * Coordinates are the town's: the main street runs along x at z = 44, the cross street along z at x = 0.
  */
@@ -227,7 +227,6 @@ function pavementLife(k: DetailKit) {
 // ---------------------------------------------------------------------------------------------------------------
 
 function crossStreet(k: DetailKit) {
-  const { r } = k;
   const edge = CROSS_HALF + CROSS_WALK - 0.35;
   // grey and green utility cabinets
   for (const [x, z, col] of [[edge - 0.05, 29.5, '#9aa4a8'], [-edge + 0.05, 58.5, '#5f8a6a'], [-edge + 0.05, 31.5, '#9aa4a8']] as const) {
@@ -238,15 +237,6 @@ function crossStreet(k: DetailKit) {
       c.body.box(0.22, 0.65, 0.23, 0.02, 0.9, 0.01, '#6a7478', { ao: 0 });
       c.body.box(0, 0.95, 0.235, 0.22, 0.12, 0.01, '#f2c230', { ao: 0 });
     });
-  }
-  // potted plants along the building side of the cross street pavements
-  for (const [side, z0, z1] of [[1, 18, 34], [-1, 18, 34], [1, 54, 68], [-1, 54, 68]] as const) {
-    for (let z = z0; z < z1; z += 1.1 + r() * 1.4) {
-      if (r() < 0.45) continue;
-      const x = side * edge;
-      if (!k.free(x, z, 0.4) || (Math.abs(z - 29.5) < 1 && side > 0) || (Math.abs(z - 58.5) < 1 && side < 0) || (Math.abs(z - 31.5) < 1 && side < 0)) continue;
-      k.put(x, crossWalkY(z), z, 0, (c) => pot(c, 0, 0, 0, Math.floor(r() * 5)));
-    }
   }
 }
 
