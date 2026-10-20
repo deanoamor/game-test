@@ -1,5 +1,6 @@
+import { toRgb, type GeoBuilder, type V3 } from '../../util/builder';
 import { pick } from '../../util/rng';
-import { SCHOOL, naturalHeight } from '../config';
+import { SCHOOL, getRoad, naturalHeight } from '../config';
 import type { TreeField } from '../forest';
 import type { Cell, SignAtlas } from '../signs';
 import { raiseSkyline } from '../skyline';
@@ -309,4 +310,74 @@ export function buildSchool(at: (x: number) => Ctx, atlas: SignAtlas, r: () => n
   for (let x = S.x0 + 3; x < S.x0 + 22; x += 2.6) shrub(ctx, 'hedge', x, y, S.z0 + 14.6, 0.5, Math.floor(r() * 9));
   trees.add('ginkgo', S.x1 - 2, S.z0 + 2.5, 0.8, y);
   trees.add('ginkgo', S.x0 + 2.5, S.z0 + 2.5, 0.8, y);
+}
+
+/**
+ * Pavements on both sides of the road from the edge of town up to the school gate: a slab with a curb where the road is
+ * gentle, concrete steps with a handrail where it climbs steeply, and street lamps along the north and east side.
+ */
+export function buildSchoolWalks(at: (x: number) => Ctx) {
+  const W = 1.9, GAP = 0.12, LIFT = 0.165, STEEP = 0.1, RISER = 0.16;
+  const top = toRgb('#cdc8bc'), side = toRgb('#a9a59b'), curb = toRgb('#e2ded4'), step = toRgb('#c2bdb1');
+  const path: { x: number; z: number; y: number }[] = [];
+  const main = getRoad('main'), sch = getRoad('school road');
+  for (let i = 0; i < main.len; i++) if (main.x[i] >= 113.9) path.push({ x: main.x[i], z: main.z[i], y: main.y[i] });
+  for (let i = 1; i < sch.len; i++) if (sch.x[i] < 162.5 || sch.z[i] < 85) path.push({ x: sch.x[i], z: sch.z[i], y: sch.y[i] });
+  const half = 4;
+  const nrm = (i: number) => {
+    const a = path[Math.max(0, i - 1)], b = path[Math.min(path.length - 1, i + 1)];
+    const tx = b.x - a.x, tz = b.z - a.z, l = Math.hypot(tx, tz) || 1;
+    return { nx: -tz / l, nz: tx / l };
+  };
+  for (const s of [-1, 1]) {
+    const pt = (i: number, off: number, y: number): V3 => { const n = nrm(i); return [path[i].x + n.nx * s * off, y, path[i].z + n.nz * s * off]; };
+    for (let i = 0; i < path.length - 1; i++) {
+      const B = at(path[i].x).body;
+      const ya = path[i].y + LIFT, yb = path[i + 1].y + LIFT;
+      const lin = (t: number, off: number, y: number): V3 => {
+        const a = pt(i, off, 0), b = pt(i + 1, off, 0);
+        return [a[0] + (b[0] - a[0]) * t, y, a[2] + (b[2] - a[2]) * t];
+      };
+      const seg = Math.hypot(path[i + 1].x - path[i].x, path[i + 1].z - path[i].z);
+      const grade = Math.abs(yb - ya) / Math.max(0.1, seg);
+      const inner = half + GAP, outer = half + GAP + W;
+      const n = grade > STEEP ? Math.max(1, Math.ceil(Math.abs(yb - ya) / RISER)) : 1;
+      for (let k = 0; k < n; k++) {
+        const t0 = k / n, t1 = (k + 1) / n;
+        // a slope follows the road; a flight of steps keeps each tread flat at the level of its upper end
+        const h0 = n === 1 ? ya : ya + ((yb - ya) * (k + 0.5)) / n, h1 = n === 1 ? yb : h0;
+        const i0 = lin(t0, inner, h0), i1 = lin(t1, inner, h1), o0 = lin(t0, outer, h0), o1 = lin(t1, outer, h1);
+        const col = n === 1 ? top : k % 2 ? step : top;
+        quadFace(B, i0, i1, o1, o0, col);
+        // the curb face toward the road, the outer face down into the ground
+        const ri0 = lin(t0, inner, path[i].y + (path[i + 1].y - path[i].y) * t0 - 0.05), ri1 = lin(t1, inner, path[i].y + (path[i + 1].y - path[i].y) * t1 - 0.05);
+        quadFace(B, ri0, ri1, i1, i0, curb);
+        const ro0 = lin(t0, outer, h0 - 1.2), ro1 = lin(t1, outer, h1 - 1.2);
+        quadFace(B, o0, o1, ro1, ro0, side);
+        // the riser up to the next tread
+        if (n > 1 && k < n - 1) {
+          const hn = ya + ((yb - ya) * (k + 1.5)) / n;
+          quadFace(B, lin(t1, inner, h1), lin(t1, outer, h1), lin(t1, outer, hn), lin(t1, inner, hn), step);
+        }
+      }
+      // a handrail on the outer edge of the steep stretches
+      if (grade > STEEP) B.cable([pt(i, outer - 0.15, ya + 0.9), pt(i + 1, outer - 0.15, yb + 0.9)], 0.03, '#b8bcc0');
+      if (grade > STEEP && i % 2 === 0) B.box(...pt(i, outer - 0.15, ya + 0.45), 0.05, 0.9, 0.05, '#b8bcc0', { ao: 0 });
+      // street lamps every 24 m on the north and east side
+      if (s < 0 && i % 12 === 6) classicLampAt(at(path[i].x), pt(i, outer - 0.35, ya));
+    }
+  }
+}
+
+/** A quad wound to face away from the road's centre line (both windings drawn, the walls are seen from both sides). */
+function quadFace(B: GeoBuilder, a: V3, b: V3, c: V3, d: V3, col: [number, number, number]) {
+  B.quad(a, b, c, d, col);
+  B.quad(a, d, c, b, col);
+}
+
+function classicLampAt(ctx: Ctx, p: V3) {
+  ctx.body.box(p[0], p[1] + 2.0, p[2], 0.12, 4.0, 0.12, '#2a2c30', { ao: 0.1 });
+  ctx.body.box(p[0], p[1] + 0.15, p[2], 0.26, 0.3, 0.26, '#2a2c30', { ao: 0.1 });
+  ctx.litA.box(p[0], p[1] + 4.25, p[2], 0.32, 0.42, 0.32, '#fff4dc', { ao: 0 });
+  ctx.body.frustum(p[0], p[1] + 4.46, p[2], 0.3, 0.06, 0.2, 4, '#2a2c30', { rotate: 0.5 });
 }

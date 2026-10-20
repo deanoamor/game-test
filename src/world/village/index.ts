@@ -10,7 +10,7 @@ import { appendCtx, newCtx, type Ctx } from './frame';
 import { Occupancy, fillEmpty } from './fillers';
 import { buildPaddies, buildTownGround, wallSeg } from './ground';
 import { buildGasStation } from './gas';
-import { buildSchool } from './school';
+import { buildSchool, buildSchoolWalks } from './school';
 import { buildExpressway, buildUnderpass } from './highway';
 import { buildHouse, type HouseSpec } from './house';
 import {
@@ -292,6 +292,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
   buildUnderpass(at);
   buildGasStation(at, atlas, r);
   buildSchool(at, atlas, r, trees);
+  buildSchoolWalks(at);
   // the stair alleys: a lamp at the top and the bottom of each flight, pots along one side
   for (const st of STAIRS) {
     const yU = heightAt(st.x, st.z - 0.5), yL = heightAt(st.x, st.z + 9);
