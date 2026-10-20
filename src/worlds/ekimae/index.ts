@@ -13,9 +13,11 @@ export const ekimae: WorldDef = {
   jp: '駅前交差点',
   bounds: BOUNDS,
   margin: 60,
-  maxDist: 45,
+  // a fixed, close game camera: no zooming in or out
+  minDist: 18,
+  maxDist: 18,
   // close to the street, at the corner with the vending machine
-  start: { key: 'ekimae', name: 'Ekimae Crossing', jp: '駅前交差点', x: -6, z: 40, radius: 1, dist: 28, pitch: 40, yaw: -70 },
+  start: { key: 'ekimae', name: 'Ekimae Crossing', jp: '駅前交差点', x: -6, z: 40, radius: 1, dist: 18, pitch: 40, yaw: -70 },
   exits: [
     { name: 'Hoshi Ginza West', jp: '星銀座 西', at: { x0: BOUNDS.x0 - 1, z0: 38, x1: BOUNDS.x0 + 3, z1: 50 }, to: null },
     { name: 'Ramen Corner East', jp: 'ラーメン角 東', at: { x0: BOUNDS.x1 - 3, z0: 38, x1: BOUNDS.x1 + 1, z1: 50 }, to: null },

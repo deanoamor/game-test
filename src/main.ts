@@ -38,6 +38,7 @@ async function main() {
   const keep = keepArea(world);
   const drone = new Drone(renderer.domElement);
   if (world.bounds) drone.bounds = { ...world.bounds };
+  drone.minDist = world.minDist;
   drone.maxDist = world.maxDist;
   const hud = new Hud(drone, world);
   const PLACES = hud.places;

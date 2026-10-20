@@ -19,7 +19,8 @@ export interface WorldDef {
   bounds: Rect | null;
   /** How much of the town around the bounds is still built, as scenery. */
   margin: number;
-  /** How far the camera may pull back. */
+  /** How close the camera may come and how far it may pull back (equal: the zoom is fixed). */
+  minDist: number;
   maxDist: number;
   /** The view you arrive with. */
   start: Place;

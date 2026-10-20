@@ -8,6 +8,7 @@ export const full: WorldDef = {
   jp: '星の町 全体',
   bounds: null,
   margin: 0,
+  minDist: 10,
   maxDist: 520,
   start: PLACES[0],
   exits: [],

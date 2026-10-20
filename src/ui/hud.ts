@@ -30,6 +30,7 @@ export class Hud {
     this.places = placesIn(world);
     const PLACES = this.places;
     $('worldName').textContent = world.bounds ? `${world.name} · ${world.jp}` : 'Hoshi no Kuni · 星の国';
+    if (world.minDist === world.maxDist) $('helpZoom').style.display = 'none';
     // the worlds menu: going to another world loads it afresh
     const sel = $<HTMLSelectElement>('world');
     for (const w of WORLDS) {
