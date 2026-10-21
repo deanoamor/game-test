@@ -6,7 +6,7 @@ import type { TreeField } from '../forest';
 import { raiseSkyline } from '../skyline';
 import type { SignAtlas } from '../signs';
 import { apartmentBlock, konbini, officeBlock, supermarket } from './buildings';
-import { appendCtx, newCtx, type Ctx, type Glow } from './frame';
+import { appendCtx, newCtx, type Ctx, type Glow, type Solid } from './frame';
 import { Occupancy, fillEmpty } from './fillers';
 import { buildPaddies, buildTownGround, wallSeg } from './ground';
 import { buildGasStation } from './gas';
@@ -61,7 +61,8 @@ export type Taken = { x: number; z: number; r: number }[];
 interface Lot { x: number; z: number; yaw: number; w: number; d: number; y: number; ctx: Ctx; height: number }
 
 /** What the player cannot walk through: the buildings (rectangles, half sizes) and the street furniture (circles). */
-export interface Obstacles { rects: { x: number; z: number; hw: number; hd: number }[]; circles: Taken }
+/** What the player walks into or up: every solid of the town (walls, street furniture, parked cars, stairs). */
+export interface Obstacles { solids: Solid[] }
 export interface VillageBuild { group: Group; glows: Glow[]; obstacles: Obstacles; update(night: number): void }
 
 export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (f: number, label: string) => void = () => {}, details: ((kit: DetailKit) => void)[] = []): Promise<VillageBuild> {
@@ -308,6 +309,8 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
   await step(0.55, 'Terraces and retaining walls…');
   buildTownGround(atGround);
   await step(0.62, 'Pavements, poles and wires…');
+  // the feet of the outside stairs stay clear: nothing of the street furniture or the worlds' details goes there
+  for (const c of chunks.values()) for (const w of c.solid) if (w.t === 'walk') taken.push({ x: w.x - w.dx * 0.9, z: w.z - w.dz * 0.9, r: 1.1 });
   streets(at, atlas, r, trees, occ, taken, (x, z, pad) => lots.some((l) => Math.abs(x - l.x) < l.w / 2 + pad && Math.abs(z - l.z) < l.d / 2 + pad));
   outskirts(at, atlas, r, trees);
   await step(0.72, 'Filling the empty lots…');
@@ -341,7 +344,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
   await step(0.9, 'Putting the town together…');
   const built = assemble(chunks, atlas, ground);
   // buildings turned a quarter turn have their width along z
-  built.obstacles = { rects: lots.map((l) => (Math.abs(Math.sin((l.yaw * Math.PI) / 180)) > 0.5 ? { x: l.x, z: l.z, hw: l.d / 2, hd: l.w / 2 } : { x: l.x, z: l.z, hw: l.w / 2, hd: l.d / 2 })), circles: taken };
+  built.obstacles = { solids: [...chunks.values()].flatMap((c) => c.solid) };
   return built;
 }
 
@@ -480,9 +483,11 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
     if (Math.abs(x) < 8 || Math.abs(Math.abs(x) - LANE_X) < 4) continue;
     const north = r() < 0.5;
     const z = north ? nIn - WALK + 0.55 : sIn + WALK - 0.55;
-    const c = at(x);
     const t = r();
-    take(x + 0.5, z, 1.3);
+    // in front of a stair foot it is drawn into nothing (the dice are thrown all the same, so the town stays put)
+    const blocked = taken.some((q) => q.r >= 1.1 && Math.hypot(q.x - (x + 0.5), q.z - z) < q.r + 1.2);
+    const c = blocked ? newCtx(r) : at(x);
+    if (!blocked) take(x + 0.5, z, 1.3);
     if (t < 0.3) { vendingMachine(c, atlas, x, SW, z, north ? 0 : 180, r() < 0.5 ? 'vendRed' : 'vendBlue'); bins(c, x + 0.9, SW, z); }
     else if (t < 0.55) { pot(c, x, SW, z, k); pot(c, x + 0.6, SW, z + 0.1, k + 1); shrub(c, 'flower', x + 1.3, SW, z, 0.7, k); }
     // no bicycles on the pavement: a pair of pots instead (the dice are still thrown, so the rest of the town stays put)
@@ -584,7 +589,7 @@ function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas, ground: Ctx): Vill
   const neon = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
   const sign = new MeshStandardMaterial({ map: atlas.texture, emissiveMap: atlas.texture, emissive: new Color('#ffffff'), emissiveIntensity: 0.3, roughness: 0.55, alphaTest: 0.4, side: 2 });
   // regroup every chunk's triangles into 40 m cells, so the camera and the shadow pass skip what they cannot see
-  const kinds: [keyof Omit<Ctx, 'r' | 'glow'>, MeshStandardMaterial | MeshBasicMaterial, boolean, string][] = [['body', body, true, 'Buildings'], ['win', win, false, 'Windows'], ['litA', litA, false, 'Lit windows'], ['litB', litB, false, 'Lit windows 2'], ['sign', sign, false, 'Signs'], ['neon', neon, false, 'Neon']];
+  const kinds: [keyof Omit<Ctx, 'r' | 'glow' | 'solid'>, MeshStandardMaterial | MeshBasicMaterial, boolean, string][] = [['body', body, true, 'Buildings'], ['win', win, false, 'Windows'], ['litA', litA, false, 'Lit windows'], ['litB', litB, false, 'Lit windows 2'], ['sign', sign, false, 'Signs'], ['neon', neon, false, 'Neon']];
   for (const [part, mat, shadow, name] of kinds) {
     const cells = GeoBuilder.splitByCell([...chunks.values()].map((c) => c[part]), 40);
     for (const [k, geo] of cells) {
@@ -605,7 +610,7 @@ function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas, ground: Ctx): Vill
   return {
     group,
     glows: [...chunks.values()].flatMap((c) => c.glow),
-    obstacles: { rects: [], circles: [] },
+    obstacles: { solids: [] },
     update(night: number) {
       litA.emissiveIntensity = 0.05 + night * 0.95;
       litB.emissiveIntensity = 0.04 + night * 0.65;

@@ -3,7 +3,7 @@ import type { GeoBuilder, V3 } from '../../util/builder';
 import type { SignAtlas } from '../signs';
 import { lampFaces, type SignalGroup } from '../signals';
 import { buildVehicle, type VehicleKind } from '../vehicles';
-import { dk, newCtx, type Ctx } from './frame';
+import { dk, newCtx, solidBox, type Ctx } from './frame';
 
 /** Everything that stands in the street: poles and wires, lamps, vending machines, rails, signs, cars and plants. */
 
@@ -18,6 +18,7 @@ const sag = (a: V3, b: V3, drop: number, n = 9): V3[] => {
 
 /** A concrete utility pole with two cross arms, insulators, a step plate and sometimes a transformer. Returns the wire attachment points. */
 export function utilityPole(ctx: Ctx, x: number, y: number, z: number, o: { height?: number; transformer?: boolean; yaw?: number } = {}) {
+  solidBox(ctx, x, z, 0.16, 0.16);
   const B = ctx.body;
   const h = o.height ?? 9.6;
   B.box(x, y + h / 2, z, 0.34, h, 0.34, '#a8a49a', { ao: 0.15 });
@@ -65,6 +66,7 @@ export function redLamp(ctx: Ctx, x: number, y: number, z: number, side = 1) {
 
 /** A vending machine with a glowing picture front. */
 export function vendingMachine(ctx: Ctx, atlas: SignAtlas, x: number, y: number, z: number, yaw: number, kind: 'vendRed' | 'vendBlue') {
+  solidBox(ctx, x, z, 0.5, 0.42, yaw);
   const tmp = new (ctx.body.constructor as new () => GeoBuilder)();
   const sg = new (ctx.sign.constructor as new () => GeoBuilder)();
   tmp.box(0, 0.95, 0, 0.95, 1.9, 0.78, kind === 'vendRed' ? '#c8322e' : '#1f5ea8', { ao: 0.12 });
@@ -79,6 +81,7 @@ export function vendingMachine(ctx: Ctx, atlas: SignAtlas, x: number, y: number,
 
 /** A silver guardrail made of posts and two pipes along the line from (x0,z) to (x1,z). */
 export function guardrail(ctx: Ctx, x0: number, x1: number, y: number, z: number) {
+  solidBox(ctx, (x0 + x1) / 2, z, Math.abs(x1 - x0) / 2, 0.1);
   const B = ctx.body;
   const len = Math.abs(x1 - x0);
   const n = Math.max(1, Math.round(len / 2.0));
@@ -95,6 +98,7 @@ export function guardrail(ctx: Ctx, x0: number, x1: number, y: number, z: number
 
 /** A roadside convex mirror on a pole: an orange ring around a round mirror. */
 export function convexMirror(ctx: Ctx, x: number, y: number, z: number, yaw: number) {
+  solidBox(ctx, x, z, 0.08, 0.08);
   const B = ctx.body;
   B.box(x, y + 1.7, z, 0.1, 3.4, 0.1, '#e8e8e8', { ao: 0.05 });
   const a = (yaw * Math.PI) / 180;
@@ -107,6 +111,7 @@ export function convexMirror(ctx: Ctx, x: number, y: number, z: number, yaw: num
 
 /** A speed limit or stop sign on a pole. */
 export function roadSign(ctx: Ctx, atlas: SignAtlas, kind: 'speed30' | 'stopSign' | 'busStop', x: number, y: number, z: number, yaw: number, h = 2.4) {
+  solidBox(ctx, x, z, 0.06, 0.06);
   const c = atlas.get(kind);
   const tmp = new (ctx.body.constructor as new () => GeoBuilder)();
   const sg = new (ctx.sign.constructor as new () => GeoBuilder)();
@@ -134,11 +139,14 @@ export function roadPaint(ctx: Ctx, atlas: SignAtlas, name: string, x: number, y
 
 /** A parked vehicle. */
 export function parkedVehicle(ctx: Ctx, kind: VehicleKind, color: string, x: number, y: number, z: number, yaw: number) {
+  const [l, w] = ({ car: [4.2, 1.75], kei: [3.5, 1.5], keivan: [3.5, 1.55], van: [4.6, 1.85], truck: [6.0, 2.15], bus: [6.7, 2.35] } as Record<VehicleKind, [number, number]>)[kind];
+  solidBox(ctx, x, z, l / 2, w / 2, yaw);
   ctx.body.appendTransformed(buildVehicle(kind, color), x, y, z, yaw);
 }
 
 /** A concrete block wall: courses of blocks, pilasters and a cap. Along the line from (x0,z0) to (x1,z1). */
 export function blockWall(ctx: Ctx, x0: number, z0: number, x1: number, z1: number, y: number, h = 1.25) {
+  { const len = Math.hypot(x1 - x0, z1 - z0); if (len > 0.1) solidBox(ctx, (x0 + x1) / 2, (z0 + z1) / 2, len / 2, 0.12, (Math.atan2(-(z1 - z0), x1 - x0) * 180) / Math.PI); }
   const B = ctx.body;
   const len = Math.hypot(x1 - x0, z1 - z0);
   const yaw = (Math.atan2(-(z1 - z0), x1 - x0) * 180) / Math.PI;
@@ -180,6 +188,7 @@ export function shrub(ctx: Ctx, kind: 'round' | 'hedge' | 'cone' | 'flower', x: 
 
 /** A potted plant on the pavement. */
 export function pot(ctx: Ctx, x: number, y: number, z: number, seed = 1) {
+  solidBox(ctx, x, z, 0.24, 0.24);
   ctx.body.box(x, y + 0.2, z, 0.42, 0.4, 0.42, ['#b9704a', '#8a6a4a', '#9aa0a6'][seed % 3], { ao: 0.2 });
   ctx.body.blob(x, y + 0.65, z, 0.34, 0.3, 0.34, ['#5aa845', '#67b350', '#4f9a3f'][seed % 3], { seed });
 }
@@ -200,6 +209,7 @@ export function bicycle(ctx: Ctx, x: number, y: number, z: number, yaw: number, 
 
 /** A stone jizo statue in a red bib, with a small roof. */
 export function jizo(ctx: Ctx, x: number, y: number, z: number, yaw = 0) {
+  solidBox(ctx, x, z, 0.3, 0.3);
   const tmp = new (ctx.body.constructor as new () => GeoBuilder)();
   tmp.box(0, 0.12, 0, 0.6, 0.24, 0.5, '#9a978f', { ao: 0.2 });
   tmp.frustum(0, 0.24, 0, 0.26, 0.17, 0.6, 7, '#a9a69d');
@@ -220,6 +230,7 @@ export function scarecrow(ctx: Ctx, x: number, y: number, z: number) {
 
 /** A bus stop with a roof, a bench and a sign. */
 export function busStop(ctx: Ctx, atlas: SignAtlas, x: number, y: number, z: number, yaw: number) {
+  solidBox(ctx, x, z, 1.4, 0.5, yaw);
   const tmp = new (ctx.body.constructor as new () => GeoBuilder)();
   for (const sx of [-1.2, 1.2]) tmp.box(sx, 1.2, -0.5, 0.1, 2.4, 0.1, '#5a6068', { ao: 0 });
   tmp.box(0, 2.45, -0.1, 3.0, 0.12, 1.4, '#3f9bd0', { ao: 0 });
@@ -234,6 +245,7 @@ export { dk };
 
 /** The green-and-white (or red) guard pipes along a pavement: bent posts and a striped top rail, from (x0,z0) to (x1,z1). */
 export function guardPipe(ctx: Ctx, x0: number, z0: number, x1: number, z1: number, y: number, color = '#4caf50') {
+  { const len = Math.hypot(x1 - x0, z1 - z0); if (len > 0.1) solidBox(ctx, (x0 + x1) / 2, (z0 + z1) / 2, len / 2 + 0.05, 0.08, (Math.atan2(-(z1 - z0), x1 - x0) * 180) / Math.PI); }
   const B = ctx.body;
   const len = Math.hypot(x1 - x0, z1 - z0);
   if (len < 0.5) return;
@@ -254,6 +266,7 @@ export function guardPipe(ctx: Ctx, x0: number, z0: number, x1: number, z1: numb
 
 /** A red fire hydrant. */
 export function hydrant(ctx: Ctx, x: number, y: number, z: number) {
+  solidBox(ctx, x, z, 0.18, 0.18);
   const B = ctx.body;
   B.frustum(x, y, z, 0.2, 0.17, 0.75, 10, '#d8322e');
   B.frustum(x, y + 0.75, z, 0.2, 0.05, 0.22, 10, '#c42a26');
@@ -263,6 +276,7 @@ export function hydrant(ctx: Ctx, x: number, y: number, z: number) {
 
 /** An orange traffic cone. */
 export function cone(ctx: Ctx, x: number, y: number, z: number) {
+  solidBox(ctx, x, z, 0.18, 0.18);
   const B = ctx.body;
   B.box(x, y + 0.03, z, 0.42, 0.06, 0.42, '#d86a1c', { ao: 0 });
   B.frustum(x, y + 0.06, z, 0.17, 0.03, 0.66, 10, '#f08a1c');
@@ -273,6 +287,7 @@ export function cone(ctx: Ctx, x: number, y: number, z: number) {
 /** A signal pole with its arm over the road and a walk signal on the pole. Its lamps are drawn dark; their lit faces go
  *  to the signal cycle (src/world/signals.ts) for `group`, the street whose traffic it shows. */
 export function trafficLight(ctx: Ctx, x: number, y: number, z: number, yaw: number, arm: number, group: SignalGroup) {
+  solidBox(ctx, x, z, 0.14, 0.14);
   const tmp = newCtx(ctx.r);
   const B = tmp.body;
   B.box(0, 2.9, 0, 0.18, 5.8, 0.18, '#a9adb1', { ao: 0.1 });
@@ -302,6 +317,7 @@ export function trafficLight(ctx: Ctx, x: number, y: number, z: number, yaw: num
 
 /** A red street lamp post with two hanging lanterns, as on old shopping streets. */
 export function doubleLamp(ctx: Ctx, x: number, y: number, z: number) {
+  solidBox(ctx, x, z, 0.16, 0.16);
   const B = ctx.body;
   B.box(x, y + 2.2, z, 0.14, 4.4, 0.14, '#c8322e', { ao: 0.1 });
   B.box(x, y + 0.15, z, 0.3, 0.3, 0.3, '#a42420', { ao: 0.1 });
@@ -317,6 +333,7 @@ export function doubleLamp(ctx: Ctx, x: number, y: number, z: number) {
 
 /** A black classic street lamp. */
 export function classicLamp(ctx: Ctx, x: number, y: number, z: number) {
+  solidBox(ctx, x, z, 0.14, 0.14);
   const B = ctx.body;
   B.box(x, y + 2.0, z, 0.12, 4.0, 0.12, '#2a2c30', { ao: 0.1 });
   B.box(x, y + 0.15, z, 0.26, 0.3, 0.26, '#2a2c30', { ao: 0.1 });
@@ -328,6 +345,7 @@ export function classicLamp(ctx: Ctx, x: number, y: number, z: number) {
 
 /** A sign on a pole, any picture from the atlas (pedestrian crossing, no entry, arrows, parking...). */
 export function signPole(ctx: Ctx, atlas: SignAtlas, name: string, x: number, y: number, z: number, yaw: number, h = 2.5, size = 0.65) {
+  solidBox(ctx, x, z, 0.06, 0.06);
   const c = atlas.get(name);
   const tmp = newCtx(ctx.r);
   tmp.body.box(0, h / 2, 0, 0.07, h, 0.07, '#9aa0a6', { ao: 0 });
@@ -343,6 +361,7 @@ export function signPole(ctx: Ctx, atlas: SignAtlas, name: string, x: number, y:
 
 /** A low wall of small blue-white tiles with a cap, from (x0,z0) to (x1,z1). */
 export function tileFence(ctx: Ctx, x0: number, z0: number, x1: number, z1: number, y: number, h = 1.2, color = '#cfe0e4') {
+  { const len = Math.hypot(x1 - x0, z1 - z0); if (len > 0.1) solidBox(ctx, (x0 + x1) / 2, (z0 + z1) / 2, len / 2, 0.1, (Math.atan2(-(z1 - z0), x1 - x0) * 180) / Math.PI); }
   const B = ctx.body;
   const len = Math.hypot(x1 - x0, z1 - z0);
   if (len < 0.4) return;
@@ -361,6 +380,7 @@ export function tileFence(ctx: Ctx, x0: number, z0: number, x1: number, z1: numb
 
 /** Bottle and can bins beside a vending machine. */
 export function bins(ctx: Ctx, x: number, y: number, z: number) {
+  solidBox(ctx, x + 0.21, z, 0.42, 0.2);
   for (let k = 0; k < 2; k++) {
     ctx.body.box(x + k * 0.42, y + 0.4, z, 0.36, 0.8, 0.36, k ? '#3a6ab8' : '#e8e8e8', { ao: 0.1 });
     ctx.body.box(x + k * 0.42, y + 0.82, z, 0.38, 0.06, 0.38, k ? '#2a4a8a' : '#c8c8c8', { ao: 0 });
@@ -369,11 +389,13 @@ export function bins(ctx: Ctx, x: number, y: number, z: number) {
 
 /** A stack of cardboard boxes. */
 export function boxes(ctx: Ctx, x: number, y: number, z: number, n = 3) {
+  solidBox(ctx, x, z, 0.32, 0.28);
   for (let k = 0; k < n; k++) ctx.body.box(x + (k % 2) * 0.12, y + 0.22 + k * 0.42, z - (k % 2) * 0.1, 0.6 - k * 0.06, 0.42, 0.5 - k * 0.05, k % 2 ? '#c9a574' : '#b8925e', { ao: 0.1, yaw: k * 9 });
 }
 
 /** A sandwich board on the pavement with a menu. */
 export function aBoard(ctx: Ctx, atlas: SignAtlas, name: string, x: number, y: number, z: number, yaw: number) {
+  solidBox(ctx, x, z, 0.3, 0.25, yaw);
   const c = atlas.get(name);
   const tmp = newCtx(ctx.r);
   tmp.body.box(0, 0.5, 0, 0.62, 1.0, 0.12, '#5a3a24', { ao: 0.1 });

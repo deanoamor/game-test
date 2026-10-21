@@ -98,7 +98,9 @@ async function main() {
   if (world.player) {
     progress(0.6, 'Waking the player…');
     await nextFrame();
-    player = await Player.create(village.obstacles, world.bounds, world.player);
+    // she may go a little past where the camera stops: the barrier for her is at the edge of the world's area
+    const b = world.bounds, m = 8;
+    player = await Player.create(village.obstacles, b && { x0: b.x0 - m, z0: b.z0 - m, x1: b.x1 + m, z1: b.z1 + m }, world.player);
     scene.add(player.group, player.shadowMesh);
     drone.following = !params.has('yaw');
   }
@@ -212,7 +214,7 @@ async function main() {
     if (player) {
       // (screenshots hold her still: tests pose her by hand)
       player.update(params.has('shot') ? 0 : dt, drone.yaw);
-      if (drone.following) drone.follow(player.pos.x, player.pos.z);
+      if (drone.following) drone.follow(player.pos.x, player.pos.z, player.pos.y);
     }
     drone.update(dt);
     light.follow(drone.target);

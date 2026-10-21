@@ -6,6 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { heightAt, inTown, roadNear } from '../world/config';
 import type { Obstacles } from '../world/village';
+import type { Solid } from '../world/village/frame';
 import type { Rect } from '../worlds/types';
 
 /**
@@ -23,6 +24,8 @@ import type { Rect } from '../worlds/types';
 const WALK = 1.55, RUN = 4.3; // m/s
 const RADIUS = 0.28;
 const PAVEMENT = 0.17;
+const STEP = 0.32; // the highest step she takes in one go (a curb is 0.17)
+const GRID = 4;
 
 type BoneName = 'Hips' | 'Spine' | 'Chest' | 'Neck' | 'Head' | 'Shoulder Left' | 'Elbow Left' | 'Wrist Left' | 'Shoulder Right' | 'Elbow Right' | 'Wrist Right' | 'Hip Left' | 'Knee Left' | 'Ankle Left' | 'Hip Right' | 'Knee Right' | 'Ankle Right';
 const BONES: BoneName[] = ['Hips', 'Spine', 'Chest', 'Neck', 'Head', 'Shoulder Left', 'Elbow Left', 'Wrist Left', 'Shoulder Right', 'Elbow Right', 'Wrist Right', 'Hip Left', 'Knee Left', 'Ankle Left', 'Hip Right', 'Knee Right', 'Ankle Right'];
@@ -162,9 +165,22 @@ export class Player {
   private walkW = 0;
   private runW = 0;
   private shadow: Mesh;
+  private grid = new Map<number, Solid[]>();
 
-  private constructor(root: Group, private obstacles: Obstacles, private bounds: Rect | null) {
+  private constructor(root: Group, obstacles: Obstacles, private bounds: Rect | null) {
     mergeSkinned(root);
+    // the solids by 4 m cells, each in every cell its footprint touches
+    for (const s of obstacles.solids) {
+      const r = s.t === 'box' ? Math.hypot(s.hw, s.hd) : s.len + s.land;
+      const cx = s.t === 'box' ? s.x : s.x + s.dx * (s.len + s.land) / 2, cz = s.t === 'box' ? s.z : s.z + s.dz * (s.len + s.land) / 2;
+      const rr = s.t === 'box' ? r : r / 2 + s.hw;
+      for (let j = Math.floor((cz - rr) / GRID); j <= Math.floor((cz + rr) / GRID); j++) for (let i = Math.floor((cx - rr) / GRID); i <= Math.floor((cx + rr) / GRID); i++) {
+        const k = i * 10007 + j;
+        let c = this.grid.get(k);
+        if (!c) this.grid.set(k, (c = []));
+        c.push(s);
+      }
+    }
     root.traverse((o) => {
       // (the loader writes the names with underscores for spaces)
       const name = o.name.replace(/_/g, ' ') as BoneName;
@@ -207,31 +223,58 @@ export class Player {
 
   /** The ground under a point: the road, or the raised pavement beside it. */
   private groundY(x: number, z: number) {
-    const y = heightAt(x, z);
-    if (!inTown(x, z)) return y;
-    const rd = roadNear(x, z);
-    return rd.d < rd.width / 2 ? y : y + PAVEMENT;
+    let y = heightAt(x, z);
+    if (inTown(x, z)) {
+      const rd = roadNear(x, z);
+      if (rd.d >= rd.width / 2) y += PAVEMENT;
+    }
+    // on a flight of stairs or its landing
+    for (const w of this.near(x, z)) {
+      if (w.t !== 'walk') continue;
+      const rx = x - w.x, rz = z - w.z;
+      const along = rx * w.dx + rz * w.dz, across = Math.abs(rx * w.dz - rz * w.dx);
+      if (across > w.hw || along < 0 || along > w.len + w.land) continue;
+      y = Math.max(y, w.y0 + (w.y1 - w.y0) * Math.min(1, along / w.len));
+    }
+    return y;
   }
 
-  /** Push a point out of the buildings and the street furniture, and back inside the barrier. */
-  private collide(p: Vector3) {
-    for (const r of this.obstacles.rects) {
-      const dx = p.x - r.x, dz = p.z - r.z;
-      const ox = r.hw + RADIUS - Math.abs(dx), oz = r.hd + RADIUS - Math.abs(dz);
-      if (ox > 0 && oz > 0) {
-        if (ox < oz) p.x += Math.sign(dx || 1) * ox;
-        else p.z += Math.sign(dz || 1) * oz;
-      }
+  /** The solids in the grid cells around a point. */
+  private near(x: number, z: number): Solid[] {
+    const out: Solid[] = [];
+    const i0 = Math.floor(x / GRID), j0 = Math.floor(z / GRID);
+    for (let j = j0 - 1; j <= j0 + 1; j++) for (let i = i0 - 1; i <= i0 + 1; i++) {
+      const c = this.grid.get(i * 10007 + j);
+      if (c) for (const s of c) if (!out.includes(s)) out.push(s);
     }
-    for (const c of this.obstacles.circles) {
-      const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), min = c.r * 0.6 + RADIUS;
-      if (d < min && d > 1e-6) { p.x = c.x + (dx / d) * min; p.z = c.z + (dz / d) * min; }
+    return out;
+  }
+
+  /** Push a point out of the boxes (walls, poles, fences, parked cars), and back inside the barrier. */
+  private collide(p: Vector3) {
+    for (const s of this.near(p.x, p.z)) {
+      if (s.t !== 'box') continue;
+      const a = (s.a * Math.PI) / 180, cs = Math.cos(a), sn = Math.sin(a);
+      const dx = p.x - s.x, dz = p.z - s.z;
+      // into the box's own frame (the inverse of u, v -> x + u cos + v sin, z - u sin + v cos)
+      let u = dx * cs - dz * sn, v = dx * sn + dz * cs;
+      const ou = s.hw + RADIUS - Math.abs(u), ov = s.hd + RADIUS - Math.abs(v);
+      if (ou <= 0 || ov <= 0) continue;
+      if (ou < ov) u += Math.sign(u || 1) * ou;
+      else v += Math.sign(v || 1) * ov;
+      p.x = s.x + u * cs + v * sn;
+      p.z = s.z - u * sn + v * cs;
     }
     if (this.bounds) {
       const b = this.bounds;
       p.x = Math.min(b.x1, Math.max(b.x0, p.x));
       p.z = Math.min(b.z1, Math.max(b.z0, p.z));
     }
+  }
+
+  /** Whether she can go from the ground at `from` to a point: no step up or down higher than a curb. */
+  private canStep(from: number, x: number, z: number) {
+    return Math.abs(this.groundY(x, z) - from) <= STEP;
   }
 
   /** Move by the keys (relative to the camera's turn `camYaw`), then pose the bones for this moment. */
@@ -251,8 +294,15 @@ export class Player {
     }
     // speed up and slow down smoothly (quicker to stop than to start)
     this.vel.lerp(want, smooth(want.lengthSq() > this.vel.lengthSq() ? 5 : 8, dt));
-    const next = this.pos.clone().addScaledVector(this.vel, dt);
-    this.collide(next);
+    // move, sliding along what stops her: the whole step, or else along x or z alone
+    const here = this.groundY(this.pos.x, this.pos.z);
+    const step = this.vel.clone().multiplyScalar(dt);
+    let next = this.pos.clone();
+    for (const [sx, sz] of [[1, 1], [1, 0], [0, 1]]) {
+      const t = this.pos.clone().add(new Vector3(step.x * sx, 0, step.z * sz));
+      this.collide(t);
+      if (this.canStep(here, t.x, t.z)) { next = t; break; }
+    }
     const moved = Math.hypot(next.x - this.pos.x, next.z - this.pos.z);
     const speed = dt > 0 ? moved / dt : 0;
     this.pos.x = next.x;

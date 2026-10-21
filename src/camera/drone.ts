@@ -136,10 +136,13 @@ export class Drone {
   }
 
   /** Keep the view on a point (the player), smoothly. */
-  follow(x: number, z: number) {
+  follow(x: number, z: number, y?: number) {
     this.goal.set(x, 0, z);
+    this.followY = y ?? null;
     this.flying = false;
   }
+  /** The height to look at while following (she may stand on stairs above the ground). */
+  private followY: number | null = null;
 
   setView(x: number, z: number, yawDeg: number, pitchDeg: number, dist: number) {
     this.goal.set(x, 0, z);
@@ -184,7 +187,7 @@ export class Drone {
     this.target.z += (this.goal.z - this.target.z) * a;
     // the ground under the target, averaged over a few metres so the terrace steps and walls do not jerk the view
     const tx = this.target.x, tz = this.target.z, R = 4;
-    const gy = (heightAt(tx, tz) * 2 + heightAt(tx + R, tz) + heightAt(tx - R, tz) + heightAt(tx, tz + R) + heightAt(tx, tz - R)) / 6;
+    const gy = this.following && this.followY !== null ? this.followY : (heightAt(tx, tz) * 2 + heightAt(tx + R, tz) + heightAt(tx - R, tz) + heightAt(tx, tz + R) + heightAt(tx, tz - R)) / 6;
     this.target.y += (gy - this.target.y) * (1 - Math.exp(-dt * 3));
     if (dt === 0) this.target.y = gy;
 

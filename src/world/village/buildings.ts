@@ -1,6 +1,6 @@
 import { Color } from 'three';
 import type { SignAtlas } from '../signs';
-import { dk, newCtx, wallBox, wallPicture, wallQuad, type Ctx } from './frame';
+import { dk, newCtx, wallBox, wallPicture, wallQuad, type Ctx, solidBox } from './frame';
 import { airConditioner, windowUnit } from './house';
 
 /** The bigger buildings that are not houses: a convenience store, a supermarket, apartments and an office block. */
@@ -10,6 +10,7 @@ const pick = <T,>(r: () => number, a: readonly T[]): T => a[Math.floor(r() * a.l
 /** A convenience store: white box, a blue and white striped band, a glass front, a sign, posters, roof units. Faces +Z. */
 export function konbini(r: () => number, atlas: SignAtlas, w = 14, d = 11): Ctx {
   const ctx = newCtx(r);
+  solidBox(ctx, 0, 0, w / 2, d / 2);
   const B = ctx.body;
   const hw = w / 2, hd = d / 2, h = 4.4;
   B.box(0, 0.12, 0, w + 0.3, 0.24, d + 0.3, '#b9b5ab', { ao: 0.1 });
@@ -49,6 +50,7 @@ export function konbini(r: () => number, atlas: SignAtlas, w = 14, d = 11): Ctx 
 /** A supermarket: two storeys, a big red sign, a canopy over the doors, posters and a row of carts. Faces +Z. */
 export function supermarket(r: () => number, atlas: SignAtlas, w = 22, d = 16): Ctx {
   const ctx = newCtx(r);
+  solidBox(ctx, 0, 0, w / 2, d / 2);
   const B = ctx.body;
   const hw = w / 2, hd = d / 2, h = 7.6;
   B.box(0, 0.12, 0, w + 0.3, 0.24, d + 0.3, '#b9b5ab', { ao: 0.1 });
@@ -86,6 +88,7 @@ export function supermarket(r: () => number, atlas: SignAtlas, w = 22, d = 16): 
  */
 export function apartmentBlock(r: () => number, w: number, d: number, floors: number, wall: string): Ctx {
   const ctx = newCtx(r);
+  solidBox(ctx, 0, 0, w / 2, d / 2);
   const B = ctx.body;
   const hw = w / 2, hd = d / 2, fh = 2.9, base = 0.3, H = floors * fh;
   const SB = 2.6, bx1 = hw - SB; // the flats end at bx1, the stair bay runs from there to hw
@@ -187,6 +190,7 @@ export function apartmentBlock(r: () => number, w: number, d: number, floors: nu
 /** A taller building at the back of the town: bands of windows, a ledge, roof gear and sometimes a billboard. Faces +Z. */
 export function officeBlock(r: () => number, atlas: SignAtlas, w: number, d: number, floors: number, wall: string): Ctx {
   const ctx = newCtx(r);
+  solidBox(ctx, 0, 0, w / 2, d / 2);
   const B = ctx.body;
   const hw = w / 2, hd = d / 2, fh = 3.3;
   B.box(0, 0.15, 0, w + 0.3, 0.3, d + 0.3, '#b9b5ab', { ao: 0.1 });

@@ -34,8 +34,10 @@ overlapping, and wait while the junction is still taken (`src/world/traffic.ts`,
 nearest the camera are real lights (`src/world/nightglow.ts`); neon blade signs glow in their own colours. **The player** (`src/player/player.ts`): in Ekimae Crossing you are the schoolgirl in seifuku
 (`assets/core/characters/seifuku.glb`). W A S D walk, Shift runs, a drag turns the camera, which follows her. The model
 is rigged but has no animations, so she is animated bone by bone: idle, walk and run, blended by her speed, with the
-stride timed to the ground she covers. She steps up onto the pavements and cannot walk through buildings, poles or the
-world's barrier. `e2e/player.mjs` and `e2e/gait.mjs` take close-ups of her. Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
+stride timed to the ground she covers. She steps up onto the pavements and climbs the outside stairs to their landings. Everything
+solid carries its own collision box (walls, poles, signs, fences, guard pipes, vending machines, parked cars, the
+world's details), and she never steps up or down more than a curb, so she cannot walk off a landing or up a wall.
+`e2e/obstacles.mjs` draws them all over a top view; `e2e/stairs.mjs` walks her up every flight. `e2e/player.mjs` and `e2e/gait.mjs` take close-ups of her. Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
 right) switches to the full map, `Hoshi Town (full map)`, which is kept as it was; links take `#world=ekimae` or
 `#world=full`.
 

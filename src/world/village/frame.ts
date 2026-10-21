@@ -19,13 +19,28 @@ export interface Ctx {
   neon: GeoBuilder;
   /** Lights that brighten their surroundings at night (pools of light on the ground, the nearest ones as real lights). */
   glow: Glow[];
+  /** What the player bumps into or climbs: boxes, and walkways that rise (stairs). */
+  solid: Solid[];
   r: () => number;
 }
 
 /** A source of light at night: where it stands (its foot on the ground), how far its pool reaches, its colour. */
+/**
+ * Something solid for the player, in the frame of whatever it was drawn into. A box: centre, half sizes, turned `a`
+ * degrees like everything else (0: lined up; local (u, v) -> (x + u cos a + v sin a, z - u sin a + v cos a)). A walk:
+ * a strip `hw` either side of a line from (x, z) along the unit direction (dx, dz), climbing from y0 to y1 over `len`
+ * metres, then level for `land` metres (stairs and their landing).
+ */
+export type Solid =
+  | { t: 'box'; x: number; z: number; hw: number; hd: number; a: number }
+  | { t: 'walk'; x: number; z: number; dx: number; dz: number; hw: number; len: number; land: number; y0: number; y1: number };
+
+/** A solid box for the player, `a` degrees turned. */
+export const solidBox = (ctx: Ctx, x: number, z: number, hw: number, hd: number, a = 0) => { ctx.solid.push({ t: 'box', x, z, hw, hd, a }); };
+
 export interface Glow { x: number; y: number; z: number; h: number; r: number; color: string; k: number }
 
-export const newCtx = (r: () => number): Ctx => ({ body: new GeoBuilder(), win: new GeoBuilder(), litA: new GeoBuilder(), litB: new GeoBuilder(), sign: new GeoBuilder(), neon: new GeoBuilder(), glow: [], r });
+export const newCtx = (r: () => number): Ctx => ({ body: new GeoBuilder(), win: new GeoBuilder(), litA: new GeoBuilder(), litB: new GeoBuilder(), sign: new GeoBuilder(), neon: new GeoBuilder(), glow: [], solid: [], r });
 
 export function appendCtx(dst: Ctx, src: Ctx, x: number, y: number, z: number, yaw: number) {
   dst.body.appendTransformed(src.body, x, y, z, yaw);
@@ -36,6 +51,15 @@ export function appendCtx(dst: Ctx, src: Ctx, x: number, y: number, z: number, y
   dst.neon.appendTransformed(src.neon, x, y, z, yaw);
   const a = (yaw * Math.PI) / 180, cs = Math.cos(a), sn = Math.sin(a);
   for (const g of src.glow) dst.glow.push({ ...g, x: x + g.x * cs + g.z * sn, y: y + g.y, z: z - g.x * sn + g.z * cs });
+  for (const s of src.solid) dst.solid.push(moveSolid(s, x, y, z, yaw));
+}
+
+/** A solid moved by (x, y, z) after turning `yaw` degrees about its frame's origin. */
+export function moveSolid(s: Solid, x: number, y: number, z: number, yaw: number): Solid {
+  const a = (yaw * Math.PI) / 180, cs = Math.cos(a), sn = Math.sin(a);
+  const px = x + s.x * cs + s.z * sn, pz = z - s.x * sn + s.z * cs;
+  if (s.t === 'box') return { ...s, x: px, z: pz, a: s.a + yaw };
+  return { ...s, x: px, z: pz, dx: s.dx * cs + s.dz * sn, dz: -s.dx * sn + s.dz * cs, y0: s.y0 + y, y1: s.y1 + y };
 }
 
 export const dk = (hex: string, k: number): Color => new Color(hex).multiplyScalar(k);

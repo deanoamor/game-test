@@ -1,7 +1,7 @@
 import { Color } from 'three';
 import type { V3 } from '../../util/builder';
 import type { SignAtlas } from '../signs';
-import { FACES, NORMAL, TANGENT, dk, hangSign, newCtx, wallBox, wallPicture, wallQuad, wp, type Ctx, type Face } from './frame';
+import { FACES, NORMAL, TANGENT, dk, hangSign, newCtx, solidBox, wallBox, wallPicture, wallQuad, wp, type Ctx, type Face } from './frame';
 
 export interface ShopSpec {
   awning: [string, string];
@@ -167,6 +167,8 @@ function antenna(ctx: Ctx, x: number, y: number, z: number) {
  */
 export function buildHouse(spec: HouseSpec, r: () => number, atlas: SignAtlas): Ctx {
   const ctx = newCtx(r);
+  // what the player bumps into: the walls (the outside stairs, beside them, are a walk of their own)
+  solidBox(ctx, 0, 0, spec.w / 2, spec.d / 2);
   const B = ctx.body;
   const { w, d } = spec;
   const hw = w / 2, hd = d / 2;
@@ -409,6 +411,8 @@ function outsideStairs(ctx: Ctx, spec: HouseSpec, base: number, fh: number) {
     B.box(x + sd, 0.12, z0 + run * 0.6, 0.12, 0.24, 0.16, '#6a7076', { ao: 0 });
   }
   B.box(x, top - 0.06, zTop - 0.6, 1.1, 0.12, 1.3, '#8a9096', { ao: 0.05 });
+  // the player climbs the flight from its foot (toward -z) and stands on the landing
+  ctx.solid.push({ t: 'walk', x, z: z0 + run * 0.6, dx: 0, dz: -1, hw: 0.5, len: z0 + run * 0.6 - zTop, land: 1.25, y0: 0, y1: top });
   for (const sz of [zTop - 1.2, z0]) B.box(x + s * 0.5, (sz === z0 ? 0.1 : top) / 2, sz, 0.08, sz === z0 ? 0.2 : top, 0.08, '#6a7076', { ao: 0 });
   B.box(x + s * 0.5, top / 2, zTop - 1.2, 0.08, top, 0.08, '#6a7076', { ao: 0 });
   B.cable([[x + s * 0.5, 1.0, z0], [x + s * 0.5, top + 0.95, zTop]], 0.03, '#5a6066');
