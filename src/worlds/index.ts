@@ -29,17 +29,20 @@ export function goToWorld(key: string) {
   location.reload();
 }
 
+/** The area a world is played in: where she walks if it is played on foot, else where the camera may go. */
+export const areaOf = (w: WorldDef): Rect | null => w.walk ?? w.bounds;
+
 /** The part of the map the minimap shows. */
 export function mapView(w: WorldDef): { cx: number; cz: number; half: number } {
-  if (!w.bounds) return { cx: 0, cz: 0, half: HALF };
-  const b = w.bounds, m = 25;
+  const b = areaOf(w), m = 25;
+  if (!b) return { cx: 0, cz: 0, half: HALF };
   return { cx: (b.x0 + b.x1) / 2, cz: (b.z0 + b.z1) / 2, half: Math.max(b.x1 - b.x0, b.z1 - b.z0) / 2 + m };
 }
 
 /** The area that is built in detail (the bounds and the scenery ring around them). */
 export function keepArea(w: WorldDef): Rect | null {
-  if (!w.bounds) return null;
-  const b = w.bounds, m = w.margin;
+  const b = areaOf(w), m = w.margin;
+  if (!b) return null;
   return { x0: b.x0 - m, z0: b.z0 - m, x1: b.x1 + m, z1: b.z1 + m };
 }
 
@@ -47,6 +50,7 @@ export const inRect = (r: Rect, x: number, z: number, pad = 0) => x >= r.x0 - pa
 
 /** The places of the full map that lie inside a world. */
 export function placesIn(w: WorldDef): Place[] {
-  if (!w.bounds) return PLACES;
-  return [w.start, ...PLACES.filter((p) => inRect(w.bounds!, p.x, p.z) && p.key !== 'town' && p.key !== w.start.key && p.name !== w.start.name)];
+  const b = areaOf(w);
+  if (!b) return PLACES;
+  return [w.start, ...PLACES.filter((p) => inRect(b, p.x, p.z) && p.key !== 'town' && p.key !== w.start.key && p.name !== w.start.name)];
 }

@@ -18,6 +18,9 @@ export interface WorldDef {
   jp: string;
   /** Where the point the camera looks at may go (the invisible barrier); none for the full map. */
   bounds: Rect | null;
+  /** For a world played on foot: where the player may walk (the invisible barrier). The camera follows her, so its
+   *  barrier is the same; the exits sit on its edge. Defaults to the bounds. */
+  walk?: Rect;
   /** How much of the town around the bounds is still built, as scenery. */
   margin: number;
   /** How close the camera may come and how far it may pull back (equal: the zoom is fixed). */

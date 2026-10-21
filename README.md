@@ -40,7 +40,8 @@ world's details), and she never steps up or down more than a curb, so she cannot
 `e2e/obstacles.mjs` draws them all over a top view; `e2e/stairs.mjs` walks her up every flight; `e2e/reach.mjs`
 floods the world with her movement rules and says whether every landing can be reached. The stair alleys between the
 terraces are climbable too, and a building with outside stairs is slid away from them so they stay inside its own lot. `e2e/player.mjs`, `e2e/gait.mjs` and `e2e/cycle.mjs` (12 poses of one stride) take close-ups of her; `e2e/smooth.mjs` checks the
-animation for pops when she starts, speeds up and stops. Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
+animation for pops when she starts, speeds up and stops. On foot, the world's `walk` area is where she may go (`src/worlds/<key>/index.ts`) and the camera's barrier is the same;
+the exits sit on its edge, and the Exit panel comes up when she stands in one (`e2e/exits.mjs` walks her to each). Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
 right) switches to the full map, `Hoshi Town (full map)`, which is kept as it was; links take `#world=ekimae` or
 `#world=full`.
 

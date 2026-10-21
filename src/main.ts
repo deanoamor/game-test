@@ -5,7 +5,7 @@ import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
 import { POND, SHRINE } from './world/config';
-import { WORLDS, currentWorld, inRect, keepArea } from './worlds';
+import { WORLDS, areaOf, currentWorld, inRect, keepArea } from './worlds';
 import { buildVillage } from './world/village';
 import { DaylightRig } from './world/daylight';
 import { TreeField, growForest } from './world/forest';
@@ -40,7 +40,9 @@ async function main() {
   const world = currentWorld();
   const keep = keepArea(world);
   const drone = new Drone(renderer.domElement);
-  if (world.bounds) drone.bounds = { ...world.bounds };
+  // the camera goes where it may look: the whole area she may walk, when it follows her
+  const area = areaOf(world);
+  if (area) drone.bounds = { ...area };
   drone.minDist = world.minDist;
   drone.maxDist = world.maxDist;
   const hud = new Hud(drone, world);
@@ -98,10 +100,7 @@ async function main() {
   if (world.player) {
     progress(0.6, 'Waking the player…');
     await nextFrame();
-    // she may go a little past where the camera stops: the barrier for her is at the edge of the world's area
-    const b = world.bounds, m = 8;
-    // (not so far south that she could walk half way down the stair alley there: it ends outside this world)
-    player = await Player.create(village.obstacles, b && { x0: b.x0 - m - 2, z0: b.z0 - m, x1: b.x1 + m, z1: b.z1 + 5 }, world.player);
+    player = await Player.create(village.obstacles, area, world.player);
     scene.add(player.group, player.shadowMesh);
     drone.following = !params.has('yaw');
   }
@@ -230,7 +229,7 @@ async function main() {
     if (light.shadowDirty) { renderer.shadowMap.needsUpdate = true; light.shadowDirty = false; }
     // the tilt-shift band follows the view: sharp where the drone looks
     post.setTiltShift(0.5, quality === 'low' ? 0 : 2.6 * Math.min(1.6, 1 + Math.max(0, drone.dist - 150) / 400));
-    hud.update(dt, hour, light.state.night);
+    hud.update(dt, hour, light.state.night, player && drone.following ? player.pos : undefined);
     if (post.usesComposer) post.render(dt);
     else renderer.render(scene, drone.camera);
     frames++;

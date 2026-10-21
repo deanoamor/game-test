@@ -1,7 +1,7 @@
 import { Color } from 'three';
 import { clamp, smoothstep } from '../util/rng';
 import { EXPRESSWAY, IC, IC_RAMP, PADDY, SHRINE, VILLAGE, getRoads, heightAt, placeAt, type Place } from '../world/config';
-import { WORLDS, goToWorld, inRect, mapView, placesIn, type Exit, type WorldDef } from '../worlds';
+import { WORLDS, areaOf, goToWorld, inRect, mapView, placesIn, type Exit, type WorldDef } from '../worlds';
 import { groundColor } from '../world/terrain';
 import type { Drone } from '../camera/drone';
 
@@ -29,7 +29,7 @@ export class Hud {
     this.view = mapView(world);
     this.places = placesIn(world);
     const PLACES = this.places;
-    $('worldName').textContent = world.bounds ? `${world.name} · ${world.jp}` : 'Hoshi no Kuni · 星の国';
+    $('worldName').textContent = areaOf(world) ? `${world.name} · ${world.jp}` : 'Hoshi no Kuni · 星の国';
     if (world.minDist === world.maxDist) $('helpZoom').style.display = 'none';
     // on foot: the keys walk, Shift runs, a drag turns the view
     if (world.player) $('help').innerHTML = '<b>W A S D</b> walk &nbsp; <b>Shift</b> run &nbsp; <b>Drag</b> turn &amp; tilt<br /><b>Q E</b> turn &nbsp; <b>R F</b> tilt &nbsp; <b>T</b> time &nbsp; <b>H</b> hide HUD';
@@ -131,7 +131,7 @@ export class Hud {
     g.arc(px(SHRINE.x), pz(SHRINE.z), 3, 0, Math.PI * 2);
     g.fill();
     // a zone: the land past the barrier dimmed, the barrier drawn, the exits marked
-    const b = this.world.bounds;
+    const b = areaOf(this.world);
     if (b) {
       g.fillStyle = 'rgba(10,16,34,0.42)';
       g.fillRect(0, 0, n, pz(b.z0));
@@ -149,7 +149,8 @@ export class Hud {
     return cv;
   }
 
-  update(dt: number, hour: number, night: number) {
+  /** `at`: where the player stands, when she is the one the camera follows (else the exits go by what the drone does). */
+  update(dt: number, hour: number, night: number, at?: { x: number; z: number }) {
     const t = this.drone.target;
     const p = placeAt(t.x, t.z);
     if (p.name !== this.lastPlace) {
@@ -203,9 +204,14 @@ export class Hud {
     g.fill();
     g.strokeStyle = '#fff';
     g.stroke();
-    // at an exit (the drone pushed against the barrier there): offer the way on
-    const pushedRecently = performance.now() - this.drone.pushed.t < 1500;
-    const ex = this.world.exits.find((e) => inRect(e.at, t.x, t.z, 1.5)) ?? (pushedRecently ? this.world.exits.find((e) => inRect(e.at, this.drone.pushed.x, this.drone.pushed.z, 6)) : undefined) ?? null;
+    // at an exit: offer the way on. On foot, she is at one when she stands in its stretch of the edge; flying, when the
+    // drone is, or has just been pushed against the barrier there.
+    let ex: Exit | null;
+    if (at) ex = this.world.exits.find((e) => inRect(e.at, at.x, at.z)) ?? null;
+    else {
+      const pushedRecently = performance.now() - this.drone.pushed.t < 1500;
+      ex = this.world.exits.find((e) => inRect(e.at, t.x, t.z, 1.5)) ?? (pushedRecently ? this.world.exits.find((e) => inRect(e.at, this.drone.pushed.x, this.drone.pushed.z, 6)) : undefined) ?? null;
+    }
     if (ex !== this.exit) {
       this.exit = ex;
       const box = $('exit');
