@@ -39,7 +39,8 @@ solid carries its own collision box (walls, poles, signs, fences, guard pipes, v
 world's details), and she never steps up or down more than a curb, so she cannot walk off a landing or up a wall.
 `e2e/obstacles.mjs` draws them all over a top view; `e2e/stairs.mjs` walks her up every flight; `e2e/reach.mjs`
 floods the world with her movement rules and says whether every landing can be reached. The stair alleys between the
-terraces are climbable too, and a building with outside stairs is slid away from them so they stay inside its own lot. `e2e/player.mjs` and `e2e/gait.mjs` take close-ups of her. Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
+terraces are climbable too, and a building with outside stairs is slid away from them so they stay inside its own lot. `e2e/player.mjs`, `e2e/gait.mjs` and `e2e/cycle.mjs` (12 poses of one stride) take close-ups of her; `e2e/smooth.mjs` checks the
+animation for pops when she starts, speeds up and stops. Exits (yellow on the minimap) mark where the roads go on to the next zones. The **World** menu (top
 right) switches to the full map, `Hoshi Town (full map)`, which is kept as it was; links take `#world=ekimae` or
 `#world=full`.
 
