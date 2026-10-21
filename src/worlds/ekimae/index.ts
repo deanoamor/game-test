@@ -18,11 +18,11 @@ export const ekimae: WorldDef = {
   bounds: BOUNDS,
   walk: WALK,
   margin: 60,
-  // a fixed, close game camera: no zooming in or out
-  minDist: 18,
-  maxDist: 18,
+  // a fixed game camera, tilt and distance: no zooming in or out, and turning never tips it
+  minDist: 26,
+  maxDist: 26,
   // close to the street, at the corner with the vending machine
-  start: { key: 'ekimae', name: 'Ekimae Crossing', jp: '駅前交差点', x: -6, z: 40, radius: 1, dist: 18, pitch: 40, yaw: -70 },
+  start: { key: 'ekimae', name: 'Ekimae Crossing', jp: '駅前交差点', x: -6, z: 40, radius: 1, dist: 26, pitch: 38, yaw: -70 },
   exits: [
     { name: 'Hoshi Ginza West', jp: '星銀座 西', at: { x0: WALK.x0 - 1, z0: 36, x1: WALK.x0 + 3, z1: 52 }, to: null },
     { name: 'Ramen Corner East', jp: 'ラーメン角 東', at: { x0: WALK.x1 - 3, z0: 36, x1: WALK.x1 + 1, z1: 52 }, to: null },

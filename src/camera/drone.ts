@@ -79,7 +79,8 @@ export class Drone {
     this.drag.y = e.clientY;
     if (this.drag.mode === 'orbit') {
       this.yawGoal -= dx * 0.005;
-      this.pitchGoal = clamp(this.pitchGoal + dy * 0.004, 0.14, 1.5);
+      // (following her, the tilt is fixed: turning the view never tips it)
+      if (!this.following) this.pitchGoal = clamp(this.pitchGoal + dy * 0.004, 0.14, 1.5);
     } else {
       // grab the ground: the map follows the pointer
       const scale = (this.dist * 2 * Math.tan(MathUtils.degToRad(this.camera.fov / 2))) / this.dom.clientHeight;
@@ -177,8 +178,8 @@ export class Drone {
     }
     if (k.has('KeyQ')) this.yawGoal += 1.4 * dt;
     if (k.has('KeyE')) this.yawGoal -= 1.4 * dt;
-    if (k.has('KeyR')) this.pitchGoal = clamp(this.pitchGoal + 0.8 * dt, 0.14, 1.5);
-    if (k.has('KeyF')) this.pitchGoal = clamp(this.pitchGoal - 0.8 * dt, 0.14, 1.5);
+    if (k.has('KeyR') && !this.following) this.pitchGoal = clamp(this.pitchGoal + 0.8 * dt, 0.14, 1.5);
+    if (k.has('KeyF') && !this.following) this.pitchGoal = clamp(this.pitchGoal - 0.8 * dt, 0.14, 1.5);
     if (k.has('Equal') || k.has('NumpadAdd')) this.distGoal = clamp(this.distGoal * Math.exp(-1.2 * dt), this.minDist, this.maxDist);
     if (k.has('Minus') || k.has('NumpadSubtract')) this.distGoal = clamp(this.distGoal * Math.exp(1.2 * dt), this.minDist, this.maxDist);
 

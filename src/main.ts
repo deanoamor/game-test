@@ -103,6 +103,8 @@ async function main() {
     player = await Player.create(village.obstacles, area, world.player);
     scene.add(player.group, player.shadowMesh);
     drone.following = !params.has('yaw');
+    // a steady view: the camera keeps its distance and its tilt, and does not rise or back off round the roofs
+    drone.clearance = false;
   }
 
   progress(0.61, 'Drawing the map…');

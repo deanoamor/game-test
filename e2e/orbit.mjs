@@ -9,9 +9,9 @@ console.log(JSON.stringify(await page.evaluate(() => {
   const g = window.__game, d = g.drone, p = g.player, out = {};
   for (const [name, x, z] of [['corner', -5, 38.6], ['street', -20, 44], ['alley', -30, 30], ['pavementN', 8, 38], ['pavementS', -12, 50]]) {
     p.teleport(x, z);
-    d.following = true; d.clearance = true;
+    d.following = true;
     d.follow(p.pos.x, p.pos.z, p.pos.y);
-    d.setView(p.pos.x, p.pos.z, 0, 40, 18);
+    const st = g.hud.world.start; d.setView(p.pos.x, p.pos.z, 0, st.pitch, st.dist);
     d.target.y = p.pos.y;
     let worstDist = 0, worstPitch = 0, minY = 1e9, maxY = -1e9, worstStep = 0, prev = d.camera.position.y;
     for (let deg = 0; deg <= 360; deg += 2) {
@@ -20,7 +20,7 @@ console.log(JSON.stringify(await page.evaluate(() => {
       const c = d.camera.position, t = d.target;
       const actual = Math.atan2(c.y - t.y, Math.hypot(c.x - t.x, c.z - t.z)) * 180 / Math.PI;
       worstDist = Math.max(worstDist, Math.hypot(c.x - t.x, c.y - t.y, c.z - t.z));
-      worstPitch = Math.max(worstPitch, Math.abs(actual - 40));
+      worstPitch = Math.max(worstPitch, Math.abs(actual - st.pitch));
       minY = Math.min(minY, c.y - t.y); maxY = Math.max(maxY, c.y - t.y);
       worstStep = Math.max(worstStep, Math.abs(c.y - prev)); prev = c.y;
     }
