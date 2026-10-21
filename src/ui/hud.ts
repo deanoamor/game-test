@@ -31,6 +31,8 @@ export class Hud {
     const PLACES = this.places;
     $('worldName').textContent = world.bounds ? `${world.name} · ${world.jp}` : 'Hoshi no Kuni · 星の国';
     if (world.minDist === world.maxDist) $('helpZoom').style.display = 'none';
+    // on foot: the keys walk, Shift runs, a drag turns the view
+    if (world.player) $('help').innerHTML = '<b>W A S D</b> walk &nbsp; <b>Shift</b> run &nbsp; <b>Drag</b> turn &amp; tilt<br /><b>Q E</b> turn &nbsp; <b>R F</b> tilt &nbsp; <b>T</b> time &nbsp; <b>H</b> hide HUD';
     // the worlds menu: going to another world loads it afresh
     const sel = $<HTMLSelectElement>('world');
     for (const w of WORLDS) {

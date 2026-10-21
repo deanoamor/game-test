@@ -26,4 +26,6 @@ export const ekimae: WorldDef = {
     { name: 'Hoshi Slope South', jp: '星坂 南', at: { x0: -5, z0: BOUNDS.z1 - 3, x1: 5, z1: BOUNDS.z1 + 1 }, to: null },
   ],
   details: ekimaeDetails,
+  // on the corner pavement by the vending machine, facing the crossing
+  player: { x: -5, z: 38.6, yaw: 90 },
 };

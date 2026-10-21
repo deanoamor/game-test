@@ -1,5 +1,6 @@
 import { ACESFilmicToneMapping, Box3, PCFSoftShadowMap, PMREMGenerator, Scene, SRGBColorSpace, WebGLRenderer, Vector3, Color, Group, type Mesh } from 'three';
 import { Drone } from './camera/drone';
+import { Player } from './player/player';
 import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
@@ -92,6 +93,16 @@ async function main() {
   const traffic = new Traffic(signals);
   scene.add(traffic.group);
 
+  // the player, in a world played on foot: the camera follows her (unless a test asked for a fixed view)
+  let player: Player | null = null;
+  if (world.player) {
+    progress(0.6, 'Waking the player…');
+    await nextFrame();
+    player = await Player.create(village.obstacles, world.bounds, world.player);
+    scene.add(player.group, player.shadowMesh);
+    drone.following = !params.has('yaw');
+  }
+
   progress(0.61, 'Drawing the map…');
   await nextFrame();
   hud.paintBase();
@@ -168,9 +179,11 @@ async function main() {
   };
   hud.onFly = (key) => {
     const p = PLACES.find((q) => q.key === key);
-    if (p) drone.flyTo(p, params.has('shot'));
+    // on foot, a place (or a click on the map) takes her there
+    if (p && player && drone.following) player.teleport(p.x, p.z);
+    else if (p) drone.flyTo(p, params.has('shot'));
   };
-  hud.onMapClick = (x, z) => drone.flyTo({ key: 'map', name: '', jp: '', x, z, radius: 1, dist: Math.max(drone.dist, 120), pitch: (drone.pitch * 180) / Math.PI, yaw: (drone.yaw * 180) / Math.PI });
+  hud.onMapClick = (x, z) => player && drone.following ? player.teleport(x, z) : drone.flyTo({ key: 'map', name: '', jp: '', x, z, radius: 1, dist: Math.max(drone.dist, 120), pitch: (drone.pitch * 180) / Math.PI, yaw: (drone.yaw * 180) / Math.PI });
   hud.onHour = (h) => { playing = false; (document.getElementById('play') as HTMLElement).textContent = '▶ Play'; applyHour(h); };
   hud.onPlay = (p) => { playing = p; };
   hud.onQuality = (q) => { manual = true; applyQuality(q as Quality); };
@@ -196,6 +209,10 @@ async function main() {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     if (playing) applyHour(hour + (dt / dayLength) * 24);
+    if (player) {
+      player.update(dt, drone.yaw);
+      if (drone.following) drone.follow(player.pos.x, player.pos.z);
+    }
     drone.update(dt);
     light.follow(drone.target);
     glow.update(dt, light.state.night, drone.target);
@@ -245,7 +262,7 @@ async function main() {
   requestAnimationFrame(loop);
 
   (window as unknown as Record<string, unknown>).__game = {
-    drone, scene, renderer, light, post, hud, signals, traffic,
+    drone, scene, renderer, light, post, hud, signals, traffic, player,
     /** Run the signals and the traffic ahead by `seconds` (for tests). */
     simulate: (seconds: number) => { for (let t = 0; t < seconds; t += 1 / 30) { signals.step(1 / 30); traffic.step(1 / 30); } },
     flyTo: (key: string, instant = true) => { const p = PLACES.find((q) => q.key === key); if (p) drone.flyTo(p, instant); },

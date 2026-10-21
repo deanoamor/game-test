@@ -26,6 +26,8 @@ export interface WorldDef {
   /** The view you arrive with. */
   start: Place;
   exits: Exit[];
+  /** Where the player starts, if the world is played on foot (yaw: the way she faces, 0 = +z, 90 = +x). */
+  player?: { x: number; z: number; yaw: number };
   /** The world's own details, added to the town where it stands (they show on the full map too). */
   details?: (kit: DetailKit) => void;
 }

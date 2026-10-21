@@ -60,7 +60,9 @@ export type Taken = { x: number; z: number; r: number }[];
 
 interface Lot { x: number; z: number; yaw: number; w: number; d: number; y: number; ctx: Ctx; height: number }
 
-export interface VillageBuild { group: Group; glows: Glow[]; update(night: number): void }
+/** What the player cannot walk through: the buildings (rectangles, half sizes) and the street furniture (circles). */
+export interface Obstacles { rects: { x: number; z: number; hw: number; hd: number }[]; circles: Taken }
+export interface VillageBuild { group: Group; glows: Glow[]; obstacles: Obstacles; update(night: number): void }
 
 export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (f: number, label: string) => void = () => {}, details: ((kit: DetailKit) => void)[] = []): Promise<VillageBuild> {
   // the town is built in steps, letting the loading screen repaint in between
@@ -337,7 +339,10 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
     for (const d of details) d(kit);
   }
   await step(0.9, 'Putting the town together…');
-  return assemble(chunks, atlas, ground);
+  const built = assemble(chunks, atlas, ground);
+  // buildings turned a quarter turn have their width along z
+  built.obstacles = { rects: lots.map((l) => (Math.abs(Math.sin((l.yaw * Math.PI) / 180)) > 0.5 ? { x: l.x, z: l.z, hw: l.d / 2, hd: l.w / 2 } : { x: l.x, z: l.z, hw: l.w / 2, hd: l.d / 2 })), circles: taken };
+  return built;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -600,6 +605,7 @@ function assemble(chunks: Map<number, Ctx>, atlas: SignAtlas, ground: Ctx): Vill
   return {
     group,
     glows: [...chunks.values()].flatMap((c) => c.glow),
+    obstacles: { rects: [], circles: [] },
     update(night: number) {
       litA.emissiveIntensity = 0.05 + night * 0.95;
       litB.emissiveIntensity = 0.04 + night * 0.65;

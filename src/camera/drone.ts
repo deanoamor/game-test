@@ -50,9 +50,9 @@ export class Drone {
     this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (e.pointerType === 'touch') {
       if (this.touches.size === 2) this.pinch = this.pinchDistance();
-      this.drag = { mode: 'pan', x: e.clientX, y: e.clientY };
+      this.drag = { mode: this.following ? 'orbit' : 'pan', x: e.clientX, y: e.clientY };
     } else {
-      this.drag = { mode: e.button === 2 || e.button === 1 || e.shiftKey ? 'orbit' : 'pan', x: e.clientX, y: e.clientY };
+      this.drag = { mode: this.following || e.button === 2 || e.button === 1 || e.shiftKey ? 'orbit' : 'pan', x: e.clientX, y: e.clientY };
     }
     this.flying = false;
   }
@@ -97,6 +97,10 @@ export class Drone {
 
   /** The invisible barrier: where the point the drone looks at may go (the whole map unless a zone sets it). */
   bounds = { x0: -HALF + 20, z0: -HALF + 20, x1: HALF - 20, z1: HALF - 20 };
+  /** Following the player: the keys move her, not the drone, and a plain drag turns the view. */
+  following = false;
+  /** Keep clear of the roofs (tests turn it off for close-ups at street level). */
+  clearance = true;
   /** How close the drone may come and how far it may pull back (the same: a fixed zoom). */
   minDist = 10;
   maxDist = 520;
@@ -131,6 +135,12 @@ export class Drone {
     this.update(0);
   }
 
+  /** Keep the view on a point (the player), smoothly. */
+  follow(x: number, z: number) {
+    this.goal.set(x, 0, z);
+    this.flying = false;
+  }
+
   setView(x: number, z: number, yawDeg: number, pitchDeg: number, dist: number) {
     this.goal.set(x, 0, z);
     this.target.set(x, heightAt(x, z), z);
@@ -145,10 +155,12 @@ export class Drone {
     const fast = k.has('ShiftLeft') || k.has('ShiftRight') ? 2.6 : 1;
     const speed = this.dist * 0.75 * fast;
     let mx = 0, mz = 0;
+    if (!this.following) {
     if (k.has('KeyW') || k.has('ArrowUp')) mz -= 1;
     if (k.has('KeyS') || k.has('ArrowDown')) mz += 1;
     if (k.has('KeyA') || k.has('ArrowLeft')) mx -= 1;
     if (k.has('KeyD') || k.has('ArrowRight')) mx += 1;
+    }
     if (mx || mz) {
       this.flying = false;
       const cs = Math.cos(this.yaw), sn = Math.sin(this.yaw);
@@ -183,7 +195,7 @@ export class Drone {
     const px = pos.x, pz = pos.z, G = 6;
     const land = (heightAt(px, pz) * 2 + heightAt(px + G, pz) + heightAt(px - G, pz) + heightAt(px, pz + G) + heightAt(px, pz - G)) / 6;
     const ground = Math.max(land, skylineSmooth(px, pz));
-    const need = Math.max(0, ground + 3 - pos.y);
+    const need = this.clearance ? Math.max(0, ground + 3 - pos.y) : 0;
     this.lift += (need - this.lift) * (1 - Math.exp(-dt * 2.5));
     if (dt === 0) this.lift = need;
     pos.y += this.lift;
