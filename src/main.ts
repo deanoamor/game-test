@@ -100,7 +100,8 @@ async function main() {
     await nextFrame();
     // she may go a little past where the camera stops: the barrier for her is at the edge of the world's area
     const b = world.bounds, m = 8;
-    player = await Player.create(village.obstacles, b && { x0: b.x0 - m, z0: b.z0 - m, x1: b.x1 + m, z1: b.z1 + m }, world.player);
+    // (not so far south that she could walk half way down the stair alley there: it ends outside this world)
+    player = await Player.create(village.obstacles, b && { x0: b.x0 - m - 2, z0: b.z0 - m, x1: b.x1 + m, z1: b.z1 + 5 }, world.player);
     scene.add(player.group, player.shadowMesh);
     drone.following = !params.has('yaw');
   }

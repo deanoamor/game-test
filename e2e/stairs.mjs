@@ -5,7 +5,7 @@ const OUT = process.env.OUT || 'e2e/out';
 fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 640, height: 480 } });
-await page.goto(`http://localhost:5300/?shot=1&world=ekimae&hud=0&q=low&pause=1&t=13&steps=${process.env.STEPS || 360}`);
+await page.goto(`http://localhost:5300/?shot=1&world=ekimae&hud=0&q=low&pause=1&t=13&steps=${process.env.STEPS || 700}`);
 await page.waitForFunction(() => window.__game && window.__game.frames() > 2, null, { timeout: 240000 });
 const walks = await page.evaluate(() => {
   const p = window.__game.player, b = p.bounds;
@@ -23,7 +23,7 @@ for (const w of walks) {
     const yaw = Math.atan2(-w.dx, -w.dz);
     p.keys.add('KeyW');
     let top = start;
-    const steps = +(new URLSearchParams(location.search).get('steps') ?? 360);
+    const steps = +(new URLSearchParams(location.search).get('steps') ?? 700);
     for (let i = 0; i < steps; i++) { p.update(1 / 60, yaw); top = Math.max(top, p.pos.y); }
     p.keys.clear();
     for (let i = 0; i < 30; i++) p.update(1 / 60, yaw);

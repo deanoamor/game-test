@@ -161,6 +161,9 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
     }
   };
 
+  /** A copy of a building drawn `dx` metres along its own x. */
+  const moved = (c: Ctx, dx: number): Ctx => { const o = newCtx(r); appendCtx(o, c, dx, 0, 0, 0); return o; };
+
   /** Put a finished building down, register its roof for the camera. */
   const place = (ctx: Ctx, x: number, z: number, yaw: number, y: number, w: number, d: number, height: number) => {
     // never on a street: a building whose footprint touches a road is left out (the lot gets filled later)
@@ -178,7 +181,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
   // ---------------------------------------------------------------------------------------------
   // a row of buildings along one side of a street
   // ---------------------------------------------------------------------------------------------
-  interface Row { front: number; yaw: 0 | 180; depth: number; y: number; ground: number; raised?: number; yard?: number; kind: 'main' | 'back'; skip: [number, number][]; specials?: (x: number) => { w: number; build: () => { ctx: Ctx; w: number; d: number; height: number; setback?: number } } | null }
+  interface Row { front: number; yaw: 0 | 180; depth: number; y: number; ground: number; raised?: number; yard?: number; kind: 'main' | 'back'; skip: [number, number][]; specials?: (x: number) => { w: number; build: () => { ctx: Ctx; w: number; d: number; height: number; setback?: number; shiftX?: number } } | null }
   const rowFill = (row: Row) => {
     let x = X_MIN;
     while (x < X_MAX - 5) {
@@ -190,6 +193,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
         const s = special.build();
         if (x + s.w > next) { x = next; continue; }
         const setback = s.setback ?? 0;
+        if (s.shiftX) s.ctx = moved(s.ctx, s.shiftX);
         occ.mark(x, row.front, x + s.w, row.yaw === 0 ? row.front - setback : row.front + setback);
         const cx = x + s.w / 2;
         const cz = row.yaw === 0 ? row.front - setback - s.d / 2 : row.front + setback + s.d / 2;
@@ -218,6 +222,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
         if (w < 5) { x = next; continue; }
       }
       let ctx: Ctx, height: number, foot = w, doorAt = 0;
+      let stairShift = 0;
       if (isApt) {
         const floors = 3 + Math.floor(r() * 2);
         ctx = apartmentBlock(r, w, d, floors, pick(r, ['#e9e0cc', '#d9dcd8', '#e4d6c0', '#cfd8dc']));
@@ -226,12 +231,19 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
         const spec = isHouse ? houseSpec(w, d) : shopSpec(w, d);
         if (spec.stairs) { spec.w = w - 1.3; foot = w; }
         ctx = buildHouse(spec, r, atlas);
+        // the flight of outside stairs is 1 m wide and stands 0.62 m off the wall: slide the building away from it, so
+        // the stairs stay inside the lot (they used to reach into the next lot, onto its stairs or its wall)
+        if (spec.stairs) {
+          stairShift = (spec.stairs === 'right' ? -1 : 1) * 0.65;
+          ctx = moved(ctx, stairShift);
+          doorAt = stairShift;
+        }
         height = spec.floors * (spec.fh ?? 3) + 2.5;
         // the front yard of a house: a tiled or block wall with a gate, pots and a plant
         if (isHouse && row.kind === 'back') {
           const fz = spec.d / 2 + 2.25;
           const hw = foot / 2;
-          const gate = (spec.doorU ?? 0);
+          const gate = (spec.doorU ?? 0) + stairShift;
           doorAt = gate;
           ctx.body.box(0, 0.06, spec.d / 2 + 1.2, foot + 0.2, 0.12, 2.4, '#cdc9be', { ao: 0.05 });
           const fence = r() < 0.55 ? tileFence : blockWall;
@@ -242,16 +254,13 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
           if (r() < 0.4) bicycle(ctx, gate + 1.6, 0.12, spec.d / 2 + 1.3, 90, pick(r, ['#4f7fd9', '#d94f4f', '#7fb8b0', '#e0b341']));
         }
       }
-      // stairs stick out on one side: shift so the whole footprint fits the lot
-      const spec2 = (ctx as unknown as { stairsSide?: number }).stairsSide;
-      void spec2;
       const cx = x + foot / 2;
       const cz = row.yaw === 0 ? row.front - d / 2 : row.front + d / 2;
       place(ctx, cx, cz, row.yaw, row.y, foot, d, height);
       if (row.yard !== undefined) backyard(x, x + foot, row.yaw === 0 ? row.front - d : row.front + d, row.yard, row.ground);
       // on a raised strip: little steps down from the gate (or the shop door) to the lane
       if (row.raised !== undefined) {
-        const gx = isHouse ? cx + doorAt : cx;
+        const gx = isHouse || stairShift ? cx + doorAt : cx;
         steps(at(gx), gx, row.raised, row.ground, row.ground - RAISE, isHouse ? 1.3 : Math.min(2.4, foot - 1));
         if (isApt) steps(at(cx), cx - foot / 2 + 1.4, row.raised, row.ground, row.ground - RAISE, 1.2);
       }
@@ -272,7 +281,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
     front: MAIN_Z - MAIN_HALF - WALK, yaw: 0, depth: 12, y: SW, ground: Y_M, yard: TERRACES[0].z1 + 0.1, kind: 'main', skip: [...mainSkip, ...upAlleys],
     specials: (x) => {
       if (Math.abs(x - -14.3) < 0.5) return { w: 8, build: () => ({ ctx: buildHouse({ ...shopSpec(8, 10), floors: 2, roof: 'gable', gableFront: false, roofColor: '#3a3f46', wall: '#f2efe8', shop: { awning: ['#c8322e', '#f4f4f0'], style: 'box', sign: undefined, noren: '#2c3f6e', banners: ['izakaya'], menu: true }, board: 'sushiBoard', roundSign: 'sushiRound', stack: true, stairs: undefined, lattice: undefined }, r, atlas), w: 8, d: 10, height: 9 }) };
-      if (Math.abs(x - -22.6) < 0.5) return { w: 7.6, build: () => ({ ctx: buildHouse({ ...shopSpec(6.3, 9), floors: 3, roof: 'flat', wall: '#d8e2e6', shop: { awning: ['#2b2a28', '#f4e6c8'], style: 'none', banners: ['ramenBanner'], menu: true }, board: 'cafeBoard', stairs: 'left', planters: true, roundSign: undefined, lattice: undefined }, r, atlas), w: 7.6, d: 9, height: 11 }) };
+      if (Math.abs(x - -22.6) < 0.5) return { w: 7.6, build: () => ({ shiftX: 0.65, ctx: buildHouse({ ...shopSpec(6.3, 9), floors: 3, roof: 'flat', wall: '#d8e2e6', shop: { awning: ['#2b2a28', '#f4e6c8'], style: 'none', banners: ['ramenBanner'], menu: true }, board: 'cafeBoard', stairs: 'left', planters: true, roundSign: undefined, lattice: undefined }, r, atlas), w: 7.6, d: 9, height: 11 }) };
       if (Math.abs(x - 26.0) < 0.5) return { w: 7.6, build: () => ({ ctx: buildHouse({ ...shopSpec(7.6, 9), floors: 2, wall: '#d6d3c8', wall2: '#cdc8ba', roof: 'gable', gableFront: false, roofColor: '#38414c', pent: '#2f3a46', stack: true, shop: { awning: ['#17a39a', '#e8f6f4'], style: 'stripes', curved: true, sign: 'ramenAwning', noren: '#b3322a', banners: ['sukiyaki', 'ramenBanner'], menu: true }, board: undefined, stairs: undefined, roundSign: undefined, lattice: undefined, tiles: undefined }, r, atlas), w: 7.6, d: 9, height: 9 }) };
       if (Math.abs(x - 33.9) < 0.5) return { w: 9.4, build: () => ({ ctx: buildHouse({ ...houseSpec(9.4, 8.4), floors: 2, wall: '#e8d46a', wall2: '#e8d46a', trim: '#f4f1e8', roof: 'hip', roofColor: '#3a3f46', shutters: '#7a5a3c', balcony: true, antenna: true, ac: 2, pent: '#3a3f46', gableFront: false, stairs: undefined, tiles: undefined }, r, atlas), w: 9.4, d: 8.4, height: 9, setback: 2.4 }) };
       return null;
@@ -344,7 +353,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
   await step(0.9, 'Putting the town together…');
   const built = assemble(chunks, atlas, ground);
   // buildings turned a quarter turn have their width along z
-  built.obstacles = { solids: [...chunks.values()].flatMap((c) => c.solid) };
+  built.obstacles = { solids: [...chunks.values(), ground].flatMap((c) => c.solid) };
   return built;
 }
 

@@ -167,6 +167,8 @@ export function buildTownGround(at: (x: number) => Ctx) {
       B.box(st.x, top + 0.005, st.z + k * tread + 0.04, st.w - 0.1, 0.012, 0.06, '#e2c24a', { ao: 0 });
     }
     const run = n * tread;
+    // the player climbs from the foot (toward -z, uphill) up the flight; the treads' tops sit half a rise below the line
+    B_solid(at(st.x), st.x, st.z + run, st.w / 2 - 0.1, run, yL, yU - rise * 0.5);
     for (const s of [-1, 1]) {
       const xw = st.x + s * (st.w / 2 + 0.1);
       wallSeg(B, xw, st.z - 0.2, xw, st.z + run, yL - 0.3, yU + 0.3, yL - 0.3, yL + 0.3, 0.2, WALL, CAP);
@@ -180,6 +182,11 @@ export function buildTownGround(at: (x: number) => Ctx) {
   perimeter(at, [[TOWN.x0, TOWN.z1], [TOWN.x1, TOWN.z1]], [0, -1], (x, z) => townIn(x, z), true);
   perimeter(at, [[TOWN.x0, TOWN.z0], [TOWN.x0, TOWN.z1]], [1, 0], (x, z) => townIn(x, z), true);
   perimeter(at, [[TOWN.x1, TOWN.z0], [TOWN.x1, TOWN.z1]], [-1, 0], (x, z) => townIn(x, z), true);
+}
+
+/** A flight of stairs for the player: from its foot (x, z) uphill along -z, `len` metres, from y0 up to y1. */
+function B_solid(ctx: Ctx, x: number, z: number, hw: number, len: number, y0: number, y1: number) {
+  ctx.solid.push({ t: 'walk', x, z, dx: 0, dz: -1, hw, len, land: 0.6, y0, y1 });
 }
 
 const townIn = (x: number, z: number) => (rampBand(x) ? rampY(z) : terraceY(z));
