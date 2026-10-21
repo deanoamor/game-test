@@ -268,12 +268,15 @@ function neonBlades(k: DetailKit) {
   for (const [x, side, name, tube] of blades) {
     const wall = side === 'n' ? N_IN - WALK : S_IN + WALK;
     const out = side === 'n' ? 1 : -1;
+    // only on a real wall: a building must stand right behind it, across the sign's whole width
+    if (![-0.35, 0, 0.35].every((dx) => k.inBuilding(x + dx, wall - out * 0.4))) continue;
     // turned so that the sign's faces look along the street
     k.put(x, SW, wall + out * 0.72, 90, (c) => {
       const cell = atlas.get(name), w = 0.5, h = Math.min(1.7, w / cell.aspect);
       const y = 4.4;
       c.body.box(0, y, 0, 0.62, h + 0.14, 0.1, '#1e1f24', { ao: 0 });
-      for (const dy of [h / 2 - 0.1, -h / 2 + 0.1]) c.body.box(0, y + dy, out * -0.48, 0.05, 0.05, 0.5, '#5a5e64', { ao: 0 });
+      // two arms back to the wall (local x runs toward it: the sign is turned 90°)
+      for (const dy of [h / 2 - 0.1, -h / 2 + 0.1]) c.body.box(out * 0.49, y + dy, 0, 0.5, 0.05, 0.05, '#5a5e64', { ao: 0 });
       board(c, cell, 0, y, 0, w, h, '#1e1f24');
       // the neon tube round the edge, on both faces
       for (const f of [0.065, -0.065]) {

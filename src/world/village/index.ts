@@ -53,6 +53,8 @@ export interface DetailKit {
   put(x: number, y: number, z: number, yaw: number, fn: (c: Ctx) => void): void;
   /** Whether nothing of the town's street furniture stands within `rad` of (x, z). */
   free(x: number, z: number, rad?: number): boolean;
+  /** Whether (x, z) is inside a building's footprint (grown by `pad`). */
+  inBuilding(x: number, z: number, pad?: number): boolean;
 }
 export type Taken = { x: number; z: number; r: number }[];
 
@@ -330,6 +332,7 @@ export async function buildVillage(trees: TreeField, atlas: SignAtlas, onStep: (
       at, atlas, trees, r: rng(4242),
       put(x, y, z, yaw, fn) { const c = newCtx(kit.r); fn(c); appendCtx(at(x), c, x, y, z, yaw); },
       free: (x, z, rad = 0.8) => taken.every((t) => Math.hypot(t.x - x, t.z - z) > t.r + rad),
+      inBuilding: (x, z, pad = 0) => lots.some((l) => Math.abs(x - l.x) < l.w / 2 + pad && Math.abs(z - l.z) < l.d / 2 + pad),
     };
     for (const d of details) d(kit);
   }
