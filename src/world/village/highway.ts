@@ -69,6 +69,7 @@ export function buildExpressway(at: (x: number) => Ctx, atlas: SignAtlas) {
     B.box(x, y + 4.4, zc, 0.18, 7.2, 0.18, '#8a9096', { ao: 0 });
     B.box(x, y + 7.9, zc, 0.12, 0.12, 5.4, '#8a9096', { ao: 0 });
     for (const s of [-1, 1]) at(x).litB.box(x, y + 7.75, zc + s * 2.6, 0.5, 0.12, 0.9, '#ffffff', { ao: 0 });
+    at(x).glow.push({ x, y, z: zc, h: 7.8, r: 11, color: '#ffd9a0', k: 0.9 });
   }
   const gantry = (x: number, s: 1 | -1, signs: [string, number][]) => {
     const ctx = at(x), B = ctx.body;
@@ -162,6 +163,7 @@ export function buildExpressway(at: (x: number) => Ctx, atlas: SignAtlas) {
     for (const s of [-1, 1]) {
       B.box(s * 5, py + 4.5, IC.z0 + 1.0, 0.2, 9, 0.2, '#8a9096', { ao: 0 });
       ctx.litB.box(s * 5, py + 9.05, IC.z0 + 1.0, 0.9, 0.15, 0.5, '#ffffff', { ao: 0 });
+      ctx.glow.push({ x: s * 5, y: py, z: IC.z0 + 1.0, h: 9, r: 10, color: '#fff0d0', k: 0.9 });
     }
     // the entrance: lane arrows from the access road and a green board pointing to the gates
     for (const s of [-1, 1]) B.box(s * 1.75, py + 0.02, IC.z0 + 4, 0.5, 0.02, 2.5, WHITE, { ao: 0 });
@@ -204,7 +206,10 @@ export function buildUnderpass(at: (x: number) => Ctx) {
       wallSeg(B, x0, U.z + s * 3.85, x1, U.z + s * 3.85, ya - 0.5, ya + 0.15, yb - 0.5, yb + 0.15, 0.7, '#c4c0b6', '#cfcbc0');
       if (ta - ya > 1.2 && Math.abs(xm - U.x) > 5.2) fence(at(xm), x0, U.z + s * (U.wall + 0.4), ta + 0.15, x1, U.z + s * (U.wall + 0.4), tb + 0.15, 1.0, '#7d8a80');
       // lights on the wall faces, and a dark band of damp at the foot
-      if (Math.round(x0) % 8 === 0 && ta - ya > 2.5) at(xm).litB.box(xm, ya + 3.0, U.z + s * (U.wall - 0.02), 1.2, 0.12, 0.08, '#ffffff', { ao: 0 });
+      if (Math.round(x0) % 8 === 0 && ta - ya > 2.5) {
+        at(xm).litB.box(xm, ya + 3.0, U.z + s * (U.wall - 0.02), 1.2, 0.12, 0.08, '#ffffff', { ao: 0 });
+        at(xm).glow.push({ x: xm, y: ya, z: U.z + s * (U.wall - 0.6), h: 3, r: 4.5, color: '#f0f6ff', k: 0.8 });
+      }
       B.box(xm, (ya + yb) / 2 + 0.45, U.z + s * (U.wall - 0.005), step, 0.3, 0.01, '#8f8c84', { ao: 0 });
     }
   }

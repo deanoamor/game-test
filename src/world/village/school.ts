@@ -280,6 +280,7 @@ export function buildSchool(at: (x: number) => Ctx, atlas: SignAtlas, r: () => n
   // a lamp at the corner and a sign for visitors
   B.box(px0 + 0.4, y + 2.4, gz + 3.2, 0.12, 4.8, 0.12, '#5a5e64', { ao: 0 });
   ctx.litB.box(px0 + 0.85, y + 4.75, gz + 3.2, 0.9, 0.1, 0.25, '#ffffff', { ao: 0 });
+  ctx.glow.push({ x: px0 + 0.85, y, z: gz + 3.2, h: 4.7, r: 6, color: '#e8f2ff', k: 0.8 });
   // the walk from the car park along the yard to the entrance
   B.box(px1 + 1.2, y + 0.035, (gz + S.z0 + 14) / 2, 2.2, 0.05, gz - S.z0 - 14 + 2.5, '#bdb8ad', { ao: 0 });
   // a concrete retaining wall wherever the hill outside drops below the plateau (none across the gate)
@@ -396,5 +397,6 @@ function classicLampAt(ctx: Ctx, p: V3) {
   ctx.body.box(p[0], p[1] + 2.0, p[2], 0.12, 4.0, 0.12, '#2a2c30', { ao: 0.1 });
   ctx.body.box(p[0], p[1] + 0.15, p[2], 0.26, 0.3, 0.26, '#2a2c30', { ao: 0.1 });
   ctx.litA.box(p[0], p[1] + 4.25, p[2], 0.32, 0.42, 0.32, '#fff4dc', { ao: 0 });
+  ctx.glow.push({ x: p[0], y: p[1], z: p[2], h: 4.2, r: 5, color: '#ffe2b0', k: 0.9 });
   ctx.body.frustum(p[0], p[1] + 4.46, p[2], 0.3, 0.06, 0.2, 4, '#2a2c30', { rotate: 0.5 });
 }

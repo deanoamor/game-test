@@ -52,14 +52,16 @@ export interface HouseSpec {
 const FRONT: Face = '+z';
 
 /** One window: frame, glass (lit or not), mullions, sill and optional louvered shutters. */
-export function windowUnit(ctx: Ctx, f: Face, hw: number, hd: number, u: number, yb: number, w: number, h: number, o: { frame: string; glass: string; lit: boolean; shutter?: string; tall?: boolean }) {
+export function windowUnit(ctx: Ctx, f: Face, hw: number, hd: number, u: number, yb: number, w: number, h: number, o: { frame: string; glass: string; lit: boolean; /** lit by the extra lighting-up: no dice are thrown for it */ quiet?: boolean; shutter?: string; tall?: boolean }) {
   const B = ctx.body;
   const yc = yb + h / 2;
   wallBox(B, f, hw, hd, u, yb + 0.04, w + 0.16, 0.08, 0.1, 0.05, o.frame);
   wallBox(B, f, hw, hd, u, yb + h - 0.04, w + 0.16, 0.08, 0.1, 0.05, o.frame);
   wallBox(B, f, hw, hd, u - w / 2 - 0.04, yc, 0.08, h, 0.1, 0.05, o.frame);
   wallBox(B, f, hw, hd, u + w / 2 + 0.04, yc, 0.08, h, 0.1, 0.05, o.frame);
-  const target = o.lit ? (ctx.r() < 0.78 ? ctx.litA : ctx.litB) : ctx.win;
+  // (a window lit quietly picks its colour from where it is, not from the dice, so the town is laid out as before)
+  const roll = o.quiet ? Math.abs(Math.sin(u * 12.9898 + yb * 78.233 + f.length * 3.1)) * 43758.5453 % 1 : o.lit ? ctx.r() : 1;
+  const target = o.lit ? (roll < 0.78 ? ctx.litA : ctx.litB) : ctx.win;
   wallQuad(target, f, hw, hd, u, yb + 0.06, w, h - 0.12, o.lit ? '#ffe3a6' : o.glass, 0.03);
   wallBox(B, f, hw, hd, u, yc, 0.05, h - 0.1, 0.06, 0.06, o.frame);
   if (!o.tall) wallBox(B, f, hw, hd, u, yc + h * 0.12, w, 0.05, 0.06, 0.06, o.frame);
@@ -72,6 +74,9 @@ export function windowUnit(ctx: Ctx, f: Face, hw: number, hd: number, u: number,
     }
   }
 }
+
+/** How many more windows of a house or shop are lit at night than its dice say (without changing the dice). */
+const EXTRA_LIT = 0.22;
 
 /** An air conditioner on a wall: a box, a dark fan and a hose. */
 export function airConditioner(ctx: Ctx, f: Face, hw: number, hd: number, u: number, y: number) {
@@ -202,7 +207,8 @@ export function buildHouse(spec: HouseSpec, r: () => number, atlas: SignAtlas): 
         if (f === FRONT && fl === 0 && (spec.shop || Math.abs(u - doorU) < 1.4)) continue;
         if (f === FRONT && fl >= 1 && spec.balcony && c === Math.floor(cols / 2)) continue;
         const ww = Math.min(1.55, L / cols - 0.9);
-        windowUnit(ctx, f, hw, hd, u, yb, ww, 1.3, { frame, glass, lit: r() < litP, shutter: spec.shutters && r() < 0.8 ? spec.shutters : undefined });
+        const roll = r(), lit = roll < litP;
+        windowUnit(ctx, f, hw, hd, u, yb, ww, 1.3, { frame, glass, lit: lit || roll < litP + EXTRA_LIT, quiet: !lit, shutter: spec.shutters && r() < 0.8 ? spec.shutters : undefined });
         if (spec.bars && fl === 0) for (let k = 0; k < 5; k++) wallBox(B, f, hw, hd, u - ww / 2 + 0.12 + (k * (ww - 0.24)) / 4, yb + 0.65, 0.04, 1.25, 0.04, 0.16, '#d8dcdf', 0);
         if (spec.planters && fl > 0 && f === FRONT && r() < 0.7) {
           wallBox(B, f, hw, hd, u, yb - 0.12, ww + 0.1, 0.26, 0.32, 0.26, '#8a6a46');
@@ -225,7 +231,8 @@ export function buildHouse(spec: HouseSpec, r: () => number, atlas: SignAtlas): 
       const n = Math.max(4, Math.round(bw / 0.2));
       for (let k = 0; k <= n; k++) wallBox(B, FRONT, hw, hd, u - bw / 2 - 0.15 + (k * (bw + 0.3)) / n, y0 + 0.62, 0.035, 0.9, 0.035, 1.02, '#4d535b', 0);
       for (const s of [-1, 1]) wallBox(B, FRONT, hw, hd, u + s * (bw / 2 + 0.15), y0 + 1.05, 0.05, 0.06, 1.02, 0.52, '#4d535b', 0);
-      windowUnit(ctx, FRONT, hw, hd, u, y0 + 0.2, bw - 0.4, 2.0, { frame, glass, lit: r() < litP, tall: true });
+      const roll = r(), lit = roll < litP;
+      windowUnit(ctx, FRONT, hw, hd, u, y0 + 0.2, bw - 0.4, 2.0, { frame, glass, lit: lit || roll < litP + EXTRA_LIT, quiet: !lit, tall: true });
     }
   }
   // pent eaves between floors (a dark little roof over each floor)

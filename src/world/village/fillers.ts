@@ -216,6 +216,7 @@ function coinParking(ctx: Ctx, atlas: SignAtlas, r: () => number, W: number, D: 
   B.box(W / 2 - 0.4, 2.2, -D / 2 + 0.4, 0.1, 4.4, 0.1, '#5a5e64', { ao: 0 });
   B.box(W / 2 - 0.8, 4.35, -D / 2 + 0.4, 0.9, 0.08, 0.12, '#5a5e64', { ao: 0 });
   ctx.litB.box(W / 2 - 1.15, 4.27, -D / 2 + 0.4, 0.5, 0.06, 0.2, '#ffffff', { ao: 0 });
+  ctx.glow.push({ x: W / 2 - 1.15, y: 0, z: -D / 2 + 0.4, h: 4.2, r: Math.min(5, 2 + W * 0.5), color: '#e8f2ff', k: 0.8 });
   chainFence(B, -W / 2 + 0.2, -D / 2 + 0.15, W / 2 - 0.2, -D / 2 + 0.15);
   chainFence(B, -W / 2 + 0.15, -D / 2 + 0.2, -W / 2 + 0.15, D / 2 - 1.2);
   chainFence(B, W / 2 - 0.15, -D / 2 + 0.2, W / 2 - 0.15, D / 2 - 1.6);
@@ -246,6 +247,7 @@ function yatai(ctx: Ctx, atlas: SignAtlas, r: () => number, W: number, D: number
     for (let s = 0; s < 4; s++) B.box(x - 0.9 + s * 0.6, 2.18, z + 0.63, 0.56, 0.42, 0.02, s % 2 ? '#a82a24' : '#b8322a', { ao: 0 });
     for (const s of [-1, 1]) {
       ctx.litA.frustum(x + s * 1.15, 1.85, z + 0.68, 0.17, 0.17, 0.42, 8, '#e0402a', { ao: 0 });
+      ctx.glow.push({ x: x + s * 1.15, y: 0, z: z + 0.9, h: 1.85, r: 2.8, color: '#ff8a5a', k: 0.8 });
       B.box(x + s * 1.15, 2.1, z + 0.68, 0.02, 0.1, 0.02, '#2a1a18', { ao: 0 });
     }
     board(ctx, atlas.get('yataiSign'), x, 2.85, z + 0.62, 1.4, 0.35, '#5a3a24', false);
@@ -388,6 +390,7 @@ function hokora(ctx: Ctx, r: () => number, W: number, D: number, plant: (lx: num
     B.box(lx, 0.1, z + 0.4, 0.34, 0.2, 0.34, '#a8a49a', { ao: 0.1 });
     B.box(lx, 0.45, z + 0.4, 0.12, 0.5, 0.12, '#a8a49a', { ao: 0 });
     ctx.litA.box(lx, 0.8, z + 0.4, 0.24, 0.2, 0.24, '#f4e8c8', { ao: 0 });
+    ctx.glow.push({ x: lx, y: 0, z: z + 0.4, h: 0.8, r: 2.4, color: '#ffd890', k: 0.7 });
     B.frustum(lx, 0.9, z + 0.4, 0.22, 0.03, 0.18, 4, '#a8a49a', { rotate: 0.785 });
   }
   B.cable([[-0.4, 1.32, z + 0.33], [0, 1.25, z + 0.33], [0.4, 1.32, z + 0.33]], 0.03, '#d8c890');

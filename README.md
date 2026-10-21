@@ -30,7 +30,9 @@ never a void. Up close the crossing has its own details (`src/worlds/ekimae/deta
 manholes and patched asphalt, a red postbox, a green phone, a notice board, nobori flags and red
 lanterns at the izakaya, a delivery scooter, pigeons, a cat, lamp banners and utility cabinets. The crossing has working traffic signals (`src/world/signals.ts`): the main street and the cross street take turns
 (green, yellow, all-red). Cars on both streets stop at the line on red, queue behind each other without ever
-overlapping, and wait while the junction is still taken (`src/world/traffic.ts`, tested in `tests/traffic.test.ts`). At night every lamp, lit shop front, konbini and vending machine throws a pool of light on the ground and the six
+overlapping, and wait while the junction is still taken (`src/world/traffic.ts`, tested in `tests/traffic.test.ts`). At night every lamp (street, car park, school, petrol station, expressway, underpass, stall and shrine lanterns), lit shop
+front, konbini and vending machine throws a pool of light on the ground; the streets that had no lamps (the cross street, the
+lanes, the frontage road, the ends of the main street, the back lanes between their old lamps) now have them; more windows are lit and the six
 nearest the camera are real lights (`src/world/nightglow.ts`); neon blade signs glow in their own colours. **The player** (`src/player/player.ts`): in Ekimae Crossing you are the schoolgirl in seifuku
 (`assets/core/characters/seifuku.glb`). W A S D walk, Shift runs, a drag turns the camera, which follows her. The model
 is rigged but has no animations, so she is animated bone by bone: idle, walk and run, blended by her speed, with the

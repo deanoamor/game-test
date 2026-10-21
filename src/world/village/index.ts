@@ -1,7 +1,7 @@
 import { Color, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import { GeoBuilder, type V3 } from '../../util/builder';
 import { pick, rng, yieldUI } from '../../util/rng';
-import { EXPRESSWAY, IC_RAMP, PADDY, PLATFORMS, POND, STAIRS, TERRACES, WATER_Y, heightAt, rampY, roadNear } from '../config';
+import { EXPRESSWAY, IC_RAMP, PADDY, PLATFORMS, POND, STAIRS, TERRACES, TOWN, WATER_Y, getRoad, heightAt, inTown, rampY, roadNear } from '../config';
 import type { TreeField } from '../forest';
 import { raiseSkyline } from '../skyline';
 import type { SignAtlas } from '../signs';
@@ -469,11 +469,15 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
   for (let i = 0; i < 7; i++) wireSpan(at(lines[0][i].x), [lines[0][i].w.power[1], lines[0][i].w.phone[0]], [lines[1][Math.min(i, lines[1].length - 1)].w.power[1], lines[1][Math.min(i, lines[1].length - 1)].w.phone[1]], 0.6);
   for (let i = 0; i < 9; i += 2) wireSpan(at(lines[0][i].x), [lines[0][i].w.phone[1]], [lines[2][Math.min(i, lines[2].length - 1)].w.phone[0]], 1.2, 0.02);
 
+  // every street lamp is remembered, so the lamps added for the streets that had none keep their distance
+  const lampPts: [number, number][] = [];
+  const dLamp = (x: number, y: number, z: number) => { doubleLamp(at(x), x, y, z); lampPts.push([x, z]); };
+  const cLamp = (x: number, y: number, z: number) => { classicLamp(at(x), x, y, z); lampPts.push([x, z]); };
   // lamps, guard pipes, hydrants, cones, vending machines, bikes and pots on the pavements
   const curbN = nIn - 0.4, curbS = sIn + 0.4;
   for (const x of [-112, -92, -70, -44, -24, 24, 44, 68, 92, 112]) {
-    doubleLamp(at(x), x + 6, SW, curbN);
-    doubleLamp(at(x), x - 5, SW, curbS);
+    dLamp(x + 6, SW, curbN);
+    dLamp(x - 5, SW, curbS);
     take(x + 6, curbN, 0.5); take(x - 5, curbS, 0.5);
   }
   for (const [a, b] of [[-108, -66], [-58, -9], [9, 58], [66, 108]]) {
@@ -539,8 +543,41 @@ function streets(at: (x: number) => Ctx, atlas: SignAtlas, r: () => number, tree
   }
   parkedVehicle(at(-12), 'kei', '#f4f4ee', -36.0, Y_N + 0.05, BACK_N + 0.6, 180);
   // the back lanes: lamps, a mirror, a vending machine by a tiled wall, cones
-  for (const x of [-90, -40, 16, 44, 90]) classicLamp(at(x), x, heightAt(x, BACK_N - BACK_HALF - 0.4) + 0.05, BACK_N - BACK_HALF - 0.4);
-  for (const x of [-88, -36, 18, 70]) classicLamp(at(x), x, heightAt(x, BACK_S + BACK_HALF + 0.4) + 0.05, BACK_S + BACK_HALF + 0.4);
+  for (const x of [-90, -40, 16, 44, 90]) cLamp(x, heightAt(x, BACK_N - BACK_HALF - 0.4) + 0.05, BACK_N - BACK_HALF - 0.4);
+  for (const x of [-88, -36, 18, 70]) cLamp(x, heightAt(x, BACK_S + BACK_HALF + 0.4) + 0.05, BACK_S + BACK_HALF + 0.4);
+  // and lamps along the streets that had none: the cross street, the two lanes, the frontage road, the back lanes in
+  // between their old lamps, and the main street past the ends of the town. Every ~13 m, alternating sides, never on a
+  // road, in front of a building, on top of something else, or close to another lamp. (They throw no dice: the town
+  // stays as it was.)
+  const roadLamps = (name: string, every: number, off: number, keep: (x: number, z: number) => boolean = () => true) => {
+    const R = getRoad(name);
+    let acc = every * 0.5, side = 1;
+    for (let i = 1; i < R.len - 1; i++) {
+      acc += Math.hypot(R.x[i] - R.x[i - 1], R.z[i] - R.z[i - 1]);
+      if (acc < every) continue;
+      const tx = R.x[i + 1] - R.x[i - 1], tz = R.z[i + 1] - R.z[i - 1], l = Math.hypot(tx, tz) || 1;
+      const x = R.x[i] + (-tz / l) * off * side, z = R.z[i] + (tx / l) * off * side;
+      acc = 0;
+      side = -side;
+      if (!keep(x, z)) continue;
+      const rd = roadNear(x, z, (n) => n !== name);
+      if (rd.d < rd.width / 2 + 0.8) continue;
+      if (nearBuilding(x, z, 0.7) || lampPts.some(([a, b]) => Math.hypot(a - x, b - z) < 7) || taken.some((q) => Math.hypot(q.x - x, q.z - z) < q.r + 0.5)) continue;
+      // on the cross street's raised pavements between the terraces the lamp stands on the pavement
+      const onWalk = name === 'cross' && inTown(x, z) && Math.abs(x) < 6.2 && Math.abs(x) > 3.3;
+      cLamp(x, onWalk ? rampY(z) + 0.17 : heightAt(x, z) + 0.05, z);
+      take(x, z, 0.3);
+    }
+  };
+  // (the crossing itself has its own poles and signals, and the back lanes' junctions their signs and mirrors)
+  const clear = (x: number, z: number) => !(Math.abs(x) < 11 && Math.abs(z - MAIN_Z) < 12) && !(Math.abs(x) < 11 && (Math.abs(z - BACK_N) < 5 || Math.abs(z - BACK_S) < 5));
+  roadLamps('cross', 13, 5, clear);
+  roadLamps('west lane', 15, 3.3);
+  roadLamps('east lane', 15, 3.3);
+  roadLamps('frontage', 17, 4.8, (x, z) => !(Math.abs(x) < 10) && Math.abs(z - 127) < 20);
+  roadLamps('main', 15, 5.2, (x) => !inTown(x, MAIN_Z) || x < TOWN.x0 + 1 || x > TOWN.x1 - 1);
+  roadLamps('back north', 22, 3.4, (x) => Math.abs(x) > 12);
+  roadLamps('back south', 22, 3.4, (x) => Math.abs(x) > 12);
   vendingMachine(at(-24), atlas, -23.8, Y_N + RAISE + 0.02, BACK_N - BACK_HALF - 0.9, 0, 'vendRed');
   bins(at(-24), -22.9, Y_N + RAISE + 0.02, BACK_N - BACK_HALF - 0.9);
   for (const x of [-48, 30]) for (let k = 0; k < 2; k++) cone(at(x), x + k * 0.9, Y_S + 0.05, BACK_S - 0.8);

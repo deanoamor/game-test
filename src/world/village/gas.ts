@@ -52,7 +52,11 @@ export function buildGasStation(at: (x: number) => Ctx, atlas: SignAtlas, r: () 
     boardZ(ctx, atlas.get('gasBrand'), kx, y + ch + 0.45, kz + s * (cd / 2 + 0.05), 3.4, 0.85, s);
     B.box(kx + s * (cw / 2 + 0.02), y + ch + 0.42, kz, 0.04, 0.82, cd, '#e8501e', { ao: 0 });
   }
-  for (let i = 0; i < 4; i++) for (let k = 0; k < 2; k++) ctx.litB.box(kx - 7.5 + i * 5, y + ch - 0.02, kz - 2.6 + k * 5.2, 3.2, 0.04, 1.4, '#ffffff', { ao: 0 });
+  for (let i = 0; i < 4; i++) for (let k = 0; k < 2; k++) {
+    ctx.litB.box(kx - 7.5 + i * 5, y + ch - 0.02, kz - 2.6 + k * 5.2, 3.2, 0.04, 1.4, '#ffffff', { ao: 0 });
+    // the canopy lights the forecourt under it
+    ctx.glow.push({ x: kx - 7.5 + i * 5, y, z: kz - 2.6 + k * 5.2, h: ch, r: 5.5, color: '#f4f8ff', k: 0.8 });
+  }
   // three pump islands along the driving direction, each with two dispensers
   for (const ix of [-55.5, -48.5, -41.5]) {
     B.box(ix, y + 0.1, kz, 1.3, 0.2, 7.0, '#d8d4c8', { ao: 0.1 });
@@ -130,6 +134,7 @@ export function buildGasStation(at: (x: number) => Ctx, atlas: SignAtlas, r: () 
   for (const lx of [-62.5, -35.5]) {
     B.box(lx, y + 3, G0.z0 + 0.6, 0.15, 6, 0.15, '#8a9096', { ao: 0 });
     ctx.litB.box(lx, y + 6.05, G0.z0 + 1.0, 0.4, 0.12, 0.8, '#ffffff', { ao: 0 });
+    ctx.glow.push({ x: lx, y, z: G0.z0 + 1.0, h: 6, r: 7.5, color: '#f4f8ff', k: 0.9 });
   }
   // turn the design so its road side (-z) faces the road on the +x side of the lot, and move it there
   const yaw = -90, a = (yaw * Math.PI) / 180, cs = Math.cos(a), sn = Math.sin(a);
