@@ -210,7 +210,8 @@ async function main() {
     last = now;
     if (playing) applyHour(hour + (dt / dayLength) * 24);
     if (player) {
-      player.update(dt, drone.yaw);
+      // (screenshots hold her still: tests pose her by hand)
+      player.update(params.has('shot') ? 0 : dt, drone.yaw);
       if (drone.following) drone.follow(player.pos.x, player.pos.z);
     }
     drone.update(dt);

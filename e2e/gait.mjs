@@ -2,6 +2,7 @@ import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 // A strip of frames of the player walking and running, seen from the side (start the dev server first; OUT=dir).
 const OUT = process.env.OUT || 'e2e/out';
+const VIEW = +(process.env.VIEW || 0); // the camera's turn: 0 from the side, 90 from the front (she walks toward +x)
 fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 420, height: 420 } });
@@ -17,17 +18,17 @@ for (const [mode, keys] of [['walk', ['KeyD']], ['run', ['KeyD', 'ShiftLeft']]])
     for (let i = 0; i < 60; i++) p.update(1 / 60, 0);
   }, keys);
   for (let f = 0; f < 8; f++) {
-    await page.evaluate(() => {
+    await page.evaluate((view) => {
       const g = window.__game, p = g.player;
       for (let i = 0; i < 5; i++) p.update(1 / 60, 0);
       g.drone.following = false;
       g.drone.clearance = false;
-      g.drone.setView(p.pos.x, p.pos.z, 0, 8, 4.2);
+      g.drone.setView(p.pos.x, p.pos.z, view, 8, 4.2);
       g.drone.target.y = p.pos.y + 0.75;
       g.drone.camera.lookAt(g.drone.target);
-    });
+    }, VIEW);
     await page.waitForTimeout(250);
-    await page.screenshot({ path: `${OUT}/gait-${mode}-${f}.png`, clip: { x: 110, y: 60, width: 200, height: 330 } });
+    await page.screenshot({ path: `${OUT}/gait-${mode}-${VIEW}-${f}.png`, clip: { x: 110, y: 60, width: 200, height: 330 } });
   }
 }
 await browser.close();
