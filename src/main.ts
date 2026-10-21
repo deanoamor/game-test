@@ -203,6 +203,7 @@ async function main() {
     water.uniforms.uTime.value += dt;
     clouds.step(dt);
     if (!params.has('shot')) signals.step(dt);
+    traffic.setNight(light.state.night);
     traffic.step(params.has('shot') ? 0 : dt);
     sky.update(drone.camera, light.state.sky);
     if (light.shadowDirty) { renderer.shadowMap.needsUpdate = true; light.shadowDirty = false; }

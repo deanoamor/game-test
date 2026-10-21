@@ -1,8 +1,8 @@
-import { Color, Group, InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, Quaternion, Vector3 } from 'three';
+import { AdditiveBlending, CanvasTexture, Color, Group, InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, Quaternion, Vector3 } from 'three';
 import { pick, rng } from '../util/rng';
 import { EXPRESSWAY, getRoad } from './config';
 import type { SignalGroup, Signals } from './signals';
-import { buildVehicle, type VehicleKind } from './vehicles';
+import { buildVehicle, vehicleLamps, type VehicleKind } from './vehicles';
 
 /**
  * Cars, mini trucks and vans in the town (along the main street and the cross street, keeping left as in Japan), and
@@ -25,7 +25,7 @@ interface Lane {
   stop?: number;
   box?: [number, number];
 }
-interface Car { lane: Lane; s: number; v: number; cruise: number; kind: VehicleKind; index: number; len: number; wid: number; vNext: number }
+interface Car { lane: Lane; s: number; v: number; cruise: number; kind: VehicleKind; index: number; len: number; wid: number; vNext: number; brake: number }
 
 /** The crossing: the stop lines frame it, the junction is where the two streets overlap. */
 const STOP_RECT = { x0: -7.2, x1: 7.2, z0: 36.3, z1: 51.7 };
@@ -73,6 +73,14 @@ function markCrossing(l: Lane, group: SignalGroup) {
 export class Traffic {
   group = new Group();
   private meshes = new Map<VehicleKind, InstancedMesh>();
+  // the lamps: head lamps and tail lamps of each kind (same instances as the bodies), and the beams on the road
+  private heads = new Map<VehicleKind, InstancedMesh>();
+  private tails = new Map<VehicleKind, InstancedMesh>();
+  private headMat = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+  private tailMat = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+  private beams: InstancedMesh | null = null;
+  private beamMat: MeshBasicMaterial | null = null;
+  private tc = new Color();
   private cars: Car[] = [];
   private m = new Matrix4();
   private q = new Quaternion();
@@ -123,6 +131,14 @@ export class Traffic {
       mesh.name = `Traffic ${kind}`;
       this.meshes.set(kind, mesh);
       this.group.add(mesh);
+      for (const [which, map, lm] of [['head', this.heads, this.headMat], ['tail', this.tails, this.tailMat]] as const) {
+        const lamps = new InstancedMesh(vehicleLamps(kind, which).toGeometry(), lm, n);
+        lamps.frustumCulled = false;
+        lamps.name = `Traffic ${kind} ${which} lamps`;
+        if (which === 'tail') for (let i = 0; i < n; i++) lamps.setColorAt(i, this.tc.setScalar(1));
+        map.set(kind, lamps);
+        this.group.add(lamps);
+      }
     }
     const used = new Map<VehicleKind, number>();
     for (const [lane, kinds, [v0, v1]] of plan) {
@@ -133,7 +149,7 @@ export class Traffic {
         used.set(kind, index + 1);
         const [len, wid] = Traffic.SIZE[kind] ?? [4.4, 2];
         const cruise = v0 + r() * (v1 - v0);
-        this.cars.push({ lane, s: step * (k + 0.3 * r()), v: cruise, cruise, kind, index, len, wid, vNext: cruise });
+        this.cars.push({ lane, s: step * (k + 0.3 * r()), v: cruise, cruise, kind, index, len, wid, vNext: cruise, brake: 0 });
         const mesh = this.meshes.get(kind)!;
         mesh.setColorAt(index, new Color(kind === 'kei' ? pick(r, ['#f4f4ee', '#f4f4ee', '#e8e8e8', '#d8e4f0']) : pick(r, paints)));
       });
@@ -143,12 +159,41 @@ export class Traffic {
     this.shadows.frustumCulled = false;
     this.shadows.name = 'Traffic shadows';
     this.group.add(this.shadows);
+    // the head lamps' beams on the road ahead (a soft elongated patch, added to what is below)
+    if (typeof document !== 'undefined') {
+      const c = document.createElement('canvas');
+      c.width = 64; c.height = 128;
+      const g = c.getContext('2d')!;
+      const grd = g.createRadialGradient(32, 112, 4, 32, 90, 90);
+      grd.addColorStop(0, 'rgba(255,255,255,0.9)');
+      grd.addColorStop(0.5, 'rgba(255,255,255,0.3)');
+      grd.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 64, 128);
+      this.beamMat = new MeshBasicMaterial({ map: new CanvasTexture(c), color: '#fff0cc', transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 });
+      // the texture's bottom edge (near the car) at the plane's -x end, its far edge at +x
+      const geo = new PlaneGeometry(1, 1).rotateZ(-Math.PI / 2).rotateX(-Math.PI / 2);
+      this.beams = new InstancedMesh(geo, this.beamMat, this.cars.length);
+      this.beams.frustumCulled = false;
+      this.beams.name = 'Traffic beams';
+      this.group.add(this.beams);
+    }
     this.step(0);
   }
 
   /** Whether a car of the other street is in the junction now. */
   private junctionTaken(g: SignalGroup) {
     return this.cars.some((c) => c.lane.group && c.lane.group !== g && c.lane.box && c.s + c.len / 2 > c.lane.box[0] && c.s - c.len / 2 < c.lane.box[1]);
+  }
+
+  /** Lamps on at night: 0 by day, 1 in the dark. */
+  setNight(n: number) {
+    this.headMat.color.setScalar(0.35 + n * 2.0);
+    this.tailMat.color.setScalar(0.4 + n * 0.9);
+    if (this.beamMat) {
+      this.beamMat.opacity = n * 0.55;
+      this.beams!.visible = n > 0.02;
+    }
   }
 
   step(dt: number) {
@@ -180,6 +225,10 @@ export class Traffic {
       c.vNext = v;
     }
     this.cars.forEach((c, n) => {
+      // brake lights while slowing down or standing still
+      const braking = c.vNext < c.v - 0.02 || c.vNext < 0.3 ? 1 : 0;
+      c.brake += (braking - c.brake) * Math.min(1, dt * 8);
+      if (dt === 0) c.brake = braking;
       c.v = c.vNext;
       const L = c.lane.path.L;
       c.s = (((c.s + c.v * dt) % L) + L) % L;
@@ -188,10 +237,22 @@ export class Traffic {
       this.q.setFromAxisAngle(this.up, yaw).multiply(this.qp.setFromAxisAngle(this.side, Math.atan(p.slope)));
       this.m.compose(this.v3.set(p.x, p.y, p.z), this.q, this.one);
       this.meshes.get(c.kind)!.setMatrixAt(c.index, this.m);
+      this.heads.get(c.kind)!.setMatrixAt(c.index, this.m);
+      const tail = this.tails.get(c.kind)!;
+      tail.setMatrixAt(c.index, this.m);
+      tail.setColorAt(c.index, this.tc.setScalar(0.8 + c.brake * 1.6));
+      if (this.beams) {
+        const ahead = c.len / 2 + 3.6;
+        this.sm.compose(this.v3.set(p.x + p.tx * ahead, c.lane.yOff ? p.y - 0.02 : p.y + 0.02, p.z + p.tz * ahead), this.qp.setFromAxisAngle(this.up, yaw), this.size.set(7.2, 1, c.wid * 1.5));
+        this.beams.setMatrixAt(n, this.sm);
+      }
       this.sm.compose(this.v3.set(p.x, c.lane.yOff ? p.y - 0.01 : p.y + 0.03, p.z), this.qp.setFromAxisAngle(this.up, yaw).multiply(this.sq), this.size.set(c.len, c.wid, 1));
       this.shadows.setMatrixAt(n, this.sm);
     });
     this.meshes.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
+    this.heads.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
+    this.tails.forEach((m) => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+    if (this.beams) this.beams.instanceMatrix.needsUpdate = true;
     if (this.shadows) this.shadows.instanceMatrix.needsUpdate = true;
   }
 }

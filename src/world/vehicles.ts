@@ -84,3 +84,20 @@ export function buildVehicle(kind: VehicleKind, body = '#ffffff'): GeoBuilder {
   }
   return b;
 }
+
+/** Where a vehicle's lamps are, on its front and back faces (it faces +x): [x, y, z, height, width]. */
+export const LAMPS: Record<VehicleKind, { head: [number, number, number, number, number][]; tail: [number, number, number, number, number][] }> = {
+  car: { head: [[2.085, 0.62, 0.55, 0.14, 0.34], [2.085, 0.62, -0.55, 0.14, 0.34]], tail: [[-2.085, 0.66, 0.55, 0.14, 0.34], [-2.085, 0.66, -0.55, 0.14, 0.34]] },
+  van: { head: [[2.285, 0.7, 0.6, 0.16, 0.36], [2.285, 0.7, -0.6, 0.16, 0.36]], tail: [[-2.285, 0.9, 0.6, 0.2, 0.3], [-2.285, 0.9, -0.6, 0.2, 0.3]] },
+  kei: { head: [[1.685, 0.7, 0.5, 0.14, 0.3], [1.685, 0.7, -0.5, 0.14, 0.3]], tail: [[-1.965, 0.8, 0.52, 0.14, 0.2], [-1.965, 0.8, -0.52, 0.14, 0.2]] },
+  truck: { head: [[2.945, 0.7, 0.62, 0.16, 0.36], [2.945, 0.7, -0.62, 0.16, 0.36]], tail: [[-2.805, 0.8, 0.8, 0.22, 0.24], [-2.805, 0.8, -0.8, 0.22, 0.24]] },
+  keivan: { head: [[1.735, 0.7, 0.5, 0.16, 0.3], [1.735, 0.7, -0.5, 0.16, 0.3]], tail: [[-1.735, 0.9, 0.55, 0.3, 0.16], [-1.735, 0.9, -0.55, 0.3, 0.16]] },
+  bus: { head: [[3.31, 0.78, 0.85, 0.18, 0.4], [3.31, 0.78, -0.85, 0.18, 0.4]], tail: [[-3.31, 0.85, 0.95, 0.26, 0.2], [-3.31, 0.85, -0.95, 0.26, 0.2]] },
+};
+
+/** The glowing faces of a vehicle's head or tail lamps, just proud of the body. */
+export function vehicleLamps(kind: VehicleKind, which: 'head' | 'tail'): GeoBuilder {
+  const b = new GeoBuilder();
+  for (const [x, y, z, h, w] of LAMPS[kind][which]) b.box(x + Math.sign(x) * 0.02, y, z, 0.03, h, w, which === 'head' ? '#fff4d6' : '#ff2414', { ao: 0 });
+  return b;
+}
