@@ -1,7 +1,7 @@
 import { MathUtils, PerspectiveCamera, Vector3 } from 'three';
 import { clamp } from '../util/rng';
 import { HALF, heightAt, type Place } from '../world/config';
-import { skylineAround } from '../world/skyline';
+import { skylineSmooth } from '../world/skyline';
 
 /**
  * The drone: a camera that floats above a point on the ground. Drag to slide the map, right-drag to turn and tilt,
@@ -180,9 +180,11 @@ export class Drone {
     const pos = new Vector3(Math.sin(this.yaw) * cp, Math.sin(this.pitch), Math.cos(this.yaw) * cp).multiplyScalar(this.dist).add(this.target);
     // stay above the ground, the roofs and the mountains, but rise and settle smoothly: the roofs below change in
     // steps as the drone moves, and following them at once made the view jolt up and down
-    const ground = Math.max(heightAt(pos.x, pos.z), skylineAround(pos.x, pos.z, 8));
+    const px = pos.x, pz = pos.z, G = 6;
+    const land = (heightAt(px, pz) * 2 + heightAt(px + G, pz) + heightAt(px - G, pz) + heightAt(px, pz + G) + heightAt(px, pz - G)) / 6;
+    const ground = Math.max(land, skylineSmooth(px, pz));
     const need = Math.max(0, ground + 3 - pos.y);
-    this.lift += (need - this.lift) * (1 - Math.exp(-dt * (need > this.lift ? 4 : 1.5)));
+    this.lift += (need - this.lift) * (1 - Math.exp(-dt * 2.5));
     if (dt === 0) this.lift = need;
     pos.y += this.lift;
     this.camera.position.copy(pos);

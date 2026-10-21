@@ -22,6 +22,20 @@ const r = await page.evaluate(() => {
     }
     out[name] = { maxStep: +maxStep.toFixed(3), maxJerk: +maxJerk.toFixed(3) };
   }
+  // turning round on the spot, at a few points
+  for (const [name, x, z] of [['turn-crossing', 0, 44], ['turn-north', -20, 30], ['turn-south', 12, 58]]) {
+    d.setView(x, z, 0, 40, 18);
+    let prev = d.camera.position.y, prevD = 0, maxStep = 0, maxJerk = 0;
+    for (let i = 0; i <= 600; i++) {
+      d.yawGoal = (i / 600) * Math.PI * 2;
+      d.update(1 / 60);
+      const y = d.camera.position.y, dy = y - prev;
+      maxStep = Math.max(maxStep, Math.abs(dy));
+      if (i > 1) maxJerk = Math.max(maxJerk, Math.abs(dy - prevD));
+      prev = y; prevD = dy;
+    }
+    out[name] = { maxStep: +maxStep.toFixed(3), maxJerk: +maxJerk.toFixed(3) };
+  }
   return out;
 });
 console.log(JSON.stringify(r));
