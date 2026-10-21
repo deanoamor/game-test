@@ -102,6 +102,8 @@ export class Drone {
   maxDist = 520;
   /** Pressing against the barrier, for the exits: the point the drone would have gone to. */
   pushed = { x: 0, z: 0, t: 0 };
+  /** How far the drone is lifted to clear what is below it (eased). */
+  private lift = 0;
 
   private clampGoal() {
     const b = this.bounds;
@@ -168,15 +170,21 @@ export class Drone {
     this.dist += (this.distGoal - this.dist) * a;
     this.target.x += (this.goal.x - this.target.x) * a;
     this.target.z += (this.goal.z - this.target.z) * a;
-    const gy = heightAt(this.target.x, this.target.z);
-    this.target.y += (gy - this.target.y) * (1 - Math.exp(-dt * 6));
+    // the ground under the target, averaged over a few metres so the terrace steps and walls do not jerk the view
+    const tx = this.target.x, tz = this.target.z, R = 4;
+    const gy = (heightAt(tx, tz) * 2 + heightAt(tx + R, tz) + heightAt(tx - R, tz) + heightAt(tx, tz + R) + heightAt(tx, tz - R)) / 6;
+    this.target.y += (gy - this.target.y) * (1 - Math.exp(-dt * 3));
     if (dt === 0) this.target.y = gy;
 
     const cp = Math.cos(this.pitch);
     const pos = new Vector3(Math.sin(this.yaw) * cp, Math.sin(this.pitch), Math.cos(this.yaw) * cp).multiplyScalar(this.dist).add(this.target);
-    // stay above the ground and out of the mountains
-    const ground = Math.max(heightAt(pos.x, pos.z), skylineAround(pos.x, pos.z, 6));
-    if (pos.y < ground + 3) pos.y = ground + 3;
+    // stay above the ground, the roofs and the mountains, but rise and settle smoothly: the roofs below change in
+    // steps as the drone moves, and following them at once made the view jolt up and down
+    const ground = Math.max(heightAt(pos.x, pos.z), skylineAround(pos.x, pos.z, 8));
+    const need = Math.max(0, ground + 3 - pos.y);
+    this.lift += (need - this.lift) * (1 - Math.exp(-dt * (need > this.lift ? 4 : 1.5)));
+    if (dt === 0) this.lift = need;
+    pos.y += this.lift;
     this.camera.position.copy(pos);
     this.camera.lookAt(this.target);
   }
