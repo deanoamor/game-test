@@ -1,8 +1,8 @@
-import { AdditiveBlending, CanvasTexture, Color, Group, InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, Quaternion, Vector3 } from 'three';
+import { AdditiveBlending, BufferAttribute, BufferGeometry, CanvasTexture, Color, DynamicDrawUsage, Group, InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, Points, PointsMaterial, Quaternion, Vector3 } from 'three';
 import { pick, rng } from '../util/rng';
 import { EXPRESSWAY, getRoad } from './config';
 import type { SignalGroup, Signals } from './signals';
-import { buildVehicle, vehicleLamps, type VehicleKind } from './vehicles';
+import { LAMPS, buildVehicle, vehicleLamps, type VehicleKind } from './vehicles';
 
 /**
  * Cars, mini trucks and vans in the town (along the main street and the cross street, keeping left as in Japan), and
@@ -80,6 +80,11 @@ export class Traffic {
   private tailMat = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
   private beams: InstancedMesh | null = null;
   private beamMat: MeshBasicMaterial | null = null;
+  private glows: InstancedMesh | null = null;
+  private glowMat: MeshBasicMaterial | null = null;
+  private haloGeo: BufferGeometry | null = null;
+  private haloMat: PointsMaterial | null = null;
+  private lampV = new Vector3();
   private tc = new Color();
   private cars: Car[] = [];
   private m = new Matrix4();
@@ -159,24 +164,31 @@ export class Traffic {
     this.shadows.frustumCulled = false;
     this.shadows.name = 'Traffic shadows';
     this.group.add(this.shadows);
-    // the head lamps' beams on the road ahead (a soft elongated patch, added to what is below)
+    // the light the lamps throw: two soft cones on the road ahead, a faint red glow behind, and a halo round each lamp
     if (typeof document !== 'undefined') {
-      const c = document.createElement('canvas');
-      c.width = 64; c.height = 128;
-      const g = c.getContext('2d')!;
-      const grd = g.createRadialGradient(32, 112, 4, 32, 90, 90);
-      grd.addColorStop(0, 'rgba(255,255,255,0.9)');
-      grd.addColorStop(0.5, 'rgba(255,255,255,0.3)');
-      grd.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = grd;
-      g.fillRect(0, 0, 64, 128);
-      this.beamMat = new MeshBasicMaterial({ map: new CanvasTexture(c), color: '#fff0cc', transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 });
-      // the texture's bottom edge (near the car) at the plane's -x end, its far edge at +x
-      const geo = new PlaneGeometry(1, 1).rotateZ(-Math.PI / 2).rotateX(-Math.PI / 2);
-      this.beams = new InstancedMesh(geo, this.beamMat, this.cars.length);
-      this.beams.frustumCulled = false;
-      this.beams.name = 'Traffic beams';
-      this.group.add(this.beams);
+      const add = { transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false } as const;
+      this.beamMat = new MeshBasicMaterial({ ...add, map: beamTexture(), color: '#ffeccc', polygonOffset: true, polygonOffsetFactor: -3 });
+      // the texture's near edge (at the car) at the plane's -x end, its far edge at +x
+      const flat = () => new PlaneGeometry(1, 1).rotateZ(-Math.PI / 2).rotateX(-Math.PI / 2);
+      this.beams = new InstancedMesh(flat(), this.beamMat, this.cars.length);
+      this.glowMat = new MeshBasicMaterial({ ...add, map: roundTexture(), color: '#ff3a24', polygonOffset: true, polygonOffsetFactor: -3 });
+      this.glows = new InstancedMesh(flat(), this.glowMat, this.cars.length);
+      for (const [m, name] of [[this.beams, 'Traffic beams'], [this.glows, 'Traffic tail glow']] as const) {
+        m.frustumCulled = false;
+        m.name = name;
+        this.group.add(m);
+      }
+      for (let i = 0; i < this.cars.length; i++) this.glows.setColorAt(i, this.tc.setScalar(1));
+      // halos: a soft round sprite on every lamp, facing the camera
+      const nLamps = this.cars.length * 4;
+      this.haloGeo = new BufferGeometry();
+      this.haloGeo.setAttribute('position', new BufferAttribute(new Float32Array(nLamps * 3), 3).setUsage(DynamicDrawUsage));
+      this.haloGeo.setAttribute('color', new BufferAttribute(new Float32Array(nLamps * 3), 3).setUsage(DynamicDrawUsage));
+      this.haloMat = new PointsMaterial({ ...add, map: roundTexture(), vertexColors: true, size: 1.1, sizeAttenuation: true });
+      const halos = new Points(this.haloGeo, this.haloMat);
+      halos.frustumCulled = false;
+      halos.name = 'Traffic lamp halos';
+      this.group.add(halos);
     }
     this.step(0);
   }
@@ -191,8 +203,10 @@ export class Traffic {
     this.headMat.color.setScalar(0.35 + n * 2.0);
     this.tailMat.color.setScalar(0.4 + n * 0.9);
     if (this.beamMat) {
-      this.beamMat.opacity = n * 0.55;
-      this.beams!.visible = n > 0.02;
+      this.beamMat.opacity = n * 0.5;
+      this.glowMat!.opacity = n * 0.35;
+      this.haloMat!.opacity = n * 0.75;
+      this.beams!.visible = this.glows!.visible = n > 0.02;
     }
   }
 
@@ -242,9 +256,27 @@ export class Traffic {
       tail.setMatrixAt(c.index, this.m);
       tail.setColorAt(c.index, this.tc.setScalar(0.8 + c.brake * 1.6));
       if (this.beams) {
-        const ahead = c.len / 2 + 3.6;
-        this.sm.compose(this.v3.set(p.x + p.tx * ahead, c.lane.yOff ? p.y - 0.02 : p.y + 0.02, p.z + p.tz * ahead), this.qp.setFromAxisAngle(this.up, yaw), this.size.set(7.2, 1, c.wid * 1.5));
+        const gy = c.lane.yOff ? p.y - 0.02 : p.y + 0.02;
+        const ahead = c.len / 2 + 4.4;
+        this.sm.compose(this.v3.set(p.x + p.tx * ahead, gy, p.z + p.tz * ahead), this.qp.setFromAxisAngle(this.up, yaw), this.size.set(9, 1, c.wid * 2.0));
         this.beams.setMatrixAt(n, this.sm);
+        const behind = c.len / 2 + 0.6;
+        this.sm.compose(this.v3.set(p.x - p.tx * behind, gy, p.z - p.tz * behind), this.qp.setFromAxisAngle(this.up, yaw), this.size.set(2.6, 1, c.wid * 1.2));
+        this.glows!.setMatrixAt(n, this.sm);
+        this.glows!.setColorAt(n, this.tc.setScalar(0.5 + c.brake * 1.0));
+        // the halos, at the lamps as the car stands now
+        const P = this.haloGeo!.getAttribute('position') as BufferAttribute, C = this.haloGeo!.getAttribute('color') as BufferAttribute;
+        const lamps = LAMPS[c.kind];
+        let j = n * 4;
+        for (const [which, list] of [['head', lamps.head], ['tail', lamps.tail]] as const) {
+          for (const [lx, ly, lz] of list.slice(0, 2)) {
+            this.lampV.set(lx + Math.sign(lx) * 0.08, ly, lz).applyMatrix4(this.m);
+            P.setXYZ(j, this.lampV.x, this.lampV.y, this.lampV.z);
+            if (which === 'head') C.setXYZ(j, 1.0, 0.92, 0.75);
+            else { const b = 0.45 + c.brake * 0.55; C.setXYZ(j, b, b * 0.12, b * 0.06); }
+            j++;
+          }
+        }
       }
       this.sm.compose(this.v3.set(p.x, c.lane.yOff ? p.y - 0.01 : p.y + 0.03, p.z), this.qp.setFromAxisAngle(this.up, yaw).multiply(this.sq), this.size.set(c.len, c.wid, 1));
       this.shadows.setMatrixAt(n, this.sm);
@@ -252,7 +284,51 @@ export class Traffic {
     this.meshes.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
     this.heads.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
     this.tails.forEach((m) => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
-    if (this.beams) this.beams.instanceMatrix.needsUpdate = true;
+    if (this.beams) {
+      this.beams.instanceMatrix.needsUpdate = true;
+      this.glows!.instanceMatrix.needsUpdate = true;
+      if (this.glows!.instanceColor) this.glows!.instanceColor.needsUpdate = true;
+      this.haloGeo!.getAttribute('position').needsUpdate = true;
+      this.haloGeo!.getAttribute('color').needsUpdate = true;
+    }
     if (this.shadows) this.shadows.instanceMatrix.needsUpdate = true;
   }
+}
+
+/** Two soft cones of head-lamp light on the road, widening and fading with distance (near edge at the bottom). */
+function beamTexture() {
+  const W = 64, H = 128, c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d')!, img = g.createImageData(W, H);
+  for (let y = 0; y < H; y++) {
+    const v = 1 - y / H; // 0 at the car, 1 far ahead
+    const fade = Math.min(1, v / 0.06) * Math.pow(1 - v, 1.8);
+    const width = 0.07 + v * 0.3;
+    for (let x = 0; x < W; x++) {
+      const u = x / (W - 1);
+      let a = 0;
+      for (const cu of [0.32, 0.68]) a += Math.exp(-(((u - cu) / width) ** 2));
+      a = Math.min(1, a * 0.75) * fade;
+      const i = (y * W + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(a * 255);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return new CanvasTexture(c);
+}
+
+/** A soft round spot (a gaussian), for halos and glows. */
+function roundTexture() {
+  const N = 64, c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d')!, img = g.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const d = Math.hypot(x - N / 2 + 0.5, y - N / 2 + 0.5) / (N / 2);
+    const i = (y * N + x) * 4;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+    img.data[i + 3] = Math.round(Math.exp(-d * d * 5) * (1 - Math.min(1, d)) * 255);
+  }
+  g.putImageData(img, 0, 0);
+  return new CanvasTexture(c);
 }
