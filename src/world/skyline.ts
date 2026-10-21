@@ -28,7 +28,7 @@ function smoothField(): Float32Array {
   let f = new Float32Array(N * N);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     let m = 0;
-    for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) if (di * di + dj * dj <= 5) m = Math.max(m, at(tops, i + di, j + dj));
+    for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) if (di * di + dj * dj <= 2) m = Math.max(m, at(tops, i + di, j + dj));
     f[j * N + i] = m;
   }
   for (let pass = 0; pass < 2; pass++) {

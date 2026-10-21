@@ -7,6 +7,9 @@ import { skylineSmooth } from '../world/skyline';
  * The drone: a camera that floats above a point on the ground. Drag to slide the map, right-drag to turn and tilt,
  * wheel to go up and down, WASD / arrows to fly, Q/E to turn, R/F to tilt, Shift to go faster.
  */
+/** The most the camera backs off to clear a roof. */
+const MAX_STRETCH = 1.45;
+
 export class Drone {
   camera: PerspectiveCamera;
   /** the point on the ground the drone looks at (smoothed) */
@@ -106,8 +109,8 @@ export class Drone {
   maxDist = 520;
   /** Pressing against the barrier, for the exits: the point the drone would have gone to. */
   pushed = { x: 0, z: 0, t: 0 };
-  /** How far the drone is lifted to clear what is below it (eased). */
-  private lift = 0;
+  /** How much further than its distance the drone stands to clear the roofs (1: not at all; eased). */
+  private stretch = 1;
 
   private clampGoal() {
     const b = this.bounds;
@@ -198,10 +201,12 @@ export class Drone {
     const px = pos.x, pz = pos.z, G = 6;
     const land = (heightAt(px, pz) * 2 + heightAt(px + G, pz) + heightAt(px - G, pz) + heightAt(px, pz + G) + heightAt(px, pz - G)) / 6;
     const ground = Math.max(land, skylineSmooth(px, pz));
-    const need = this.clearance ? Math.max(0, ground + 3 - pos.y) : 0;
-    this.lift += (need - this.lift) * (1 - Math.exp(-dt * 2.5));
-    if (dt === 0) this.lift = need;
-    pos.y += this.lift;
+    // to clear a roof the camera backs off along its own line of sight (the same tilt, a little further away) rather
+    // than just going up, which tilted the picture down as it turned past a building
+    const up = pos.y - this.target.y;
+    const want = this.clearance && up > 0.5 ? Math.min(MAX_STRETCH, Math.max(1, (ground + 1.5 - this.target.y) / up)) : 1;
+    this.stretch += (want - this.stretch) * (dt > 0 ? 1 - Math.exp(-dt * 2.5) : 1);
+    pos.sub(this.target).multiplyScalar(this.stretch).add(this.target);
     this.camera.position.copy(pos);
     this.camera.lookAt(this.target);
   }
