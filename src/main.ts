@@ -77,17 +77,18 @@ async function main() {
   // the drivers: they stop for her (and the NPCs) on the road, and honk and shout at her if she stands in the way
   const angry: { x: number; y: number; z: number; text: string; t: number; el: HTMLElement }[] = [];
   if (stage.extra.traffic) {
-    const RAGE = ['おい！', 'どけ！', '邪魔だ！', '何してんだ！', 'いい加減にしろ！'];
+    const RAGE: [string, string][] = [['おい！', 'Hey!'], ['どけ！', 'Move!'], ['邪魔だ！', 'You are in the way!'], ['何してんだ！', 'What are you doing?!'], ['いい加減にしろ！', 'That is enough already!']];
     stage.extra.traffic.onHonk = (c) => {
       const lx = player?.pos.x ?? drone.target.x, lz = player?.pos.z ?? drone.target.z;
       const d = Math.hypot(c.x - lx, c.z - lz);
-      const text = RAGE[Math.min(c.n - 1, RAGE.length - 1)];
+      const [text, en] = RAGE[Math.min(c.n - 1, RAGE.length - 1)];
       sound.honk(d, c.kind, c.n);
       if (d < 40) {
         if (c.n > 1) sound.shout(text, d);
         const el = document.createElement('div');
         el.className = 'carTag';
-        el.textContent = `💢 ${text}`;
+        el.innerHTML = `💢 ${text}<span class="en"></span>`;
+        el.querySelector('.en')!.textContent = en;
         document.getElementById('hud')!.appendChild(el);
         angry.push({ x: c.x, y: c.y + 2.3, z: c.z, text, t: 1.8, el });
         while (angry.length > 3) angry.shift()!.el.remove();
@@ -246,7 +247,10 @@ async function main() {
     if (stage.extra.traffic) {
       const tb = stage.extra.traffic.blockers;
       tb.length = 0;
-      if (player) tb.push({ x: player.pos.x, y: player.pos.y, z: player.pos.z, r: 0.3 });
+      if (player) {
+        tb.push({ x: player.pos.x, y: player.pos.y, z: player.pos.z, r: 0.3 });
+        player.carBlockers = stage.extra.traffic.circlesNear(player.pos.x, player.pos.z, 12, player.pos.y);
+      }
       for (const n of stage.npcs) tb.push({ x: n.pos.x, y: n.pos.y, z: n.pos.z, r: 0.3 });
       for (let i = angry.length - 1; i >= 0; i--) {
         const a = angry[i];

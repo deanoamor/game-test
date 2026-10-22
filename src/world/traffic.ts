@@ -229,6 +229,22 @@ export class Traffic {
     return Math.min(1.4, sum * 0.9);
   }
 
+  /** The moving cars near a point as circles (a few along each car's length), for the player to bump into. `y`: her height
+   *  (a car on the road below a landing does not stop her). */
+  circlesNear(x: number, z: number, range: number, y: number): { x: number; z: number; r: number }[] {
+    const out: { x: number; z: number; r: number }[] = [];
+    for (const c of this.cars) {
+      const p = pointAt(c.lane, c.s);
+      if (Math.abs(p.y - y) > 1.6 || Math.hypot(p.x - x, p.z - z) > range + c.len / 2) continue;
+      const r = c.wid / 2, n = Math.max(1, Math.ceil((c.len - c.wid) / (r * 1.1)) + 1), half = (c.len - c.wid) / 2;
+      for (let i = 0; i < n; i++) {
+        const a = n === 1 ? 0 : -half + (2 * half * i) / (n - 1);
+        out.push({ x: p.x + p.tx * a, z: p.z + p.tz * a, r });
+      }
+    }
+    return out;
+  }
+
   step(dt: number) {
     const taken: Record<SignalGroup, boolean> = { main: this.junctionTaken('main'), cross: this.junctionTaken('cross') };
     // first decide every car's speed from where everyone is, then move them all

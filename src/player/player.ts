@@ -35,6 +35,8 @@ export class Player {
   frozen = false;
   /** Characters she cannot walk through (circles that move: the NPCs). */
   blockers: { x: number; z: number; r: number }[] = [];
+  /** The cars on the road round her (circles, set every frame): she cannot walk through them either. */
+  carBlockers: { x: number; z: number; r: number }[] = [];
   private keys = new Set<string>();
   private shadow: Mesh;
   private grid = new Map<number, Solid[]>();
@@ -148,7 +150,7 @@ export class Player {
       p.x = s.x + u * cs + v * sn;
       p.z = s.z - u * sn + v * cs;
     }
-    for (const c of this.blockers) {
+    for (const c of [...this.blockers, ...this.carBlockers]) {
       const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), min = c.r + RADIUS;
       if (d < min && d > 1e-6) { p.x = c.x + (dx / d) * min; p.z = c.z + (dz / d) * min; }
     }

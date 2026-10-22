@@ -45,6 +45,16 @@ await page.evaluate(() => { window.__game.player.teleport(-16, 38.6); __honksRes
 await frames(2);
 r = await run(30);
 ok('when she steps aside it is quiet again', r.held === 0, JSON.stringify(r));
+// she cannot walk through a moving car: put her in the middle of one, and she is pushed out of it
+await page.evaluate(() => {
+  const g = window.__game, t = g.traffic, c = t.cars[3];
+  const m = new g.scene.children[0].matrix.constructor(), p = new (g.player.pos.constructor)();
+  t.meshes.get(c.kind).getMatrixAt(c.index, m); p.setFromMatrixPosition(m);
+  g.player.teleport(p.x, p.z); g.player.pos.y = p.y; g.__carAt = [p.x, p.z];
+});
+await frames(3);
+const inside = await page.evaluate(() => { const g = window.__game, p = g.player; let worst = 1e9; for (const c of p.carBlockers) worst = Math.min(worst, Math.hypot(p.pos.x - c.x, p.pos.z - c.z) - c.r); return { worst: +worst.toFixed(2), n: p.carBlockers.length }; });
+ok('a moving car is solid for her', inside.n > 0 && inside.worst > 0.2, JSON.stringify(inside));
 ok('no page errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 await browser.close();
 process.exit(bad ? 1 : 0);
