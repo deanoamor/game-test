@@ -28,3 +28,28 @@ export const NURSE: NpcDef = {
     'Take care now. Drink something warm, and get some sleep tonight.',
   ],
 };
+
+/** The clerk of the Hoshi Mart, the konbini by the crossing. */
+export const CLERK: NpcDef = {
+  id: 'clerk',
+  name: 'Clerk Kenta',
+  jp: '店員 けんた',
+  role: 'Hoshi Mart',
+  model: 'konbini',
+  at: { x: -6, z: -2.5, yaw: 0 },
+  // a short stretch of the legs: out of the shop for a minute, to the lamp and back
+  route: [
+    { x: -6, z: -2.5, wait: 5 },
+    { x: -6, z: 2.5, wait: 4 },
+    { x: -2.5, z: 2.5, wait: 3 },
+    { x: -2.5, z: -2.5, wait: 4 },
+  ],
+  speed: 1.2,
+  greet: 'Irasshaimase!',
+  lines: [
+    'Irasshaimase! Welcome to Hoshi Mart!',
+    'I am Kenta. We are open all day and all night, right by the crossing.',
+    'Hot onigiri, fresh bento and warm drinks from the machine. The cream bread sells out before noon, so come early!',
+    'Thank you very much! Please come again!',
+  ],
+};
