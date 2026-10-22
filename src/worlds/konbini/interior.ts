@@ -383,6 +383,7 @@ export function buildShop(): InteriorBuild {
     solids,
     shadowHalf: 13,
     floor: () => 0,
+    surface: () => 'tile',
     update(night) {
       // a shop is lit all the time (it is a konbini): the light only follows the day a little
       for (const l of lights) l.intensity = 1.1 + 2.4 * night;

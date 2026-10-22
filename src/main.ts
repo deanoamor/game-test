@@ -5,6 +5,8 @@ import { Player } from './player/player';
 import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
+import { Sound } from './audio/sound';
+import { KONBINI } from './worlds/ekimae/home';
 import { buildIndoor } from './stages/indoor';
 import { buildOutdoor } from './stages/outdoor';
 import { areaOf, arrival, carriedHour, currentWorld, forgetCarried, keepArea } from './worlds';
@@ -60,13 +62,25 @@ async function main() {
     drone.clearance = false;
   }
 
+  // the sound: the ambience of the place, her steps, the voices (it starts at the first key or click)
+  const sound = new Sound(world.key === 'konbini' ? 'shop' : world.key === 'home' ? 'home' : 'town', !params.has('shot'));
+  if (KONBINI.door.x1 > KONBINI.door.x0) sound.chimeAt = { x: (KONBINI.door.x0 + KONBINI.door.x1) / 2, z: (KONBINI.door.z0 + KONBINI.door.z1) / 2 };
+  {
+    const btn = document.getElementById('sound') as HTMLButtonElement, vol = document.getElementById('vol') as HTMLInputElement;
+    const show = () => { btn.textContent = sound.muted || sound.volume === 0 ? '🔇 Sound' : '🔊 Sound'; vol.value = String(sound.volume); };
+    btn.onclick = () => sound.setMuted(!sound.muted);
+    vol.oninput = () => { sound.setVolume(Number(vol.value)); if (sound.muted) sound.setMuted(false); };
+    sound.onChange = show;
+    show();
+  }
+
   // NPCs: the player cannot walk through them, their name tags are in the HUD, and F talks to the one in reach
   let talk: TalkUI | null = null;
   if (player && stage.npcs.length) {
     const layer = document.getElementById('hud')!;
     player.blockers = stage.npcs.map((n) => n.blocker);
     for (const n of stage.npcs) layer.appendChild(n.label);
-    talk = new TalkUI(player, stage.npcs, layer);
+    talk = new TalkUI(player, stage.npcs, layer, sound);
   }
 
   progress(0.95, 'Drawing the map…');
@@ -188,6 +202,7 @@ async function main() {
 
   // ---- loop ----
   let last = performance.now();
+  let stepIdx = 0;
   let frames = 0;
   let manual = params.has('q');
   let autoClock = 0, autoFrames = 0, autoSteps = 0;
@@ -201,8 +216,22 @@ async function main() {
       player.update(params.has('shot') ? 0 : dt, drone.yaw);
       if (drone.following) drone.follow(player.pos.x, player.pos.z, player.pos.y);
     }
-    for (const n of stage.npcs) n.update(params.has('shot') ? 0 : dt, player?.pos);
+    for (const n of stage.npcs) {
+      const before = n.bubble;
+      n.update(params.has('shot') ? 0 : dt, player?.pos);
+      if (n.bubble && !before) sound.greet(n.def.id);
+    }
     drone.update(dt);
+    if (player) {
+      // her steps: one for each foot, as the stride comes round
+      const g = player.gait, idx = Math.floor(g.phase / Math.PI);
+      if (idx !== stepIdx && g.walkW > 0.35) {
+        const inRoom = stage.extra.home?.surface;
+        sound.step(inRoom ? inRoom(player.pos.x, player.pos.z) : player.surface, g.runW > 0.5);
+      }
+      stepIdx = idx;
+      sound.update(dt, { night: light.state.night, x: player.pos.x, z: player.pos.z, traffic: stage.extra.traffic?.loudness(player.pos.x, player.pos.z) ?? 0, walk: stage.extra.signals?.walking() ?? false });
+    } else sound.update(dt, { night: light.state.night, x: drone.target.x, z: drone.target.z, traffic: stage.extra.traffic?.loudness(drone.target.x, drone.target.z) ?? 0, walk: stage.extra.signals?.walking() ?? false });
     for (const n of stage.npcs) n.project(drone.camera, host.clientWidth, host.clientHeight);
     if (talk && player) talk.update(player.pos);
     light.follow(drone.target);
@@ -248,7 +277,7 @@ async function main() {
   requestAnimationFrame(loop);
 
   (window as unknown as Record<string, unknown>).__game = {
-    drone, scene, renderer, light, post, hud, player, stage, talk, npcs: stage.npcs, ...stage.extra,
+    drone, scene, renderer, light, post, hud, player, stage, talk, sound, npcs: stage.npcs, ...stage.extra,
     hour: () => hour,
     /** Run the signals and the traffic ahead by `seconds` (for tests). */
     simulate: (seconds: number) => { const { signals, traffic } = stage.extra; if (signals && traffic) for (let t = 0; t < seconds; t += 1 / 30) { signals.step(1 / 30); traffic.step(1 / 30); } },

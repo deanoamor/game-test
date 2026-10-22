@@ -519,6 +519,7 @@ export function buildHome(): InteriorBuild {
     solids,
     shadowHalf: 12,
     floor: (x, z) => (x < -2.2 && z < -2.7 ? 0 : FL),
+    surface: (x, z) => ((x < -2.2 && z < -2.7) || (x < -2.2 && z > 0.8) ? 'tile' : x > 1.2 ? 'tatami' : 'wood'),
     update(night) {
       for (const l of lights) l.intensity = 0.25 + 3.2 * night;
       ambient.intensity = 0.04 + 0.28 * night;

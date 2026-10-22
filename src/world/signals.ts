@@ -54,6 +54,12 @@ export class Signals {
     return 'red';
   }
 
+  /** Whether a walk signal shows green (blinking green counts) on either street. */
+  walking(): boolean {
+    const m = this.light('main'), c = this.light('cross');
+    return m === 'green' || c === 'green' || ((m === 'yellow' || c === 'yellow') && Math.floor(this.t * 3) % 2 === 0);
+  }
+
   step(dt: number) {
     this.t += dt;
     const blink = Math.floor(this.t * 3) % 2 === 0;

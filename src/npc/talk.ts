@@ -1,5 +1,6 @@
 import type { Vector3 } from 'three';
 import type { Player } from '../player/player';
+import type { Sound } from '../audio/sound';
 import { Npc } from './npc';
 
 /**
@@ -15,7 +16,7 @@ export class TalkUI {
   private near: Npc | null = null;
   private active: Npc | null = null;
 
-  constructor(private player: Player, private npcs: Npc[], host: HTMLElement) {
+  constructor(private player: Player, private npcs: Npc[], host: HTMLElement, private sound?: Sound) {
     this.box = document.createElement('div');
     this.box.id = 'talk';
     this.box.className = 'panel';
@@ -48,12 +49,14 @@ export class TalkUI {
   private show(n: Npc, line: string) {
     this.who.textContent = `${n.def.name} · ${n.def.jp}`;
     this.text.textContent = line;
+    this.sound?.speak(n.def.id, line);
     const last = n.line >= n.def.lines.length - 1;
     this.hint.textContent = last ? 'F: goodbye' : 'F: next';
     this.box.classList.add('on');
   }
 
   private finish() {
+    this.sound?.stopSpeak();
     this.active = null;
     this.player.frozen = false;
     this.box.classList.remove('on');

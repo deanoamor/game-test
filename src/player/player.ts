@@ -85,6 +85,21 @@ export class Player {
     this.vel.set(0, 0, 0);
   }
 
+  /** What she walks on now (for the sound of her steps). */
+  get surface(): 'road' | 'pavement' | 'stairs' | 'grass' | 'floor' {
+    if (this.floorFn) return 'floor';
+    const { x, z } = this.pos;
+    for (const w of this.near(x, z)) {
+      if (w.t !== 'walk') continue;
+      const rx = x - w.x, rz = z - w.z;
+      const along = rx * w.dx + rz * w.dz, across = Math.abs(rx * w.dz - rz * w.dx);
+      if (across <= w.hw && along >= 0 && along <= w.len && this.pos.y > heightAt(x, z) + 0.4) return 'stairs';
+    }
+    if (!inTown(x, z)) return 'grass';
+    const rd = roadNear(x, z);
+    return rd.d >= rd.width / 2 ? 'pavement' : 'road';
+  }
+
   /** The blob shadow, to be added to the scene beside the player. */
   get shadowMesh() { return this.shadow; }
 

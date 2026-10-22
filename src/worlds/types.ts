@@ -27,6 +27,8 @@ export interface InteriorBuild {
   floor(x: number, z: number): number;
   /** Lamps, windows and screens follow the time of day (`night`: 0 by day, 1 in the dark). */
   update(night: number, hour: number): void;
+  /** What the floor is made of under a point (the sound of her steps). */
+  surface?(x: number, z: number): 'wood' | 'tile' | 'tatami';
   /** Every frame: the camera's turn about the room, so the walls between it and the rooms can be cut down. */
   frame(dt: number, cameraYaw: number): void;
   /** How big the shadow-casting sun's area should be (metres either side of the room). */

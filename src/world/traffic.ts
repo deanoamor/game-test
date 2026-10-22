@@ -210,6 +210,20 @@ export class Traffic {
     }
   }
 
+  /** How loud the traffic is at a point (0: silent, about 1: beside a busy road): every moving car adds what its speed and its
+   *  distance give, a bus or a truck more than a car. */
+  loudness(x: number, z: number): number {
+    let sum = 0;
+    for (const c of this.cars) {
+      const p = pointAt(c.lane, c.s);
+      const d = Math.hypot(p.x - x, p.z - z);
+      if (d > 80) continue;
+      const weight = c.kind === 'bus' || c.kind === 'truck' ? 1.6 : 1;
+      sum += (weight * (0.12 + Math.min(1, c.v / 9))) / (1 + (d / 9) * (d / 9));
+    }
+    return Math.min(1.4, sum * 0.9);
+  }
+
   step(dt: number) {
     const taken: Record<SignalGroup, boolean> = { main: this.junctionTaken('main'), cross: this.junctionTaken('cross') };
     // first decide every car's speed from where everyone is, then move them all
