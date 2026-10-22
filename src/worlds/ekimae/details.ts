@@ -2,7 +2,8 @@ import { Color, type ColorRepresentation } from 'three';
 import type { V3 } from '../../util/builder';
 import { rampY } from '../../world/config';
 import { STREET, type DetailKit } from '../../world/village';
-import { solidBox, type Ctx } from '../../world/village/frame';
+import { solidBox, type Ctx, type Solid } from '../../world/village/frame';
+import { HOME } from './home';
 import { bench, board, nobori } from '../../world/village/fillers';
 import { boxes, pot, shrub } from '../../world/village/props';
 
@@ -35,6 +36,7 @@ export function ekimaeDetails(k: DetailKit) {
   crossStreet(k);
   lampBanners(k);
   neonBlades(k);
+  homeDoor(k);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -294,4 +296,49 @@ function neonBlades(k: DetailKit) {
       c.glow.push({ x: 0, y: 0, z: 0, h: 3.6, r: 3.2, color: tube, k: 0.9 });
     });
   }
+}
+
+/**
+ * Her home: the door at the top of the outside stairs by the crossing (the landing that was a blank wall with a window
+ * over it). A wooden door in a frame with a frosted pane, a porch light, a name plate and a mat; the door's trigger
+ * and the place she arrives when she comes out go to HOME (see ./home.ts) for the world's exits and spawns.
+ */
+function homeDoor(k: DetailKit) {
+  type Walk = Extract<Solid, { t: 'walk' }>;
+  const all = k.solids();
+  const flights = all.filter((s): s is Walk => s.t === 'walk');
+  const W = flights.sort((a, b) => Math.hypot(a.x - HOME.near.x, a.z - HOME.near.z) - Math.hypot(b.x - HOME.near.x, b.z - HOME.near.z))[0];
+  if (!W || Math.hypot(W.x - HOME.near.x, W.z - HOME.near.z) > 6) return;
+  // the landing is at the head of the flight (it climbs toward -z); the door is in the middle of it, on the wall
+  const doorZ = W.z - W.len - 0.6;
+  let s = 0;
+  for (const sg of [1, -1]) {
+    const wx = W.x - sg * 0.62;
+    if (all.some((b) => b.t === 'box' && Math.abs(b.a % 180) < 1 && Math.abs(b.x + sg * b.hw - wx) < 0.12 && Math.abs(b.z - doorZ) < b.hd)) s = sg;
+  }
+  if (!s) return;
+  const wallX = W.x - s * 0.62;
+  k.put(wallX, W.y1, doorZ, s > 0 ? 90 : -90, (c) => {
+    const B = c.body, wood = '#a8693f', jamb = '#efe8d8';
+    B.box(-0.52, 1.08, 0.09, 0.09, 2.16, 0.12, jamb, { ao: 0.05 });
+    B.box(0.52, 1.08, 0.09, 0.09, 2.16, 0.12, jamb, { ao: 0.05 });
+    B.box(0, 2.19, 0.09, 1.13, 0.09, 0.12, jamb, { ao: 0.05 });
+    B.box(0, 1.06, 0.1, 0.94, 2.1, 0.06, wood, { ao: 0.05 });
+    B.box(0, 0.5, 0.135, 0.62, 0.74, 0.012, '#8e5532', { ao: 0 }); // the panels
+    B.box(0, 1.38, 0.135, 0.62, 0.3, 0.012, '#8e5532', { ao: 0 });
+    c.litB.box(0, 1.78, 0.135, 0.5, 0.42, 0.012, '#ffe9b8', { ao: 0 }); // a frosted pane that glows at night
+    for (const x of [-0.17, 0.17]) B.box(x, 1.78, 0.142, 0.02, 0.42, 0.006, '#5a3a24', { ao: 0 });
+    B.box(0.34, 1.0, 0.16, 0.05, 0.05, 0.08, '#d8b04a', { ao: 0 }); // the handle
+    B.box(0.28, 1.0, 0.2, 0.16, 0.03, 0.03, '#d8b04a', { ao: 0 });
+    B.box(0.78, 1.5, 0.045, 0.22, 0.12, 0.02, '#f2efe6', { ao: 0 }); // a name plate beside the door
+    B.box(0.78, 1.5, 0.057, 0.17, 0.06, 0.005, '#2a2d33', { ao: 0 });
+    B.box(0, 2.42, 0.1, 0.24, 0.16, 0.12, '#3a3d42', { ao: 0.05 }); // a porch light over it
+    c.litA.box(0, 2.4, 0.17, 0.16, 0.1, 0.03, '#ffe0a0', { ao: 0 });
+    c.glow.push({ x: 0, y: 0, z: 0.7, h: 2.4, r: 3.6, color: '#ffd9a0', k: 1 });
+    B.box(0, 0.016, 0.5, 0.8, 0.032, 0.5, '#6a5a48', { ao: 0 }); // the mat
+  });
+  // where she must stand (the landing), and where she comes out (the head of the flight, facing down it)
+  Object.assign(HOME.door, { x0: W.x - 0.65, x1: W.x + 0.65, z0: doorZ - 0.85, z1: doorZ + 0.55 });
+  HOME.info.minY = W.y1 - 0.5;
+  Object.assign(HOME.out, { x: W.x, z: doorZ + 0.95, yaw: 0 });
 }

@@ -10,6 +10,8 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; color: var(--ink); font: 13px/1.4 'Noto Sans JP', 'Yu Gothic', 'Hiragino Sans', system-ui, sans-serif; }
   #app { position: fixed; inset: 0; }
+  #app { transition: opacity .25s; }
+  body.leaving #app, body.leaving #hud { opacity: 0; transition: opacity .25s; }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
   canvas:active { cursor: grabbing; }
   .panel { position: fixed; background: var(--glass); border: 1px solid var(--line); border-radius: 14px; backdrop-filter: blur(10px); padding: 10px 12px; }
@@ -69,7 +71,7 @@
   <div id="help" class="panel"><b>Drag</b> slide the map &nbsp; <b>Right-drag</b> turn &amp; tilt<br /><span id="helpZoom"><b>Wheel</b> zoom &nbsp; </span><b>W A S D</b> fly &nbsp; <b>Q E</b> turn &nbsp; <b>R F</b> tilt<br /><b>Shift</b> faster &nbsp; <b>1–9</b> places &nbsp; <b>T</b> time &nbsp; <b>H</b> hide HUD</div>
   <div id="minimap" class="panel"><canvas id="mini" width="420" height="420"></canvas></div>
   <div id="fps"></div>
-  <div id="exit" class="panel"><div class="lbl">Exit</div><b id="exitName"></b><p id="exitNote"></p><button id="exitGo">Go on ▶</button></div>
+  <div id="exit" class="panel"><div class="lbl" id="exitLabel">Exit</div><b id="exitName"></b><p id="exitNote"></p><button id="exitGo">Go on ▶</button></div>
 </div>
 <div id="loading"><div class="box"><h1>HOSHI NO KUNI</h1><h2>星の国</h2><div class="bar"><i id="bar"></i></div><p id="loadMsg">Shaping the land…</p></div></div>
 <script>

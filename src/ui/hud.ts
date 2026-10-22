@@ -22,6 +22,7 @@ export class Hud {
   readonly places: Place[];
   private view: { cx: number; cz: number; half: number };
   private exit: Exit | null = null;
+  private hour = 12;
 
   constructor(private drone: Drone, private world: WorldDef) {
     // the map is painted once the world exists (see paintBase); until then a blank one
@@ -42,8 +43,9 @@ export class Hud {
       o.selected = w.key === world.key;
       sel.appendChild(o);
     }
-    sel.onchange = () => goToWorld(sel.value);
-    $('exitGo').onclick = () => { if (this.exit?.to) goToWorld(this.exit.to); };
+    sel.onchange = () => goToWorld(sel.value, undefined, this.hour);
+    $('exitGo').onclick = () => this.take();
+    if (world.interior) { $('minimap').style.display = 'none'; $('places').style.display = 'none'; }
     const list = $('places');
     PLACES.forEach((p, i) => {
       const b = document.createElement('button');
@@ -56,6 +58,7 @@ export class Hud {
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'SELECT') return;
       const n = Number(e.key);
       if (n >= 1 && n <= PLACES.length) this.onFly?.(PLACES[n - 1].key);
+      if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') && this.exit?.door) { e.preventDefault(); this.take(); }
       if (e.code === 'KeyH') $('hud').classList.toggle('off');
       if (e.code === 'KeyT') $('play').click();
     });
@@ -150,9 +153,10 @@ export class Hud {
   }
 
   /** `at`: where the player stands, when she is the one the camera follows (else the exits go by what the drone does). */
-  update(dt: number, hour: number, night: number, at?: { x: number; z: number }) {
+  update(dt: number, hour: number, night: number, at?: { x: number; z: number; y?: number }) {
+    this.hour = hour;
     const t = this.drone.target;
-    const p = placeAt(t.x, t.z);
+    const p = this.world.interior ? { name: this.world.name, jp: this.world.jp, key: this.world.key } : placeAt(t.x, t.z);
     if (p.name !== this.lastPlace) {
       this.lastPlace = p.name;
       $('placeName').textContent = p.name;
@@ -171,6 +175,8 @@ export class Hud {
       this.fpsAcc = 0;
       this.fpsN = 0;
     }
+    // (the rooms of a house have no minimap)
+    if (this.world.interior) { this.updateExit(t, at); return; }
     // the minimap with the drone's view cone
     const g = this.mini.getContext('2d')!;
     const W = this.mini.width;
@@ -204,10 +210,15 @@ export class Hud {
     g.fill();
     g.strokeStyle = '#fff';
     g.stroke();
-    // at an exit: offer the way on. On foot, she is at one when she stands in its stretch of the edge; flying, when the
-    // drone is, or has just been pushed against the barrier there.
+    this.updateExit(t, at);
+  }
+
+  /** The panel at an exit or a door: when she stands in one, offer the way on. */
+  private updateExit(t: { x: number; z: number }, at?: { x: number; z: number; y?: number }) {
+    // On foot, she is at one when she stands in its stretch (a door at the top of stairs only from up there); flying,
+    // when the drone is, or has just been pushed against the barrier there.
     let ex: Exit | null;
-    if (at) ex = this.world.exits.find((e) => inRect(e.at, at.x, at.z)) ?? null;
+    if (at) ex = this.world.exits.find((e) => inRect(e.at, at.x, at.z) && (e.door?.minY === undefined || (at.y ?? 0) >= e.door.minY)) ?? null;
     else {
       const pushedRecently = performance.now() - this.drone.pushed.t < 1500;
       ex = this.world.exits.find((e) => inRect(e.at, t.x, t.z, 1.5)) ?? (pushedRecently ? this.world.exits.find((e) => inRect(e.at, this.drone.pushed.x, this.drone.pushed.z, 6)) : undefined) ?? null;
@@ -217,15 +228,23 @@ export class Hud {
       const box = $('exit');
       box.classList.toggle('on', !!ex);
       if (ex) {
+        $('exitLabel').textContent = ex.door ? 'Door' : 'Exit';
         $('exitName').textContent = `${ex.name} · ${ex.jp}`;
-        $('exitNote').textContent = ex.to ? 'The next area — it loads when you go on.' : 'The next area is not built yet.';
+        $('exitNote').textContent = ex.door ? `Press Enter to ${ex.door.prompt.toLowerCase()}.` : ex.to ? 'The next area — it loads when you go on.' : 'The next area is not built yet.';
+        $<HTMLButtonElement>('exitGo').textContent = ex.door ? `${ex.door.prompt} ▶` : 'Go on ▶';
         $<HTMLButtonElement>('exitGo').disabled = !ex.to;
       }
     }
   }
 
+  /** Take the door or the exit she is at, if it leads anywhere: the next world loads behind the loading screen. */
+  private take() {
+    if (this.exit?.to) goToWorld(this.exit.to, this.world.key, this.hour);
+  }
+
   /** Paint the minimap's ground, roads and places (after the world is built). */
   paintBase() {
+    if (this.world.interior) return;
     this.base = this.paintMap();
   }
 

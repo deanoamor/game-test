@@ -1,23 +1,14 @@
-import { ACESFilmicToneMapping, Box3, PCFSoftShadowMap, PMREMGenerator, Scene, SRGBColorSpace, WebGLRenderer, Vector3, Color, Group, type Mesh } from 'three';
+import { ACESFilmicToneMapping, PCFSoftShadowMap, PMREMGenerator, Scene, SRGBColorSpace, WebGLRenderer, Vector3, Color, type Mesh } from 'three';
 import { Drone } from './camera/drone';
 import { Player } from './player/player';
 import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
-import { POND, SHRINE } from './world/config';
-import { WORLDS, areaOf, currentWorld, inRect, keepArea } from './worlds';
-import { buildVillage } from './world/village';
+import { buildIndoor } from './stages/indoor';
+import { buildOutdoor } from './stages/outdoor';
+import { areaOf, arrival, carriedHour, currentWorld, forgetCarried, keepArea } from './worlds';
 import { DaylightRig } from './world/daylight';
-import { TreeField, growForest } from './world/forest';
-import { loadLandmarks } from './world/landmarks';
-import { buildRoads } from './world/roads';
 import { Clouds, SkyDome } from './world/sky';
-import { SignAtlas } from './world/signs';
-import { buildTerrain } from './world/terrain';
-import { NightGlow } from './world/nightglow';
-import { Signals } from './world/signals';
-import { Traffic } from './world/traffic';
-import { buildWater } from './world/water';
 
 const params = new URLSearchParams(location.search);
 const nextFrame = yieldUI;
@@ -36,8 +27,11 @@ async function main() {
   host.appendChild(renderer.domElement);
 
   const scene = new Scene();
-  // the world: a zone of the town (with its scenery ring and invisible barrier) or the full map
+  // the world: a zone of the town (with its scenery ring and invisible barrier), the full map, or the rooms of a house
   const world = currentWorld();
+  const spawn = arrival(world);
+  const carried = carriedHour();
+  forgetCarried();
   const keep = keepArea(world);
   const drone = new Drone(renderer.domElement);
   // the camera goes where it may look: the whole area she may walk, when it follows her
@@ -49,79 +43,38 @@ async function main() {
   const PLACES = hud.places;
   const progress = (f: number, msg: string) => hud.setProgress(f, msg);
 
-  progress(0.04, 'Shaping the land…');
-  await nextFrame();
-  const terrain = buildTerrain();
-  scene.add(terrain);
-  const water = buildWater();
-  scene.add(water.mesh);
-
-  progress(0.22, 'Planting forests…');
-  await nextFrame();
-  const trees = new TreeField();
-  const { rocks } = growForest(trees);
-  scene.add(rocks);
-
-  progress(0.4, 'Building the village…');
-  await nextFrame();
-  const atlas = new SignAtlas();
-  // every world's own details go into the town (the full map shows them too)
-  const details = WORLDS.flatMap((w) => (w.details ? [w.details] : []));
-  const village = await buildVillage(trees, atlas, (f, msg) => progress(0.4 + f * 0.2, msg), details);
-  // a zone draws only its own area and the scenery ring in detail: the buildings and props beyond are left out
-  // (the town's ground is kept everywhere, so there are no holes); trees reach a little further, the land is all there
-  if (keep) {
-    const box = new Box3();
-    for (const m of [...village.group.children] as Mesh[]) {
-      if (m.name.startsWith('Town ground')) continue;
-      box.copy(m.geometry.boundingBox!);
-      if (box.max.x < keep.x0 || box.min.x > keep.x1 || box.max.z < keep.z0 || box.min.z > keep.z1) {
-        village.group.remove(m);
-        m.geometry.dispose();
-      }
-    }
-    water.mesh.visible = inRect(keep, POND.x, POND.z, POND.radius + 30);
-  }
-  scene.add(village.group);
-  // the lights of the town at night: pools of light, and real lights near the camera
-  const glow = new NightGlow(keep ? village.glows.filter((g) => inRect(keep, g.x, g.z, 10)) : village.glows);
-  scene.add(glow.group);
-  scene.add(buildRoads());
-  const windU = { value: 0 };
-  scene.add(trees.build(windU, keep ? (x, z) => inRect(keep, x, z, 90) : undefined));
-  // the signals at the crossing, and the traffic that keeps to them
-  const signals = new Signals();
-  scene.add(signals.group);
-  const traffic = new Traffic(signals);
-  scene.add(traffic.group);
+  const stage = world.interior
+    ? await buildIndoor({ scene, world, progress, nextFrame })
+    : await buildOutdoor({ scene, world, keep, progress, nextFrame });
 
   // the player, in a world played on foot: the camera follows her (unless a test asked for a fixed view)
   let player: Player | null = null;
   if (world.player) {
-    progress(0.6, 'Waking the player…');
+    progress(0.92, 'Waking the player…');
     await nextFrame();
-    player = await Player.create(village.obstacles, area, world.player);
+    player = await Player.create(stage.obstacles, area, spawn ?? world.player, stage.floor);
     scene.add(player.group, player.shadowMesh);
     drone.following = !params.has('yaw');
     // a steady view: the camera keeps its distance and its tilt, and does not rise or back off round the roofs
     drone.clearance = false;
   }
 
-  progress(0.61, 'Drawing the map…');
+  progress(0.95, 'Drawing the map…');
   await nextFrame();
   hud.paintBase();
-  progress(0.62, 'Placing landmarks…');
-  const marks = !keep || inRect(keep, SHRINE.x, SHRINE.z, 40)
-    ? await loadLandmarks((n, total, name) => progress(0.62 + (n / total) * 0.3, `Landmark: ${name}`))
-    : { group: new Group(), glow: [] as { emissiveIntensity: number }[] };
-  scene.add(marks.group);
 
   const sky = new SkyDome();
   scene.add(sky.mesh);
   const clouds = new Clouds();
   scene.add(clouds.mesh);
   const light = new DaylightRig(scene, renderer);
-  if (keep) light.fogScale = 1.7;
+  light.fogScale = stage.fogScale;
+  if (stage.shadowHalf) {
+    // a small world: the sun's shadows cover only the area it needs, so they are sharper
+    const c = light.sun.shadow.camera, h = stage.shadowHalf;
+    c.left = -h; c.right = h; c.top = h; c.bottom = -h;
+    c.updateProjectionMatrix();
+  }
 
   // a soft sky reflection for the glass
   {
@@ -158,7 +111,7 @@ async function main() {
   resize();
 
   // ---- state ----
-  let hour = Number(params.get('t') ?? 11.5);
+  let hour = Number(params.get('t') ?? carried ?? 11.5);
   let playing = !params.has('pause') && !params.has('shot');
   const dayLength = 360; // seconds for a whole day
   const applyQuality = (q: Quality) => {
@@ -175,8 +128,7 @@ async function main() {
     hour = ((h % 24) + 24) % 24;
     light.setHour(hour);
     const s = light.state;
-    village.update(s.night);
-    marks.glow.forEach((m) => { m.emissiveIntensity = s.night * 1.4; });
+    stage.setNight(s.night, hour);
     clouds.tint(s.sky.horizon, s.night);
     post.setLook(s.night, s.bloom);
     document.body.style.background = `#${s.sky.horizon.getHexString()}`;
@@ -198,6 +150,8 @@ async function main() {
   if (startPlace) drone.flyTo(startPlace, true);
   else drone.flyTo(world.start, true);
   if (params.has('yaw')) drone.setView(params.has('tx') ? Number(params.get('tx')) : drone.target.x, params.has('tz') ? Number(params.get('tz')) : drone.target.z, Number(params.get('yaw')), Number(params.get('pitch') ?? 45), Number(params.get('dist') ?? drone.dist));
+  // on foot the camera starts on her, at her height
+  if (player && drone.following) { drone.follow(player.pos.x, player.pos.z, player.pos.y); drone.update(0); }
   if (params.get('hud') === '0') hud.setHud(false);
 
   progress(1, 'Ready');
@@ -220,13 +174,8 @@ async function main() {
     }
     drone.update(dt);
     light.follow(drone.target);
-    glow.update(dt, light.state.night, drone.target);
-    windU.value += dt;
-    water.uniforms.uTime.value += dt;
+    stage.step(dt, light.state.night, drone.target, drone.yaw, params.has('shot'));
     clouds.step(dt);
-    if (!params.has('shot')) signals.step(dt);
-    traffic.setNight(light.state.night);
-    traffic.step(params.has('shot') ? 0 : dt);
     sky.update(drone.camera, light.state.sky);
     if (light.shadowDirty) { renderer.shadowMap.needsUpdate = true; light.shadowDirty = false; }
     // the tilt-shift band follows the view: sharp where the drone looks
@@ -267,9 +216,10 @@ async function main() {
   requestAnimationFrame(loop);
 
   (window as unknown as Record<string, unknown>).__game = {
-    drone, scene, renderer, light, post, hud, signals, traffic, player,
+    drone, scene, renderer, light, post, hud, player, stage, ...stage.extra,
+    hour: () => hour,
     /** Run the signals and the traffic ahead by `seconds` (for tests). */
-    simulate: (seconds: number) => { for (let t = 0; t < seconds; t += 1 / 30) { signals.step(1 / 30); traffic.step(1 / 30); } },
+    simulate: (seconds: number) => { const { signals, traffic } = stage.extra; if (signals && traffic) for (let t = 0; t < seconds; t += 1 / 30) { signals.step(1 / 30); traffic.step(1 / 30); } },
     flyTo: (key: string, instant = true) => { const p = PLACES.find((q) => q.key === key); if (p) drone.flyTo(p, instant); },
     setHour: (h: number) => { playing = false; applyHour(h); },
     setQuality: applyQuality,
@@ -286,9 +236,8 @@ async function main() {
         const t = (g.index ? g.index.count : g.getAttribute('position').count) / 3;
         tris += t * (m.count ?? 1);
       });
-      return { triangles: Math.round(tris), meshes, trees: trees.count };
+      return { triangles: Math.round(tris), meshes, trees: stage.trees };
     },
-    terrain: terrain as Mesh,
     loadSeconds: performance.now() / 1000,
   };
 }

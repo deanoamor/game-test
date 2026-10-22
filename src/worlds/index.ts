@@ -1,6 +1,7 @@
 import { HALF, PLACES, type Place } from '../world/config';
 import { ekimae } from './ekimae';
 import { full } from './full';
+import { home } from './home';
 import type { Rect, WorldDef } from './types';
 
 export type { Exit, Rect, WorldDef } from './types';
@@ -14,19 +15,54 @@ export type { Exit, Rect, WorldDef } from './types';
  * Each world lives in its own folder (src/worlds/<key>/) and is listed here; the town they are cut from is built by
  * src/world/.
  */
-export const WORLDS: WorldDef[] = [ekimae, full];
+export const WORLDS: WorldDef[] = [ekimae, home, full];
 
 /** The world this page shows: from the address (#world=… or ?world=…), the first zone by default. */
 export function currentWorld(): WorldDef {
   const fromHash = /(?:^|[#&])world=([\w-]+)/.exec(location.hash)?.[1];
   const fromQuery = new URLSearchParams(location.search).get('world');
-  return WORLDS.find((w) => w.key === (fromHash ?? fromQuery)) ?? WORLDS[0];
+  return WORLDS.find((w) => w.key === (fromHash ?? fromQuery ?? remembered().world)) ?? WORLDS[0];
+}
+
+/** Which world she came from (the address has `from=…`), so she arrives at the right door. */
+export function cameFrom(): string | null {
+  return /[#&]from=([\w-]+)/.exec(location.hash)?.[1] ?? new URLSearchParams(location.search).get('from') ?? remembered().from ?? null;
+}
+
+/** Where she arrives in a world: at the place for the world she came from, else the world's own start. */
+export function arrival(w: WorldDef): { x: number; z: number; yaw: number } | undefined {
+  const from = cameFrom();
+  return (from ? w.spawns?.[from] : undefined) ?? w.player;
+}
+
+// Going to another world reloads the page. The target is in the address, and also kept for the next load alone (a page
+// shown inside a frame may drop the address on a reload), together with the time of day, so the clock carries over.
+const KEY = 'hoshi.next';
+function remembered(): { world?: string; from?: string } {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(KEY) ?? '{}');
+    return v;
+  } catch { return {}; }
+}
+/** The clock carried over from the world she left (hours), if any. */
+export function carriedHour(): number | null {
+  try {
+    const h = JSON.parse(sessionStorage.getItem(KEY) ?? '{}').hour;
+    return typeof h === 'number' ? h : null;
+  } catch { return null; }
+}
+/** Called once the page has read what was left for it. */
+export function forgetCarried() {
+  try { sessionStorage.removeItem(KEY); } catch { /* no storage */ }
 }
 
 /** Go to another world: it is loaded afresh (the page reloads with the new world in its address). */
-export function goToWorld(key: string) {
-  location.hash = `world=${key}`;
-  location.reload();
+export function goToWorld(key: string, from?: string, hour?: number) {
+  try { sessionStorage.setItem(KEY, JSON.stringify({ world: key, from, hour })); } catch { /* no storage */ }
+  location.hash = from ? `world=${key}&from=${from}` : `world=${key}`;
+  // a short fade, then the new world loads behind the loading screen
+  document.body.classList.add('leaving');
+  setTimeout(() => location.reload(), 280);
 }
 
 /** The area a world is played in: where she walks if it is played on foot, else where the camera may go. */

@@ -30,7 +30,16 @@ never a void. Up close the crossing has its own details (`src/worlds/ekimae/deta
 manholes and patched asphalt, a red postbox, a green phone, a notice board, nobori flags and red
 lanterns at the izakaya, a delivery scooter, pigeons, a cat, lamp banners and utility cabinets. The crossing has working traffic signals (`src/world/signals.ts`): the main street and the cross street take turns
 (green, yellow, all-red). Cars on both streets stop at the line on red, queue behind each other without ever
-overlapping, and wait while the junction is still taken (`src/world/traffic.ts`, tested in `tests/traffic.test.ts`). At night every lamp (street, car park, school, petrol station, expressway, underpass, stall and shrine lanterns), lit shop
+overlapping, and wait while the junction is still taken (`src/world/traffic.ts`, tested in `tests/traffic.test.ts`). **Her home (World 2, `src/worlds/home/`).** The outside stairs of the building by the crossing (north side of the main
+street, east of the cross street) now end in a real door. Walk up to it and press Enter (or click the panel): the home
+loads behind the loading screen (the clock carries over), and the front door of its entrance brings her back out onto
+the stairs. The home is a flat of 8 m by 9 m seen like a doll's house, no ceiling, the walls on the camera's side cut
+down: an entrance a step lower than the rooms, a hall, a kitchen and dining corner, a living room with tatami and a
+kotatsu (and a sleeping cat), her bedroom (bed, desk, wardrobe, her uniform on a rack) and the bathroom. Every world is
+a *stage* (`src/stages/`): the town (`outdoor.ts`) or rooms (`indoor.ts`); the loop, the player and the camera are shared.
+`e2e/doors.mjs` walks through both doors and back, `e2e/rooms.mjs` checks every room can be reached.
+
+At night every lamp (street, car park, school, petrol station, expressway, underpass, stall and shrine lanterns), lit shop
 front, konbini and vending machine throws a pool of light on the ground; the streets that had no lamps (the cross street, the
 lanes, the frontage road, the ends of the main street, the back lanes between their old lamps) now have them; more windows are lit and the six
 nearest the camera are real lights (`src/world/nightglow.ts`); neon blade signs glow in their own colours. **The player** (`src/player/player.ts`): in Ekimae Crossing you are the schoolgirl in seifuku

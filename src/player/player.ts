@@ -176,6 +176,7 @@ export class Player {
   private shadow: Mesh;
   private grid = new Map<number, Solid[]>();
   private hipLift = 0;
+  private floorFn: ((x: number, z: number) => number) | null = null;
 
   private constructor(root: Group, obstacles: Obstacles, private bounds: Rect | null) {
     mergeSkinned(root);
@@ -212,8 +213,10 @@ export class Player {
     window.addEventListener('blur', () => this.keys.clear());
   }
 
-  static async create(obstacles: Obstacles, bounds: Rect | null, at: { x: number; z: number; yaw: number }) {
+  /** `floor`: the height of the floor under a point, in a world with no town (the rooms of a house). */
+  static async create(obstacles: Obstacles, bounds: Rect | null, at: { x: number; z: number; yaw: number }, floor?: (x: number, z: number) => number) {
     const p = new Player(await loadModel(), obstacles, bounds);
+    p.floorFn = floor ?? null;
     p.pos.set(at.x, p.groundY(at.x, at.z), at.z);
     p.facing = (at.yaw * Math.PI) / 180;
     p.update(0, 0);
@@ -233,6 +236,7 @@ export class Player {
 
   /** The ground under a point: the road, or the raised pavement beside it. */
   private groundY(x: number, z: number) {
+    if (this.floorFn) return this.floorFn(x, z);
     let y = heightAt(x, z);
     if (inTown(x, z)) {
       const rd = roadNear(x, z);

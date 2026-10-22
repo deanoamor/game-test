@@ -1,5 +1,7 @@
+import type { Group } from 'three';
 import type { Place } from '../world/config';
 import type { DetailKit } from '../world/village';
+import type { Solid } from '../world/village/frame';
 
 export interface Rect { x0: number; z0: number; x1: number; z1: number }
 
@@ -10,6 +12,24 @@ export interface Exit {
   at: Rect;
   /** The world it leads to (null: that area is not built yet). */
   to: string | null;
+  /** A door rather than the end of a street: the panel says so, and Enter (or Space) takes it. `minY`: only from a
+   *  platform at least this high (a door at the top of a flight of stairs is not reached from the street under it). */
+  door?: { prompt: string; minY?: number };
+}
+
+/** A furnished room (or rooms) to walk about in: a world with no town round it. */
+export interface InteriorBuild {
+  group: Group;
+  /** What she bumps into: walls, partitions, furniture. */
+  solids: Solid[];
+  /** The height of the floor under a point (the entrance is a step lower than the rooms). */
+  floor(x: number, z: number): number;
+  /** Lamps, windows and screens follow the time of day (`night`: 0 by day, 1 in the dark). */
+  update(night: number, hour: number): void;
+  /** Every frame: the camera's turn about the room, so the walls between it and the rooms can be cut down. */
+  frame(dt: number, cameraYaw: number): void;
+  /** How big the shadow-casting sun's area should be (metres either side of the room). */
+  shadowHalf: number;
 }
 
 export interface WorldDef {
@@ -33,4 +53,8 @@ export interface WorldDef {
   player?: { x: number; z: number; yaw: number };
   /** The world's own details, added to the town where it stands (they show on the full map too). */
   details?: (kit: DetailKit) => void;
+  /** An interior world: built from this instead of the town. */
+  interior?: () => InteriorBuild;
+  /** Where she arrives when she comes from another world (the key of the world she left; none: `player`). */
+  spawns?: Record<string, { x: number; z: number; yaw: number }>;
 }
