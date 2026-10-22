@@ -3,7 +3,7 @@ import type { V3 } from '../../util/builder';
 import { rampY } from '../../world/config';
 import { STREET, type DetailKit } from '../../world/village';
 import { solidBox, type Ctx, type Solid } from '../../world/village/frame';
-import { HOME } from './home';
+import { HOME, KONBINI } from './home';
 import { bench, board, nobori } from '../../world/village/fillers';
 import { boxes, pot, shrub } from '../../world/village/props';
 
@@ -37,6 +37,7 @@ export function ekimaeDetails(k: DetailKit) {
   lampBanners(k);
   neonBlades(k);
   homeDoor(k);
+  konbiniDoor(k);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -341,4 +342,29 @@ function homeDoor(k: DetailKit) {
   Object.assign(HOME.door, { x0: W.x - 0.65, x1: W.x + 0.65, z0: doorZ - 0.85, z1: doorZ + 0.55 });
   HOME.info.minY = W.y1 - 0.5;
   Object.assign(HOME.out, { x: W.x, z: doorZ + 0.95, yaw: 0 });
+}
+
+/**
+ * Hoshi Mart's door (World 3): the glass front of the convenience store gets an automatic door between two mullions, with
+ * a "push" plate and a mat; the door's trigger and the place she arrives when she comes out go to KONBINI (./home.ts).
+ * The store is found by its footprint (a 15 x 11 box on the south side of the main street).
+ */
+function konbiniDoor(k: DetailKit) {
+  const B = k.solids().find((s) => s.t === 'box' && Math.abs(s.hw - 7.5) < 0.1 && Math.abs(s.hd - 5.5) < 0.1 && s.z > MAIN_Z);
+  if (!B || B.t !== 'box') return;
+  // the store faces the street (north, -z): its glass front is at the north face, and its door between the 4th and 5th mullion
+  const dx = B.x - 1.085, front = B.z - B.hd;
+  k.put(dx, SW, front, 180, (c) => {
+    const b = c.body, steel = '#6a7076';
+    b.box(0, 1.5, 0.1, 2.1, 0.06, 0.1, steel, { ao: 0 }); // the head of the door
+    b.box(0, 2.55, 0.1, 0.6, 0.18, 0.12, '#2a2d33', { ao: 0.05 }); // the sensor box
+    for (const s of [-1, 1]) b.box(s * 0.04, 1.2, 0.13, 0.03, 2.4, 0.04, steel, { ao: 0 }); // the meeting bars
+    for (const s of [-1, 1]) b.box(s * 0.2, 1.0, 0.16, 0.025, 0.5, 0.03, '#d8dde0', { ao: 0 }); // the handles
+    c.litB.box(0, 1.22, 0.07, 2.0, 2.3, 0.012, '#eaf6fc', { ao: 0 });
+    b.box(0, 0.012, 0.6, 1.8, 0.024, 0.9, '#2a8fd8', { ao: 0 }); // the mat
+    b.box(0, 0.026, 0.6, 1.64, 0.008, 0.74, '#f4f6f8', { ao: 0 });
+    c.glow.push({ x: 0, y: 0, z: 1.0, h: 2.4, r: 4.2, color: '#dceeff', k: 0.5 });
+  });
+  Object.assign(KONBINI.door, { x0: dx - 1.1, x1: dx + 1.1, z0: front - 1.4, z1: front + 0.1 });
+  Object.assign(KONBINI.out, { x: dx, z: front - 1.2, yaw: 180 });
 }

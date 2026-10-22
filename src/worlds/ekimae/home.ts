@@ -15,3 +15,13 @@ export const HOME = {
   /** The stairs it belongs to are looked for round here. */
   near: { x: 7, z: 36.8 },
 };
+
+/**
+ * The door of Hoshi Mart (World 3): the automatic door in the glass front of the convenience store on the south side of
+ * the main street. Where exactly the store stands depends on the town's layout, so the details (details.ts) fill these in.
+ */
+export const KONBINI = {
+  door: { x0: 0, z0: 0, x1: 0, z1: 0 } as Rect,
+  info: { prompt: 'Go in' },
+  out: { x: 0, z: 0, yaw: 180 },
+};

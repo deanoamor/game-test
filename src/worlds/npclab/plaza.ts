@@ -1,7 +1,7 @@
 import { CanvasTexture, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry } from 'three';
 import { GeoBuilder } from '../../util/builder';
 import { Npc } from '../../npc/npc';
-import { CLERK, NURSE } from '../../npc/people';
+import { NURSE } from '../../npc/people';
 import type { Solid } from '../../world/village/frame';
 import type { InteriorBuild } from '../types';
 
@@ -105,8 +105,6 @@ export async function buildPlaza(): Promise<InteriorBuild> {
   // the NPC
   const nurse = await Npc.create(NURSE);
   group.add(nurse.group, nurse.shadow);
-  const clerk = await Npc.create(CLERK);
-  group.add(clerk.group, clerk.shadow);
 
   return {
     group,
@@ -115,6 +113,6 @@ export async function buildPlaza(): Promise<InteriorBuild> {
     update(night) { lampMat.color.setScalar(0.8 + night * 0.6); },
     frame() {},
     shadowHalf: 22,
-    npcs: [nurse, clerk],
+    npcs: [nurse],
   };
 }

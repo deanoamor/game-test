@@ -1,6 +1,6 @@
 import type { Rect, WorldDef } from '../types';
 import { ekimaeDetails } from './details';
-import { HOME } from './home';
+import { HOME, KONBINI } from './home';
 
 /**
  * World 1: Ekimae Crossing, where the main street (along x, z = 44) meets the cross street (along z, x = 0). It covers
@@ -30,10 +30,11 @@ export const ekimae: WorldDef = {
     { name: 'Back Lane North', jp: '裏通り 北', at: { x0: -6.5, z0: WALK.z0 - 1, x1: 6.5, z1: WALK.z0 + 3 }, to: null },
     { name: 'Hoshi Slope South', jp: '星坂 南', at: { x0: -6.5, z0: WALK.z1 - 3, x1: 6.5, z1: WALK.z1 + 1 }, to: null },
     { name: 'Home', jp: '自宅', at: HOME.door, to: 'home', door: HOME.info },
+    { name: 'Hoshi Mart', jp: 'ほしマート', at: KONBINI.door, to: 'konbini', door: KONBINI.info },
   ],
   details: ekimaeDetails,
   // the door at the top of the outside stairs by the crossing is the way into her home (World 2)
-  spawns: { home: HOME.out },
+  spawns: { home: HOME.out, konbini: KONBINI.out },
   // on the corner pavement by the vending machine, facing the crossing
   player: { x: -5, z: 38.6, yaw: 90 },
 };

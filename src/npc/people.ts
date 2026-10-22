@@ -1,7 +1,7 @@
 import type { NpcDef } from './npc';
 
 /**
- * The NPCs of the game, as data. (None of them is in a world yet: see src/worlds/npclab/ for the room they are tried in.)
+ * The NPCs of the game, as data. (The nurse is not in a world yet: see src/worlds/npclab/ for the room she is tried in. The clerk works in Hoshi Mart, World 3.)
  */
 
 /** The nurse of the Hoshi clinic, the one with the sign by the crossing. */
