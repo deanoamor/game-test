@@ -1,4 +1,4 @@
-import { AmbientLight, Color, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, PointLight } from 'three';
+import { AmbientLight, Color, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, PointLight } from 'three';
 import { GeoBuilder } from '../../util/builder';
 import type { Solid } from '../../world/village/frame';
 import type { InteriorBuild } from '../types';
@@ -475,22 +475,6 @@ export function buildHome(): InteriorBuild {
   frame('S', 3.2, 1.6, 0.6, 0.45, '#6f4d33', '#c9a05a');
 
   // ---------------------------------------------------------------------------------------------------------------
-  // the outside: a garden ground, and trees round the house
-  // ---------------------------------------------------------------------------------------------------------------
-  const yard = new Mesh(new PlaneGeometry(260, 260).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: '#7f8f6c', roughness: 1 }));
-  yard.position.y = -0.36;
-  yard.receiveShadow = true;
-  group.add(yard);
-  const trees = new GeoBuilder();
-  for (let k = 0; k < 16; k++) {
-    const a = (k / 16) * Math.PI * 2 + 0.3, r = 12 + (k % 4) * 3.5;
-    const x = Math.cos(a) * r, z = Math.sin(a) * r, s = 1 + (k % 3) * 0.25;
-    trees.frustum(x, -0.36, z, 0.25 * s, 0.18 * s, 2.2 * s, 7, '#6a4a32', { ao: 0.1 });
-    trees.blob(x, 2.6 * s, z, 1.5 * s, 1.5 * s, 1.5 * s, k % 5 === 0 ? '#e8a0b4' : '#4f9a45', { seed: k + 40 });
-    trees.blob(x + 0.5 * s, 3.5 * s, z, 1.1 * s, 1.1 * s, 1.1 * s, k % 5 === 0 ? '#f2b8c8' : '#5aa845', { seed: k + 70 });
-  }
-
-  // ---------------------------------------------------------------------------------------------------------------
   // meshes, lights
   // ---------------------------------------------------------------------------------------------------------------
   const wallMat = new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 });
@@ -505,7 +489,7 @@ export function buildHome(): InteriorBuild {
     o.receiveShadow = true;
     return o;
   };
-  group.add(mesh(body, bodyMat, true, 'Home furniture'), mesh(trees, bodyMat, true, 'Home trees'), mesh(lamp, lampMat, false, 'Home lamps'), mesh(screen, screenMat, false, 'Home screens'));
+  group.add(mesh(body, bodyMat, true, 'Home furniture'), mesh(lamp, lampMat, false, 'Home lamps'), mesh(screen, screenMat, false, 'Home screens'));
   const walls = (Object.keys(side) as Side[]).map((k) => {
     const g = new Group();
     g.name = `Wall ${k}`;

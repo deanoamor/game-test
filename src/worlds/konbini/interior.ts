@@ -8,7 +8,7 @@ import type { InteriorBuild } from '../types';
  * and the walls between the camera and the shop are cut down. The automatic door is in the north wall (a few steps in
  * from the street); inside are two aisles of shelves, a magazine rack, a drinks cooler and a chilled case for onigiri
  * and bento, an eat-in bar by the window, and the counter in the north-east corner with the till, the oden and the
- * clerk's side, closed off by the ATM and the copier.
+ * clerk's side, closed off by the ATM and the copier. Nothing is built outside the walls, and the only light is the shop's own.
  *
  * Axes: x east, z south, y up. Everything is boxes with vertex colours, like the rest of the game.
  */
@@ -237,8 +237,8 @@ export function buildShop(): InteriorBuild {
   bx(body, -4.7, 0, 2.2, 0.55, 0.92, 2.6, C.woodL, { ao: 0.08 });
   bx(body, -4.66, 0.92, 2.2, 0.62, 0.05, 2.7, C.wood, { ao: 0.05 });
   for (const z of [1.3, 2.2, 3.1]) {
-    body.frustum(-4.1, 0, z, 0.17, 0.17, 0.02, 10, C.dark, { ao: 0 });
-    bx(body, -4.1, 0.02, z, 0.04, 0.6, 0.04, C.greyD, { ao: 0 });
+    body.frustum(-4.1, 0.02, z, 0.17, 0.17, 0.03, 10, C.dark, { ao: 0 }); // (on the tiles, not in their plane)
+    bx(body, -4.1, 0.05, z, 0.04, 0.57, 0.04, C.greyD, { ao: 0 });
     body.frustum(-4.1, 0.62, z, 0.17, 0.16, 0.06, 10, C.blue, { ao: 0.05 });
   }
   S(-4.65, 2.2, 0.32, 1.38);
@@ -340,31 +340,6 @@ export function buildShop(): InteriorBuild {
   menu.name = 'Oden menu';
 
   // ---------------------------------------------------------------------------------------------------------------
-  // the outside: the pavement round the shop, the street, a vending machine by the door
-  // ---------------------------------------------------------------------------------------------------------------
-  const yard = new Mesh(new PlaneGeometry(260, 260).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: '#6b6e72', roughness: 1 }));
-  yard.position.y = -0.36;
-  yard.receiveShadow = true;
-  group.add(yard);
-  const outside = new GeoBuilder();
-  bx(outside, 0, -0.36, 0, 13.4, 0.36, 11.4, '#bdb8ac', { ao: 0.05 });
-  for (let k = 0; k < 8; k++) bx(outside, -6 + k * 1.7, 0.0, 6.4, 0.1, 0.01, 2.6, '#f4f2ea', { ao: 0 }); // parking lines
-  for (let k = 0; k < 2; k++) { // two vending machines beside the door, on the outside
-    const x = -0.9 + k * 0.85;
-    bx(outside, x, 0, -4.7, 0.7, 1.75, 0.6, k ? '#d8402a' : '#2a8fd8', { ao: 0.08 });
-    bx(outside, x, 0.55, -4.38, 0.54, 1.0, 0.02, '#dff2fa', { ao: 0 });
-    for (let j = 0; j < 6; j++) bx(outside, x - 0.2 + (j % 3) * 0.2, 0.7 + Math.floor(j / 3) * 0.4, -4.4, 0.08, 0.2, 0.03, GOODS[(j + k * 3) % GOODS.length], { ao: 0 });
-  }
-  S(-0.48, -4.7, 0.8, 0.32);
-  const trees = new GeoBuilder();
-  for (let k = 0; k < 14; k++) {
-    const a = (k / 14) * Math.PI * 2 + 0.2, r = 13 + (k % 4) * 3.5;
-    const x = Math.cos(a) * r, z = Math.sin(a) * r, s = 1 + (k % 3) * 0.25;
-    trees.frustum(x, -0.36, z, 0.25 * s, 0.18 * s, 2.2 * s, 7, '#6a4a32', { ao: 0.1 });
-    trees.blob(x, 2.6 * s, z, 1.5 * s, 1.5 * s, 1.5 * s, '#4f9a45', { seed: k + 40 });
-  }
-
-  // ---------------------------------------------------------------------------------------------------------------
   // meshes, lights
   // ---------------------------------------------------------------------------------------------------------------
   const wallMat = new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 });
@@ -377,7 +352,7 @@ export function buildShop(): InteriorBuild {
     o.name = name; o.castShadow = shadow; o.receiveShadow = true;
     return o;
   };
-  group.add(mesh(body, bodyMat, true, 'Shop furniture'), mesh(outside, bodyMat, true, 'Shop outside'), mesh(trees, bodyMat, true, 'Shop trees'), mesh(lit, litMat, false, 'Shop lit'), mesh(screen, screenMat, false, 'Shop screens'));
+  group.add(mesh(body, bodyMat, true, 'Shop furniture'), mesh(lit, litMat, false, 'Shop lit'), mesh(screen, screenMat, false, 'Shop screens'));
   const walls = (Object.keys(side) as Side[]).map((k) => {
     const g = new Group();
     g.name = `Wall ${k}`;

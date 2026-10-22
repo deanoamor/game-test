@@ -134,10 +134,29 @@ async function main() {
     (document.getElementById('quality') as HTMLSelectElement).value = q;
     resize();
   };
+  // inside (the home, the shop) there is no sun, sky or town round it: the only light is the lamps of the room, the same at
+  // any hour, and the world outside the walls is empty (the clock still runs for the HUD)
+  const indoors = !!world.interior;
+  if (indoors) {
+    sky.mesh.visible = false;
+    clouds.mesh.visible = false;
+    document.body.style.background = '#0b0d12';
+  }
   const applyHour = (h: number) => {
     hour = ((h % 24) + 24) % 24;
-    light.setHour(hour);
+    light.setHour(indoors ? 21.5 : hour);
     const s = light.state;
+    if (indoors) {
+      light.sun.intensity = 0;
+      light.sun.castShadow = false;
+      light.moon.intensity = 0;
+      light.hemi.intensity = 0.1;
+      light.fog.density = 0;
+      scene.environmentIntensity = 0.08;
+      stage.setNight(1, hour);
+      post.setLook(1, s.bloom);
+      return;
+    }
     stage.setNight(s.night, hour);
     clouds.tint(s.sky.horizon, s.night);
     post.setLook(s.night, s.bloom);
