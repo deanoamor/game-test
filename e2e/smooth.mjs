@@ -8,8 +8,8 @@ await page.waitForFunction(() => window.__game && window.__game.frames() > 2, nu
 console.log(JSON.stringify(await page.evaluate(() => {
   const p = window.__game.player;
   p.teleport(-30, 44);
-  const names = [...p.bones.keys()];
-  const snap = () => { const o = {}; for (const n of names) { const b = p.bones.get(n); o[n] = [b.rotation.x, b.rotation.y, b.rotation.z]; } o.hipsY = [p.bones.get('Hips').position.y]; return o; };
+  const names = [...p.gait.bones.keys()];
+  const snap = () => { const o = {}; for (const n of names) { const b = p.gait.bones.get(n); o[n] = [b.rotation.x, b.rotation.y, b.rotation.z]; } o.hipsY = [p.gait.bones.get('Hips').position.y]; return o; };
   let prev = snap();
   const worst = {};
   const script = [[0.5, []], [2.5, ['KeyD']], [2.5, ['KeyD', 'ShiftLeft']], [2, ['KeyD']], [1.5, []]];

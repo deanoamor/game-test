@@ -2,6 +2,7 @@ import { HALF, PLACES, type Place } from '../world/config';
 import { ekimae } from './ekimae';
 import { full } from './full';
 import { home } from './home';
+import { npclab } from './npclab';
 import type { Rect, WorldDef } from './types';
 
 export type { Exit, Rect, WorldDef } from './types';
@@ -15,7 +16,7 @@ export type { Exit, Rect, WorldDef } from './types';
  * Each world lives in its own folder (src/worlds/<key>/) and is listed here; the town they are cut from is built by
  * src/world/.
  */
-export const WORLDS: WorldDef[] = [ekimae, home, full];
+export const WORLDS: WorldDef[] = [ekimae, home, full, npclab];
 
 /** The world this page shows: from the address (#world=… or ?world=…), the first zone by default. */
 export function currentWorld(): WorldDef {

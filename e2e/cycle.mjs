@@ -13,9 +13,9 @@ for (let k = 0; k < 12; k++) {
   await page.evaluate(([k, mode, view]) => {
     const g = window.__game, p = g.player;
     p.teleport(16, 44);
-    p.walkW = 1; p.runW = mode === 'run' ? 1 : 0;
-    p.facing = Math.PI / 2; p.phase = (k / 12) * Math.PI * 2;
-    p.pose();
+    p.gait.walkW = 1; p.gait.runW = mode === "run" ? 1 : 0;
+    p.facing = Math.PI / 2; p.gait.phase = (k / 12) * Math.PI * 2;
+    p.gait.pose();
     p.group.rotation.y = p.facing; p.group.position.copy(p.pos);
     g.drone.following = false; g.drone.clearance = false;
     g.drone.setView(p.pos.x, p.pos.z, view, 8, 4.2);

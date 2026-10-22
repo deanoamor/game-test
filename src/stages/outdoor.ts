@@ -88,6 +88,7 @@ export async function buildOutdoor(o: { scene: Scene; world: WorldDef; keep: Rec
     },
     fogScale: keep ? 1.7 : 1,
     trees: trees.count,
+    npcs: [],
     extra: { signals, traffic, terrain },
   };
 }

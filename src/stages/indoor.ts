@@ -6,7 +6,7 @@ import type { Stage } from './stage';
 export async function buildIndoor(o: { scene: Scene; world: WorldDef; progress: (f: number, msg: string) => void; nextFrame: () => Promise<void> }): Promise<Stage> {
   o.progress(0.3, 'Furnishing the home…');
   await o.nextFrame();
-  const home = o.world.interior!();
+  const home = await o.world.interior!();
   o.scene.add(home.group);
   return {
     obstacles: { solids: home.solids },
@@ -16,6 +16,7 @@ export async function buildIndoor(o: { scene: Scene; world: WorldDef; progress: 
     fogScale: 0.2,
     shadowHalf: home.shadowHalf,
     trees: 0,
+    npcs: home.npcs ?? [],
     extra: { home },
   };
 }

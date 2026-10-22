@@ -1,5 +1,6 @@
 import { ACESFilmicToneMapping, PCFSoftShadowMap, PMREMGenerator, Scene, SRGBColorSpace, WebGLRenderer, Vector3, Color, type Mesh } from 'three';
 import { Drone } from './camera/drone';
+import { TalkUI } from './npc/talk';
 import { Player } from './player/player';
 import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
@@ -57,6 +58,15 @@ async function main() {
     drone.following = !params.has('yaw');
     // a steady view: the camera keeps its distance and its tilt, and does not rise or back off round the roofs
     drone.clearance = false;
+  }
+
+  // NPCs: the player cannot walk through them, their name tags are in the HUD, and F talks to the one in reach
+  let talk: TalkUI | null = null;
+  if (player && stage.npcs.length) {
+    const layer = document.getElementById('hud')!;
+    player.blockers = stage.npcs.map((n) => n.blocker);
+    for (const n of stage.npcs) layer.appendChild(n.label);
+    talk = new TalkUI(player, stage.npcs, layer);
   }
 
   progress(0.95, 'Drawing the map…');
@@ -172,7 +182,10 @@ async function main() {
       player.update(params.has('shot') ? 0 : dt, drone.yaw);
       if (drone.following) drone.follow(player.pos.x, player.pos.z, player.pos.y);
     }
+    for (const n of stage.npcs) n.update(params.has('shot') ? 0 : dt, player?.pos);
     drone.update(dt);
+    for (const n of stage.npcs) n.project(drone.camera, host.clientWidth, host.clientHeight);
+    if (talk && player) talk.update(player.pos);
     light.follow(drone.target);
     stage.step(dt, light.state.night, drone.target, drone.yaw, params.has('shot'));
     clouds.step(dt);
@@ -216,7 +229,7 @@ async function main() {
   requestAnimationFrame(loop);
 
   (window as unknown as Record<string, unknown>).__game = {
-    drone, scene, renderer, light, post, hud, player, stage, ...stage.extra,
+    drone, scene, renderer, light, post, hud, player, stage, talk, npcs: stage.npcs, ...stage.extra,
     hour: () => hour,
     /** Run the signals and the traffic ahead by `seconds` (for tests). */
     simulate: (seconds: number) => { const { signals, traffic } = stage.extra; if (signals && traffic) for (let t = 0; t < seconds; t += 1 / 30) { signals.step(1 / 30); traffic.step(1 / 30); } },

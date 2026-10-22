@@ -1,6 +1,7 @@
 import type { Group } from 'three';
 import type { Place } from '../world/config';
 import type { DetailKit } from '../world/village';
+import type { Npc } from '../npc/npc';
 import type { Solid } from '../world/village/frame';
 
 export interface Rect { x0: number; z0: number; x1: number; z1: number }
@@ -30,6 +31,8 @@ export interface InteriorBuild {
   frame(dt: number, cameraYaw: number): void;
   /** How big the shadow-casting sun's area should be (metres either side of the room). */
   shadowHalf: number;
+  /** The NPCs that are in it. */
+  npcs?: Npc[];
 }
 
 export interface WorldDef {
@@ -54,7 +57,7 @@ export interface WorldDef {
   /** The world's own details, added to the town where it stands (they show on the full map too). */
   details?: (kit: DetailKit) => void;
   /** An interior world: built from this instead of the town. */
-  interior?: () => InteriorBuild;
+  interior?: () => InteriorBuild | Promise<InteriorBuild>;
   /** Where she arrives when she comes from another world (the key of the world she left; none: `player`). */
   spawns?: Record<string, { x: number; z: number; yaw: number }>;
 }

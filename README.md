@@ -39,6 +39,13 @@ kotatsu (and a sleeping cat), her bedroom (bed, desk, wardrobe, her uniform on a
 a *stage* (`src/stages/`): the town (`outdoor.ts`) or rooms (`indoor.ts`); the loop, the player and the camera are shared.
 `e2e/doors.mjs` walks through both doors and back, `e2e/rooms.mjs` checks every room can be reached.
 
+**NPCs (`src/npc/`, `src/characters/`).** The model loading, the skinning fix-ups and the walk/run/idle/gestures
+(wave, talk, bow, think) are shared by the player and the NPCs (`src/characters/`). An NPC (`npc.ts`) stands, walks a route
+and waits at each point, waves when the player comes near, turns to face her, and talks when F is pressed (`talk.ts`;
+the lines are data in `people.ts`). The first one, Nurse Hanae of the Hoshi Clinic, is **not in any world of the game
+yet**: she is tried in the *NPC test room* (World menu, `src/worlds/npclab/`; take it out of `src/worlds/index.ts` when
+the NPCs have their places). `e2e/npc.mjs` takes close-ups, `e2e/npc-flow.mjs` checks what she does.
+
 At night every lamp (street, car park, school, petrol station, expressway, underpass, stall and shrine lanterns), lit shop
 front, konbini and vending machine throws a pool of light on the ground; the streets that had no lamps (the cross street, the
 lanes, the frontage road, the ends of the main street, the back lanes between their old lamps) now have them; more windows are lit and the six

@@ -1,4 +1,5 @@
 import type { Mesh, Vector3 } from 'three';
+import type { Npc } from '../npc/npc';
 import type { Signals } from '../world/signals';
 import type { Traffic } from '../world/traffic';
 import type { Obstacles } from '../world/village';
@@ -22,5 +23,7 @@ export interface Stage {
   /** A tighter shadow area, for a small world (metres either side of the camera's target). */
   shadowHalf?: number;
   trees: number;
+  /** The NPCs of this world (they are updated by the loop, and can be talked to). */
+  npcs: Npc[];
   extra: { signals?: Signals; traffic?: Traffic; terrain?: Mesh; home?: InteriorBuild };
 }
