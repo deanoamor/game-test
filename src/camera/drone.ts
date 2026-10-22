@@ -210,6 +210,10 @@ export class Drone {
     pos.sub(this.target).multiplyScalar(this.stretch).add(this.target);
     this.camera.position.copy(pos);
     this.camera.lookAt(this.target);
+    // thin layers on a surface (floor tiles, road paint, kerbs) flicker when the depth buffer cannot tell them apart; the
+    // nearer the near plane, the worse that is, and nothing stands within a quarter of the distance of this camera
+    const near = Math.min(6, Math.max(0.3, this.dist * 0.2));
+    if (Math.abs(near - this.camera.near) > 0.05) { this.camera.near = near; this.camera.updateProjectionMatrix(); }
   }
 
   resize(w: number, h: number) {

@@ -71,7 +71,7 @@ export function buildShop(): InteriorBuild {
   // the floor: pale tiles in a loose chequer, a blue border strip at the entrance, a mat
   // ---------------------------------------------------------------------------------------------------------------
   bx(body, 0, -0.35, 0, 10.7, 0.35, 8.7, C.slab, { ao: 0.2 });
-  for (let i = 0; i < 20; i++) for (let j = 0; j < 16; j++) bx(body, X0 + 0.25 + i * 0.5, 0, Z0 + 0.25 + j * 0.5, 0.49, 0.008, 0.49, (i + j) % 2 ? '#e6e5df' : '#dcdbd4', { ao: 0.01 });
+  for (let i = 0; i < 20; i++) for (let j = 0; j < 16; j++) bx(body, X0 + 0.25 + i * 0.5, 0, Z0 + 0.25 + j * 0.5, 0.49, 0.02, 0.49, (i + j) % 2 ? '#e6e5df' : '#dcdbd4', { ao: 0.01 });
   bx(body, -3, 0.008, -3.35, 2.0, 0.012, 0.8, '#3a4a5a', { ao: 0 }); // the door mat
   bx(body, -3, 0.02, -3.35, 1.84, 0.004, 0.64, '#4a5c6e', { ao: 0 });
 
