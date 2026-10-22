@@ -25,7 +25,7 @@ interface Lane {
   stop?: number;
   box?: [number, number];
 }
-interface Car { lane: Lane; s: number; v: number; cruise: number; kind: VehicleKind; index: number; len: number; wid: number; vNext: number; brake: number }
+interface Car { lane: Lane; s: number; v: number; cruise: number; kind: VehicleKind; index: number; len: number; wid: number; vNext: number; brake: number; blockT: number; honkT: number; honks: number }
 
 /** The crossing: the stop lines frame it, the junction is where the two streets overlap. */
 const STOP_RECT = { x0: -7.2, x1: 7.2, z0: 36.3, z1: 51.7 };
@@ -101,6 +101,11 @@ export class Traffic {
   private sq = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
   private static SIZE: Partial<Record<VehicleKind, [number, number]>> = { car: [4.6, 2.1], kei: [3.8, 1.9], van: [5.0, 2.2], truck: [7.2, 2.7], bus: [10.5, 2.9] };
 
+  /** People standing on the road (the player, the NPCs): a car stops short of one in its way. */
+  blockers: { x: number; y: number; z: number; r: number }[] = [];
+  /** Called when a car that has been stopped by someone in its way sounds its horn (`n`: which honk of this wait). */
+  onHonk: ((car: { x: number; y: number; z: number; kind: VehicleKind; n: number }) => void) | null = null;
+
   constructor(private signals?: Signals) {
     const r = rng(808);
     const town = (name: string, reverse: boolean, offset: number): Lane => {
@@ -154,7 +159,7 @@ export class Traffic {
         used.set(kind, index + 1);
         const [len, wid] = Traffic.SIZE[kind] ?? [4.4, 2];
         const cruise = v0 + r() * (v1 - v0);
-        this.cars.push({ lane, s: step * (k + 0.3 * r()), v: cruise, cruise, kind, index, len, wid, vNext: cruise, brake: 0 });
+        this.cars.push({ lane, s: step * (k + 0.3 * r()), v: cruise, cruise, kind, index, len, wid, vNext: cruise, brake: 0, blockT: 0, honkT: 0, honks: 0 });
         const mesh = this.meshes.get(kind)!;
         mesh.setColorAt(index, new Color(kind === 'kei' ? pick(r, ['#f4f4ee', '#f4f4ee', '#e8e8e8', '#d8e4f0']) : pick(r, paints)));
       });
@@ -247,10 +252,38 @@ export class Traffic {
           if (stop) target = Math.min(target, Math.max(0, (toLine - 0.4) * 1.2));
         }
       }
+      // someone standing in the lane ahead: stop short of them (and honk, see below)
+      let block = Infinity;
+      if (this.blockers.length) {
+        const p = pointAt(l, c.s), px = p.x, pz = p.z, py = p.y, tx = p.tx, tz = p.tz;
+        for (const b of this.blockers) {
+          if (Math.abs(b.y - py) > 1.6) continue;
+          const dx = b.x - px, dz = b.z - pz;
+          const along = dx * tx + dz * tz, lat = Math.abs(dx * tz - dz * tx);
+          const reach = c.len / 2 + b.r;
+          if (along > 0 && along < reach + 3 + c.v * 1.3 + (c.v * c.v) / 5 && lat < c.wid / 2 + b.r + 0.25) block = Math.min(block, along - reach - 1.5);
+        }
+        if (block < Infinity) target = Math.min(target, Math.max(0, block * 1.3));
+      }
+      if (block === Infinity) { c.blockT = 0; c.honks = 0; c.honkT = 0; }
       let v = target > c.v ? Math.min(target, c.v + l.accel * dt) : target;
+      if (dt > 0 && block < Infinity) v = Math.min(v, Math.max(0, (block + 0.6) / dt));
       // and never into the car ahead, however short the frame
       if (dt > 0) v = Math.min(v, Math.max(0, (gap - 0.6) / dt));
       c.vNext = v;
+      if (block < Infinity && v < 0.4) {
+        c.blockT += dt;
+        // held up: a honk after a moment, then again and again, quicker as it goes on
+        if (c.blockT > 1.0) {
+          c.honkT -= dt;
+          if (c.honkT <= 0) {
+            c.honks++;
+            c.honkT = c.honks > 12 ? 2.6 : c.honks > 4 ? 0.9 : 1.5; // (it tires out in the end)
+            const p = pointAt(l, c.s);
+            this.onHonk?.({ x: p.x, y: p.y, z: p.z, kind: c.kind, n: c.honks });
+          }
+        }
+      }
     }
     this.cars.forEach((c, n) => {
       // brake lights while slowing down or standing still

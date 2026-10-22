@@ -26,6 +26,7 @@ export interface Hearing {
 
 interface Voice { base: number; range: number; wave: OscillatorType; rate: number }
 const VOICES: Record<string, Voice> = {
+  angry: { base: 150, range: 110, wave: 'sawtooth', rate: 0.045 },
   nurse: { base: 640, range: 160, wave: 'triangle', rate: 0.052 },
   clerk: { base: 230, range: 80, wave: 'square', rate: 0.048 },
   default: { base: 420, range: 120, wave: 'triangle', rate: 0.05 },
@@ -296,11 +297,15 @@ export class Sound {
   /** An NPC speaks: a chirp for every letter, in the character's voice, as long as the line takes to read. */
   speak(id: string, text: string) {
     this.stopSpeak();
-    if (!this.ok()) return;
+    this.speakBus = this.voice(id, text, 1);
+  }
+  /** A voice saying `text`, at `gain` (the bus it goes through is returned so it can be cut off). */
+  private voice(id: string, text: string, gain: number): GainNode | null {
+    if (!this.ok()) return null;
     const ctx = this.ctx!;
     const v = VOICES[id] ?? VOICES.default;
-    const bus = (this.speakBus = ctx.createGain());
-    bus.gain.value = 1;
+    const bus = ctx.createGain();
+    bus.gain.value = gain;
     bus.connect(this.master!);
     let t = ctx.currentTime + 0.03;
     let pitch = v.base;
@@ -324,6 +329,28 @@ export class Sound {
       o.start(t); o.stop(t + v.rate);
       t += v.rate;
     }
+    setTimeout(() => bus.disconnect(), (t - ctx.currentTime) * 1000 + 300);
+    return bus;
+  }
+  /** A driver's horn, heard from `dist` metres: one short honk at first, then angrier (two, then long ones). */
+  honk(dist: number, kind: string, n: number) {
+    if (!this.ok()) return;
+    const vol = 0.16 / (1 + (dist / 14) * (dist / 14));
+    if (vol < 0.004) return;
+    const f = kind === 'bus' ? 250 : kind === 'truck' ? 290 : kind === 'van' ? 360 : kind === 'kei' ? 500 : 420;
+    const pattern = n < 3 ? [0.28] : n < 5 ? [0.16, 0.16] : [0.14, 0.14, 0.5];
+    let t = 0;
+    for (const d of pattern) {
+      for (const k of [1, 1.26]) {
+        this.beep(f * k, d, vol * (k === 1 ? 1 : 0.8), 'sawtooth', t);
+      }
+      t += d + 0.07;
+    }
+  }
+  /** A driver shouting (the same chirps as the voices, low and rough), from `dist` metres. */
+  shout(text: string, dist: number) {
+    const g = 0.9 / (1 + (dist / 16) * (dist / 16));
+    if (g > 0.05) this.voice('angry', text, g);
   }
   stopSpeak() {
     const b = this.speakBus;

@@ -74,6 +74,27 @@ async function main() {
     show();
   }
 
+  // the drivers: they stop for her (and the NPCs) on the road, and honk and shout at her if she stands in the way
+  const angry: { x: number; y: number; z: number; text: string; t: number; el: HTMLElement }[] = [];
+  if (stage.extra.traffic) {
+    const RAGE = ['おい！', 'どけ！', '邪魔だ！', '何してんだ！', 'いい加減にしろ！'];
+    stage.extra.traffic.onHonk = (c) => {
+      const lx = player?.pos.x ?? drone.target.x, lz = player?.pos.z ?? drone.target.z;
+      const d = Math.hypot(c.x - lx, c.z - lz);
+      const text = RAGE[Math.min(c.n - 1, RAGE.length - 1)];
+      sound.honk(d, c.kind, c.n);
+      if (d < 40) {
+        if (c.n > 1) sound.shout(text, d);
+        const el = document.createElement('div');
+        el.className = 'carTag';
+        el.textContent = `💢 ${text}`;
+        document.getElementById('hud')!.appendChild(el);
+        angry.push({ x: c.x, y: c.y + 2.3, z: c.z, text, t: 1.8, el });
+        while (angry.length > 3) angry.shift()!.el.remove();
+      }
+    };
+  }
+
   // NPCs: the player cannot walk through them, their name tags are in the HUD, and F talks to the one in reach
   let talk: TalkUI | null = null;
   if (player && stage.npcs.length) {
@@ -222,6 +243,21 @@ async function main() {
       if (n.bubble && !before) sound.greet(n.def.id);
     }
     drone.update(dt);
+    if (stage.extra.traffic) {
+      const tb = stage.extra.traffic.blockers;
+      tb.length = 0;
+      if (player) tb.push({ x: player.pos.x, y: player.pos.y, z: player.pos.z, r: 0.3 });
+      for (const n of stage.npcs) tb.push({ x: n.pos.x, y: n.pos.y, z: n.pos.z, r: 0.3 });
+      for (let i = angry.length - 1; i >= 0; i--) {
+        const a = angry[i];
+        a.t -= dt;
+        if (a.t <= 0) { a.el.remove(); angry.splice(i, 1); continue; }
+        const v = new Vector3(a.x, a.y, a.z).project(drone.camera);
+        a.el.style.display = v.z < 1 ? 'block' : 'none';
+        a.el.style.left = `${((v.x + 1) / 2) * host.clientWidth}px`;
+        a.el.style.top = `${((1 - v.y) / 2) * host.clientHeight}px`;
+      }
+    }
     if (player) {
       // her steps: one for each foot, as the stride comes round
       const g = player.gait, idx = Math.floor(g.phase / Math.PI);
