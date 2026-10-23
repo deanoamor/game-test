@@ -382,12 +382,16 @@ export function buildShop(): InteriorBuild {
     group,
     solids,
     shadowHalf: 13,
-    // anywhere in the shop's floor space: F to buy (the shelves, the coolers, the chilled case, the counter)
+    // where to press F: the stack of baskets by the door, each shelf (it sells its own things), the register
     spots: [
-      { x: 2.7, z: -1.2, r: 2.3, label: 'Buy things at the counter', kind: 'shop' },
-      { x: 0.4, z: 0.55, r: 2.9, label: 'Buy things (shelves)', kind: 'shop' },
-      { x: 1.2, z: 2.6, r: 2.4, label: 'Buy drinks', kind: 'shop' },
-      { x: 3.7, z: 0.2, r: 1.9, label: 'Buy onigiri and bento', kind: 'shop' },
+      { x0: -4.45, z0: -3.5, x1: -4.45, z1: -3.5, r: 1.5, label: 'Basket', kind: 'basket' },
+      { x0: -1.6, z0: -0.4, x1: 2.4, z1: -0.4, r: 1.5, label: 'Snacks', kind: 'shelf', shelf: 'snacks' },
+      { x0: -1.6, z0: 1.5, x1: 2.4, z1: 1.5, r: 1.4, label: 'Daily goods', kind: 'shelf', shelf: 'daily' },
+      { x0: -1.5, z0: 3.3, x1: 3.8, z1: 3.3, r: 1.5, label: 'Drinks', kind: 'shelf', shelf: 'drinks' },
+      { x0: 4.6, z0: -1.2, x1: 4.6, z1: 1.6, r: 1.8, label: 'Fresh food', kind: 'shelf', shelf: 'fresh' },
+      { x0: -3.8, z0: 3.4, x1: -2.4, z1: 3.4, r: 1.5, label: 'Freezer', kind: 'shelf', shelf: 'frozen' },
+      { x0: -4.55, z0: -2.1, x1: -4.55, z1: 0.3, r: 1.5, label: 'Magazines', kind: 'shelf', shelf: 'magazines' },
+      { x0: 1.6, z0: -1.5, x1: 4.4, z1: -1.5, r: 1.0, label: 'Pay at the register', kind: 'register' },
     ],
     floor: () => 0,
     surface: () => 'tile',

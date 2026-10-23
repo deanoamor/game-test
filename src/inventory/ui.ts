@@ -1,31 +1,45 @@
 import type { Player } from '../player/player';
 import type { Sound } from '../audio/sound';
-import { BAGS, MAX_STACK, itemOf } from './items';
-import { Inventory } from './store';
+import { BAGS, BASKET_CAP, MAX_STACK, itemOf, shelfOf } from './items';
+import type { Basket } from './shop';
+import type { Inventory } from './store';
 
 /**
  * The bag, the wardrobe and the shop, as one panel in the middle of the screen. B opens the bag; F at the wardrobe at
- * home opens the wardrobe (change the bag, keep things); the shop opens when she has talked to the clerk. The player
- * stands still while a panel is open. Esc (or the button) closes it.
+ * home opens the wardrobe (change the bag, keep things). In the shop it goes like a real one: F at the stack by the
+ * door takes a basket, F at a shelf shows what that shelf has (add things to the basket), F at the register shows the
+ * basket and the total, and paying puts the things in the bag. The player stands still while a panel is open. Esc
+ * (or the button) closes it.
  */
 
-type Mode = 'bag' | 'wardrobe' | 'shop';
-export interface Spot { x: number; z: number; r: number; label: string; kind: 'wardrobe' | 'shop' }
+type Mode = 'bag' | 'wardrobe' | 'shelf' | 'register';
+/** A place to press F at: a line segment (a shelf, the counter) or a point, and how near she must be. */
+export interface Spot { x0: number; z0: number; x1: number; z1: number; r: number; label: string; kind: 'wardrobe' | 'basket' | 'shelf' | 'register'; shelf?: string }
+
+const segDist = (x: number, z: number, s: Spot) => {
+  const dx = s.x1 - s.x0, dz = s.z1 - s.z0, l2 = dx * dx + dz * dz;
+  const t = l2 ? Math.min(1, Math.max(0, ((x - s.x0) * dx + (z - s.z0) * dz) / l2)) : 0;
+  return Math.hypot(x - (s.x0 + dx * t), z - (s.z0 + dz * t));
+};
 
 export class BagUI {
   private box: HTMLElement;
   private prompt: HTMLElement;
   mode: Mode | null = null;
+  private shelf = 'snacks';
   private selected = -1;
   private message = '';
   private spots: Spot[] = [];
   private near: Spot | null = null;
+  private toastT = 0;
   /** The shop's button to chat with the clerk. */
   onChat: (() => void) | null = null;
   /** True while a talk is going on (F belongs to it). */
   busy: (() => boolean) | null = null;
+  /** The basket in her hand changed (how many things in it; null: none). */
+  onHeld: ((count: number | null) => void) | null = null;
 
-  constructor(private inv: Inventory, private player: Player | null, host: HTMLElement, private sound?: Sound) {
+  constructor(private inv: Inventory, readonly basket: Basket, private player: Player | null, host: HTMLElement, private sound?: Sound) {
     this.box = document.createElement('div');
     this.box.id = 'bag';
     this.box.className = 'panel';
@@ -39,19 +53,30 @@ export class BagUI {
       if (tag === 'INPUT' || tag === 'SELECT') return;
       if (e.code === 'KeyB' && !e.repeat) { this.mode === 'bag' ? this.close() : !this.mode && this.open('bag'); }
       else if (e.code === 'Escape' && this.mode) this.close();
-      else if (e.code === 'KeyF' && !e.repeat && !this.mode && this.near && !this.busy?.()) this.open(this.near.kind);
+      else if (e.code === 'KeyF' && !e.repeat && !this.mode && this.near && !this.busy?.()) this.act(this.near);
     });
     this.box.addEventListener('click', (e) => this.click(e.target as HTMLElement));
     inv.onChange = () => this.mode && this.render();
+    basket.onChange = () => { this.onHeld?.(basket.has ? basket.count : null); if (this.mode) this.render(); };
   }
 
   setSpots(s: Spot[]) { this.spots = s; }
 
-  open(mode: Mode) {
+  /** A short notice where the prompt is. */
+  toast(text: string) {
+    this.prompt.textContent = text;
+    this.prompt.classList.add('on');
+    this.toastT = 3;
+  }
+
+  open(mode: Mode, shelf?: string) {
     if (this.mode && this.mode !== mode) return;
     this.mode = mode;
+    if (shelf) this.shelf = shelf;
     this.selected = -1;
-    this.message = mode === 'wardrobe' ? 'Pick a bag, or move things between the bag and the wardrobe.' : mode === 'shop' ? 'Irasshaimase! What would you like?' : '';
+    this.message = mode === 'wardrobe' ? 'Pick a bag, or move things between the bag and the wardrobe.'
+      : mode === 'register' ? (this.basket.has && this.basket.count ? 'Irasshaimase! Is this everything?' : 'Irasshaimase! Your basket is empty. Take one by the door and pick things from the shelves.')
+      : mode === 'shelf' ? 'Add what you want to the basket, then pay at the register.' : '';
     if (this.player) this.player.frozen = true;
     this.prompt.classList.remove('on');
     this.render();
@@ -65,12 +90,43 @@ export class BagUI {
     if (this.player) this.player.frozen = false;
   }
 
-  /** Every frame: near the wardrobe, say so. */
-  update(x: number, z: number) {
+  /** What she must settle before she leaves the shop (null: nothing). */
+  leaveGuard(): string | null {
+    if (this.basket.has && this.basket.count > 0) return 'Pay for the things in your basket first (at the register), or put them back.';
+    if (this.basket.has) this.basket.giveBack();
+    return null;
+  }
+
+  /** Every frame: near a place to press F at, say so. */
+  update(x: number, z: number, dt = 0) {
     if (this.mode) return;
-    if (this.busy?.()) { this.near = null; this.prompt.classList.remove('on'); return; }
-    this.near = this.spots.find((s) => Math.hypot(x - s.x, z - s.z) < s.r) ?? null;
-    if (this.near) { this.prompt.innerHTML = `<b>F</b> · ${this.near.label}`; this.prompt.classList.add('on'); } else this.prompt.classList.remove('on');
+    if (this.busy?.()) { this.near = null; this.toastT = 0; this.prompt.classList.remove('on'); return; }
+    let best: Spot | null = null, bd = Infinity;
+    for (const s of this.spots) { const d = segDist(x, z, s); if (d < s.r && d < bd) { best = s; bd = d; } }
+    // (a notice stays for a few seconds, unless she walks to another place)
+    if (best !== this.near) this.toastT = 0;
+    this.near = best;
+    if (this.toastT > 0) { this.toastT -= dt; if (this.toastT > 0) return; }
+    if (best) {
+      let label = best.label;
+      if (best.kind === 'basket') label = this.basket.has ? 'Put the basket back' : 'Take a basket';
+      else if (best.kind === 'shelf') label = this.basket.has ? `${shelfOf(best.shelf!).name}: pick things` : `${shelfOf(best.shelf!).name} (take a basket first, by the door)`;
+      this.prompt.innerHTML = `<b>F</b> · ${label}`;
+      this.prompt.classList.add('on');
+    } else this.prompt.classList.remove('on');
+  }
+
+  private act(s: Spot) {
+    if (s.kind === 'wardrobe') this.open('wardrobe');
+    else if (s.kind === 'register') this.open('register');
+    else if (s.kind === 'basket') {
+      if (this.basket.has) { const had = this.basket.count; this.basket.giveBack(); this.toast(had ? 'You put everything back and returned the basket.' : 'You returned the basket.'); }
+      else { this.basket.take(); this.toast('You took a basket. Pick things from the shelves, then pay at the register.'); }
+      this.sound?.cue('swap');
+    } else if (s.kind === 'shelf') {
+      if (!this.basket.has) this.toast('Take a basket first: the stack is by the door.');
+      else this.open('shelf', s.shelf);
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------------------
@@ -78,6 +134,12 @@ export class BagUI {
     const s = this.inv.state.slots[i];
     if (!s) return `<button class="slot empty" ${attr}="${i}"></button>`;
     return `<button class="slot${i === this.selected ? ' sel' : ''}" ${attr}="${i}" title="${itemOf(s.id).name}">${itemOf(s.id).icon}${s.n > 1 ? `<i>${s.n}</i>` : ''}</button>`;
+  }
+
+  private basketHtml() {
+    const b = this.basket;
+    const chips = b.items.length ? b.items.map((s) => `<button class="chip" data-drop="${s.id}" title="Put one back">${itemOf(s.id).icon}<i>×${s.n}</i></button>`).join('') : '<em>Empty</em>';
+    return `<div class="basket"><b>🧺 Basket</b> <span>${b.count}/${BASKET_CAP}</span><div class="chips">${chips}</div><span class="tot">¥${b.total}</span></div>`;
   }
 
   private render() {
@@ -93,16 +155,22 @@ export class BagUI {
       const bags = BAGS.map((b) => `<button class="bagcard${b.id === st.bag ? ' on' : ''}" data-bag="${b.id}"><span>${b.icon}</span><b>${b.name}</b><small>${b.slots} slots</small></button>`).join('');
       const stash = st.stash.length ? st.stash.map((t, i) => `<button class="slot" data-take="${i}" title="${itemOf(t.id).name}">${itemOf(t.id).icon}<i>${t.n}</i></button>`).join('') : '<em>Empty</em>';
       html = `${head}<h5>Bags</h5><div class="bags">${bags}</div><h5>In your bag <small>(click to put away)</small></h5>${grid}<h5>In the wardrobe <small>(click to take)</small></h5><div class="grid stash">${stash}</div><div class="msg">${this.message}</div><div class="hint">Esc: close</div>`;
-    } else {
-      const rows = Inventory.shopItems.map((i) => `<div class="row"><span>${i.icon}</span><div><b>${i.name}</b> <small>${i.jp}</small><br><small>${i.note}</small></div><i>¥${i.price}</i><button data-buy="${i.id}">Buy</button></div>`).join('');
-      html = `${head}<div class="rows">${rows}</div><div class="msg">${this.message}</div>${this.onChat ? '<button class="chat" data-chat>💬 Talk to the clerk</button>' : ''}<div class="hint">Esc: close</div>`;
+    } else if (this.mode === 'shelf') {
+      const sh = shelfOf(this.shelf);
+      const full = this.basket.count >= BASKET_CAP;
+      const rows = sh.items.map((id) => { const i = itemOf(id); return `<div class="row"><span>${i.icon}</span><div><b>${i.name}</b> <small>${i.jp}</small><br><small>${i.note}</small></div><i>¥${i.price}</i><button data-add="${id}"${full ? ' disabled' : ''}>${full ? 'Full' : 'Add'}</button></div>`; }).join('');
+      html = `<div class="bh"><b>${sh.icon} ${sh.name}</b><span>${sh.jp}</span><span class="yen">¥${st.yen}</span><button data-close>✕</button></div><div class="rows">${rows}</div>${this.basketHtml()}<div class="msg">${this.message}</div><div class="hint">Esc: close · pay at the register</div>`;
+    } else if (this.mode === 'register') {
+      const b = this.basket;
+      const rows = b.items.map((s) => { const i = itemOf(s.id); return `<div class="row"><span>${i.icon}</span><div><b>${i.name}</b> <small>${i.jp}</small></div><i>×${s.n} · ¥${i.price * s.n}</i><button data-drop="${s.id}">−</button></div>`; }).join('');
+      html = `<div class="bh"><b>🧾 Register</b><span>Hoshi Mart</span><span class="yen">¥${st.yen}</span><button data-close>✕</button></div>${rows ? `<div class="rows">${rows}</div>` : '<div class="info">Nothing in the basket.</div>'}<div class="basket"><b>Total</b><span class="tot">¥${b.total}</span></div><div class="msg">${this.message}</div><button class="pay" data-pay${b.count ? '' : ' disabled'}>Pay ¥${b.total}</button> ${this.onChat ? '<button class="chat" data-chat>💬 Talk to the clerk</button>' : ''}<div class="hint">Esc: close</div>`;
     }
     this.box.innerHTML = html;
   }
 
   private click(t: HTMLElement) {
     const el = t.closest('button');
-    if (!el) return;
+    if (!el || el.disabled) return;
     const d = el.dataset;
     if ('close' in d) return this.close();
     if ('chat' in d) { this.close(); this.onChat?.(); return; }
@@ -127,10 +195,22 @@ export class BagUI {
       this.sound?.cue('swap');
       return this.render();
     }
-    if (d.buy !== undefined) {
-      const why = this.inv.buy(d.buy);
-      this.message = why ?? `Thank you very much! (${itemOf(d.buy).name})`;
-      if (!why) this.sound?.cue('buy');
+    if (d.add !== undefined) {
+      if (this.basket.add(d.add)) { this.message = `${itemOf(d.add).name} is in the basket.`; this.sound?.cue('swap'); }
+      else this.message = 'The basket is full.';
+      return this.render();
+    }
+    if (d.drop !== undefined) { this.basket.removeOne(d.drop); this.message = `You put back the ${itemOf(d.drop).name}.`; this.sound?.cue('swap'); return this.render(); }
+    if ('pay' in d) {
+      const b = this.basket;
+      const why = this.inv.pay(b.items, b.total);
+      if (why) this.message = why;
+      else {
+        b.giveBack();
+        this.message = 'Thank you very much! (The things are in your bag.)';
+        this.sound?.cue('buy');
+        this.sound?.speak('clerk', 'Arigatou gozaimashita! Mata okoshi kudasai!');
+      }
       return this.render();
     }
   }

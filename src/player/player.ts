@@ -110,6 +110,14 @@ export class Player {
     if (g) this.group.add(g);
   }
 
+  private heldGroup: Group | null = null;
+  /** Hold something in her right hand (the shop's basket), in place of what she holds. */
+  setHeld(g: Group | null) {
+    if (this.heldGroup) this.group.remove(this.heldGroup);
+    this.heldGroup = g;
+    if (g) this.group.add(g);
+  }
+
   /** The blob shadow, to be added to the scene beside the player. */
   get shadowMesh() { return this.shadow; }
 

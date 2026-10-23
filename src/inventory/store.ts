@@ -1,4 +1,4 @@
-import { BAGS, ITEMS, MAX_STACK, bagOf, itemOf } from './items';
+import { BAGS, MAX_STACK, bagOf, itemOf } from './items';
 
 /**
  * What she carries: a bag with a number of slots (each holds up to five of the same thing), the wardrobe at home where
@@ -59,13 +59,24 @@ export class Inventory {
     return it.use;
   }
 
-  /** Buy one: money out, item in. Returns why not, or null when it worked. */
-  buy(id: string): string | null {
-    const it = itemOf(id);
-    if (this.state.yen < it.price) return 'Not enough money.';
-    if (this.room(id) < 1) return 'Your bag is full.';
-    this.state.yen -= it.price;
-    this.add(id, 1);
+  /** Whether all of these would fit in the bag together. */
+  canFit(stacks: Stack[]): boolean {
+    const slots = this.state.slots.map((x) => (x ? { ...x } : null));
+    for (const st of stacks) {
+      let left = st.n;
+      for (const s of slots) if (s && s.id === st.id && left > 0) { const k = Math.min(left, MAX_STACK - s.n); s.n += k; left -= k; }
+      for (let i = 0; i < slots.length && left > 0; i++) if (!slots[i]) { const k = Math.min(left, MAX_STACK); slots[i] = { id: st.id, n: k }; left -= k; }
+      if (left > 0) return false;
+    }
+    return true;
+  }
+
+  /** Pay at the register: money out, the things into the bag. Returns why not, or null when it worked. */
+  pay(stacks: Stack[], total: number): string | null {
+    if (this.state.yen < total) return `Not enough money (you have ¥${this.state.yen}).`;
+    if (!this.canFit(stacks)) return 'Your bag is too full for all of this. Put some back, or make room first.';
+    this.state.yen -= total;
+    for (const st of stacks) this.add(st.id, st.n);
     this.save();
     return null;
   }
@@ -109,6 +120,4 @@ export class Inventory {
     return left;
   }
 
-  /** Known item ids (for the shop). */
-  static get shopItems() { return ITEMS.filter((i) => i.price > 0); }
 }

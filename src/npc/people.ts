@@ -51,6 +51,6 @@ export const CLERK: NpcDef = {
     'Irasshaimase! Welcome to Hoshi Mart!',
     'I am Kenta. We are open all day and all night, right by the crossing.',
     'Hot onigiri, fresh bento and warm drinks from the machine. The cream bread sells out before noon, so come early!',
-    'Would you like to buy something today?',
+    'Take a basket from the stack by the door, pick what you like from the shelves, and bring it to the register. I will ring you up!',
   ],
 };

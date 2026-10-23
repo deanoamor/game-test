@@ -7,9 +7,10 @@ import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
 import { Sound } from './audio/sound';
 import { BAGS } from './inventory/items';
+import { Basket } from './inventory/shop';
 import { Inventory } from './inventory/store';
 import { BagUI } from './inventory/ui';
-import { buildBagModel } from './player/bagModel';
+import { buildBagModel, buildBasketModel } from './player/bagModel';
 import { KONBINI } from './worlds/ekimae/home';
 import { buildIndoor } from './stages/indoor';
 import { buildOutdoor } from './stages/outdoor';
@@ -114,13 +115,18 @@ async function main() {
   let bagUi: BagUI | null = null;
   if (player) {
     const layer = document.getElementById('hud')!;
-    bagUi = new BagUI(inv, player, layer, sound);
+    const basket = new Basket();
+    bagUi = new BagUI(inv, basket, player, layer, sound);
+    bagUi.onHeld = (n) => player!.setHeld(n === null ? null : buildBasketModel(n));
+    // (she cannot leave the shop with an unpaid basket)
+    hud.guard = () => (world.key === 'konbini' ? bagUi!.leaveGuard() : null);
+    hud.onBlocked = (why) => bagUi!.toast(why);
     const wear = () => player!.setBag(buildBagModel(inv.state.bag));
     wear();
     const refresh = inv.onChange;
     inv.onChange = () => { refresh?.(); wear(); };
     bagUi.setSpots(stage.extra.home?.spots ?? []);
-    if (talk) { talk.onShop = () => bagUi!.open('shop'); talk.blocked = () => !!bagUi!.mode; bagUi.onChat = () => talk!.press(true); bagUi.busy = () => talk!.talking; }
+    if (talk) { talk.onShop = () => bagUi!.open('register'); talk.blocked = () => !!bagUi!.mode; bagUi.onChat = () => talk!.press(true); bagUi.busy = () => talk!.talking; }
     const bb = document.getElementById('bagBtn');
     if (bb) bb.onclick = () => (bagUi!.mode === 'bag' ? bagUi!.close() : bagUi!.open('bag'));
   } else document.getElementById('bagBtn')?.remove();
@@ -285,7 +291,7 @@ async function main() {
       }
     }
     if (player) {
-      bagUi?.update(player.pos.x, player.pos.z);
+      bagUi?.update(player.pos.x, player.pos.z, dt);
       // her steps: one for each foot, as the stride comes round
       const g = player.gait, idx = Math.floor(g.phase / Math.PI);
       if (idx !== stepIdx && g.walkW > 0.35) {

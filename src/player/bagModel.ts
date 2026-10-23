@@ -57,3 +57,21 @@ export function buildBagModel(id: string): Group {
   }
   return g;
 }
+
+/** The shop's basket in her right hand: a red plastic basket with a handle, and what is in it showing over the rim. */
+export function buildBasketModel(count: number): Group {
+  const g = new Group();
+  g.name = 'Basket';
+  const red = '#d8402a', redD = '#a8301e';
+  g.add(box(0.3, 0.03, 0.2, redD, -0.3, 0.38, 0.12));
+  g.add(box(0.3, 0.14, 0.02, red, -0.3, 0.45, 0.21));
+  g.add(box(0.3, 0.14, 0.02, red, -0.3, 0.45, 0.03));
+  g.add(box(0.02, 0.14, 0.2, red, -0.45, 0.45, 0.12));
+  g.add(box(0.02, 0.14, 0.2, red, -0.15, 0.45, 0.12));
+  g.add(box(0.26, 0.02, 0.02, '#e8e8e8', -0.3, 0.6, 0.12)); // the handle
+  g.add(box(0.02, 0.1, 0.02, '#e8e8e8', -0.42, 0.55, 0.12));
+  g.add(box(0.02, 0.1, 0.02, '#e8e8e8', -0.18, 0.55, 0.12));
+  const goods = ['#f2c230', '#3a9a5a', '#4aa8e0', '#f08aac', '#e8862a', '#f4f4ee'];
+  for (let i = 0; i < Math.min(count, 6); i++) g.add(box(0.07, 0.1 + (i % 3) * 0.03, 0.07, goods[i % goods.length], -0.4 + (i % 3) * 0.1, 0.46 + (i % 3) * 0.015, 0.07 + Math.floor(i / 3) * 0.1));
+  return g;
+}

@@ -518,7 +518,7 @@ export function buildHome(): InteriorBuild {
     group,
     solids,
     shadowHalf: 12,
-    spots: [{ x: 3.65, z: 3.0, r: 1.9, label: 'Wardrobe: change your bag, keep things', kind: 'wardrobe' }],
+    spots: [{ x0: 3.65, z0: 3.0, x1: 3.65, z1: 3.0, r: 1.9, label: 'Wardrobe: change your bag, keep things', kind: 'wardrobe' }],
     floor: (x, z) => (x < -2.2 && z < -2.7 ? 0 : FL),
     surface: (x, z) => ((x < -2.2 && z < -2.7) || (x < -2.2 && z > 0.8) ? 'tile' : x > 1.2 ? 'tatami' : 'wood'),
     update(night) {

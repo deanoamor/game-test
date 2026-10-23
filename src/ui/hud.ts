@@ -239,8 +239,14 @@ export class Hud {
 
   /** Take the door or the exit she is at, if it leads anywhere: the next world loads behind the loading screen. */
   private take() {
+    const why = this.guard?.();
+    if (why) { this.onBlocked?.(why); return; }
     if (this.exit?.to) goToWorld(this.exit.to, this.world.key, this.hour);
   }
+
+  /** Something that must be settled before she can leave (the shop's unpaid basket): the reason, or null. */
+  guard: (() => string | null) | null = null;
+  onBlocked: ((why: string) => void) | null = null;
 
   /** Paint the minimap's ground, roads and places (after the world is built). */
   paintBase() {
