@@ -102,6 +102,14 @@ export class Player {
     return rd.d >= rd.width / 2 ? 'pavement' : 'road';
   }
 
+  private bagGroup: Group | null = null;
+  /** Wear a bag (a model from bagModel.ts), in place of the one she has. */
+  setBag(g: Group | null) {
+    if (this.bagGroup) this.group.remove(this.bagGroup);
+    this.bagGroup = g;
+    if (g) this.group.add(g);
+  }
+
   /** The blob shadow, to be added to the scene beside the player. */
   get shadowMesh() { return this.shadow; }
 

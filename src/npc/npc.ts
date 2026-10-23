@@ -30,6 +30,8 @@ export interface NpcDef {
   speed?: number;
   /** What she says when talked to, line by line. */
   lines: string[];
+  /** After the last line, the shop opens (the clerk). */
+  shop?: boolean;
   /** What she says over her head when she sees the player (and waves). */
   greet?: string;
 }

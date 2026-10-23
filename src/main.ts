@@ -6,6 +6,10 @@ import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
 import { Sound } from './audio/sound';
+import { BAGS } from './inventory/items';
+import { Inventory } from './inventory/store';
+import { BagUI } from './inventory/ui';
+import { buildBagModel } from './player/bagModel';
 import { KONBINI } from './worlds/ekimae/home';
 import { buildIndoor } from './stages/indoor';
 import { buildOutdoor } from './stages/outdoor';
@@ -67,7 +71,7 @@ async function main() {
   if (KONBINI.door.x1 > KONBINI.door.x0) sound.chimeAt = { x: (KONBINI.door.x0 + KONBINI.door.x1) / 2, z: (KONBINI.door.z0 + KONBINI.door.z1) / 2 };
   {
     const btn = document.getElementById('sound') as HTMLButtonElement, vol = document.getElementById('vol') as HTMLInputElement;
-    const show = () => { btn.textContent = sound.muted || sound.volume === 0 ? '🔇 Sound' : '🔊 Sound'; vol.value = String(sound.volume); };
+    const show = () => { btn.textContent = sound.muted || sound.volume === 0 ? '🔇' : '🔊'; vol.value = String(sound.volume); };
     btn.onclick = () => sound.setMuted(!sound.muted);
     vol.oninput = () => { sound.setVolume(Number(vol.value)); if (sound.muted) sound.setMuted(false); };
     sound.onChange = show;
@@ -104,6 +108,23 @@ async function main() {
     for (const n of stage.npcs) layer.appendChild(n.label);
     talk = new TalkUI(player, stage.npcs, layer, sound);
   }
+
+  // the bag: what she carries (kept in the browser), shown on her, opened with B; the wardrobe at home; the shop's clerk
+  const inv = new Inventory();
+  let bagUi: BagUI | null = null;
+  if (player) {
+    const layer = document.getElementById('hud')!;
+    bagUi = new BagUI(inv, player, layer, sound);
+    const wear = () => player!.setBag(buildBagModel(inv.state.bag));
+    wear();
+    const refresh = inv.onChange;
+    inv.onChange = () => { refresh?.(); wear(); };
+    bagUi.setSpots(stage.extra.home?.spots ?? []);
+    if (talk) { talk.onShop = () => bagUi!.open('shop'); talk.blocked = () => !!bagUi!.mode; }
+    const bb = document.getElementById('bagBtn');
+    if (bb) bb.onclick = () => (bagUi!.mode === 'bag' ? bagUi!.close() : bagUi!.open('bag'));
+  } else document.getElementById('bagBtn')?.remove();
+  void BAGS;
 
   progress(0.95, 'Drawing the map…');
   await nextFrame();
@@ -264,6 +285,7 @@ async function main() {
       }
     }
     if (player) {
+      bagUi?.update(player.pos.x, player.pos.z);
       // her steps: one for each foot, as the stride comes round
       const g = player.gait, idx = Math.floor(g.phase / Math.PI);
       if (idx !== stepIdx && g.walkW > 0.35) {
@@ -318,7 +340,7 @@ async function main() {
   requestAnimationFrame(loop);
 
   (window as unknown as Record<string, unknown>).__game = {
-    drone, scene, renderer, light, post, hud, player, stage, talk, sound, npcs: stage.npcs, ...stage.extra,
+    drone, scene, renderer, light, post, hud, player, stage, talk, sound, inv, bagUi, npcs: stage.npcs, ...stage.extra,
     hour: () => hour,
     /** Run the signals and the traffic ahead by `seconds` (for tests). */
     simulate: (seconds: number) => { const { signals, traffic } = stage.extra; if (signals && traffic) for (let t = 0; t < seconds; t += 1 / 30) { signals.step(1 / 30); traffic.step(1 / 30); } },

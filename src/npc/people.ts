@@ -46,10 +46,11 @@ export const CLERK: NpcDef = {
   ],
   speed: 1.2,
   greet: 'Irasshaimase!',
+  shop: true,
   lines: [
     'Irasshaimase! Welcome to Hoshi Mart!',
     'I am Kenta. We are open all day and all night, right by the crossing.',
     'Hot onigiri, fresh bento and warm drinks from the machine. The cream bread sells out before noon, so come early!',
-    'Thank you very much! Please come again!',
+    'Would you like to buy something today?',
   ],
 };

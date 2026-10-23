@@ -16,6 +16,11 @@ export class TalkUI {
   private near: Npc | null = null;
   private active: Npc | null = null;
 
+  /** Called when a talk with a shopkeeper ends. */
+  onShop: (() => void) | null = null;
+  /** True while something else (the bag) has the screen: F does nothing here. */
+  blocked: (() => boolean) | null = null;
+
   constructor(private player: Player, private npcs: Npc[], host: HTMLElement, private sound?: Sound) {
     this.box = document.createElement('div');
     this.box.id = 'talk';
@@ -34,9 +39,10 @@ export class TalkUI {
 
   /** F (or a click on the box): start talking to the one in reach, or go on to the next line. */
   press() {
+    if (this.blocked?.()) return;
     if (this.active) {
       const line = this.active.nextLine();
-      if (line === null) this.finish();
+      if (line === null) { const shop = this.active.def.shop; this.finish(); if (shop) this.onShop?.(); }
       else this.show(this.active, line);
     } else if (this.near) {
       this.active = this.near;
@@ -51,7 +57,7 @@ export class TalkUI {
     this.text.textContent = line;
     this.sound?.speak(n.def.id, line);
     const last = n.line >= n.def.lines.length - 1;
-    this.hint.textContent = last ? 'F: goodbye' : 'F: next';
+    this.hint.textContent = last ? (n.def.shop ? 'F: shop' : 'F: goodbye') : 'F: next';
     this.box.classList.add('on');
   }
 
@@ -64,6 +70,7 @@ export class TalkUI {
 
   /** Every frame: find the NPC in reach (the nearest), and show or hide the prompt. */
   update(at: Vector3) {
+    if (this.blocked?.()) { this.box.classList.remove('on'); return; }
     if (this.active && !this.active.canTalk(at) && Math.hypot(at.x - this.active.pos.x, at.z - this.active.pos.z) > 4.5) { this.active.endTalk(); this.finish(); }
     if (this.active) return;
     let best: Npc | null = null, bd = Infinity;

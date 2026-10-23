@@ -36,7 +36,7 @@
   .carTag { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); background: #fff; color: #c42b1c; font-weight: 800; font-size: 15px; padding: 3px 10px; border-radius: 12px; border: 2px solid #c42b1c; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 6px rgba(0,0,0,.3); animation: shake .18s infinite alternate; }
   .carTag .en { display: block; font-size: 11px; font-weight: 600; color: #444; text-align: center; margin-top: 1px; }
   @keyframes shake { from { margin-left: -2px; } to { margin-left: 2px; } }
-  #time .row input[type=range] { width: 110px; margin: 0; }
+  #time .row input[type=range] { width: 90px; margin: 0; }
   #time select option { color: #111; }
   #help { left: 14px; bottom: 14px; color: var(--dim); font-size: 12px; line-height: 1.7; }
   #help b { color: var(--ink); font-weight: 600; }
@@ -50,6 +50,33 @@
   #exit button:disabled { opacity: .4; cursor: default; }
   #talk { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(560px, 86vw); display: none; cursor: pointer; pointer-events: auto; }
   #talk.on { display: block; }
+  #act { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); display: none; font-size: 13px; pointer-events: none; }
+  #act.on { display: block; }
+  #act b { background: rgba(255,255,255,.18); border-radius: 5px; padding: 1px 7px; margin-right: 4px; }
+  #bag { z-index: 40; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, 92vw); max-height: 86vh; overflow: auto; display: none; pointer-events: auto; }
+  #bag.on { display: block; }
+  #bag .bh { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  #bag .bh b { font-size: 15px; } #bag .bh span { font-size: 12px; color: var(--dim); } #bag .bh .yen { margin-left: auto; color: var(--text, #fff); font-weight: 700; }
+  #bag button { all: unset; cursor: pointer; }
+  #bag .bh button { padding: 2px 8px; border-radius: 8px; background: rgba(255,255,255,.12); }
+  #bag h5 { margin: 10px 0 4px; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); font-weight: 600; } #bag h5 small { text-transform: none; letter-spacing: 0; }
+  #bag .grid { display: grid; grid-template-columns: repeat(auto-fill, 52px); gap: 6px; }
+  #bag .slot { position: relative; width: 52px; height: 52px; border-radius: 10px; background: rgba(255,255,255,.1); border: 1px solid var(--line); display: grid; place-items: center; font-size: 26px; }
+  #bag .slot.empty { background: rgba(255,255,255,.04); }
+  #bag .slot.sel { outline: 2px solid var(--accent); }
+  #bag .slot i { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-style: normal; font-weight: 700; }
+  #bag .slot:hover { background: rgba(255,255,255,.2); }
+  #bag .bags { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  #bag .bagcard { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 10px; background: rgba(255,255,255,.08); border: 1px solid var(--line); text-align: center; }
+  #bag .bagcard span { font-size: 24px; } #bag .bagcard b { font-size: 11px; } #bag .bagcard small { font-size: 10px; color: var(--dim); }
+  #bag .bagcard.on { outline: 2px solid var(--accent); background: rgba(255,255,255,.16); }
+  #bag .info { margin-top: 10px; font-size: 13px; line-height: 1.5; min-height: 40px; } #bag .info button { margin-left: 6px; padding: 1px 10px; border-radius: 8px; background: var(--accent); color: #111; font-weight: 700; }
+  #bag .msg { margin-top: 8px; font-size: 12px; color: var(--accent); min-height: 16px; }
+  #bag .hint { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); text-align: right; margin-top: 4px; }
+  #bag em { font-size: 12px; color: var(--dim); }
+  #bag .rows .row { display: grid; grid-template-columns: 34px 1fr auto auto; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  #bag .rows .row > span { font-size: 24px; } #bag .rows small { color: var(--dim); font-size: 11px; } #bag .rows i { font-style: normal; font-weight: 700; }
+  #bag .rows button { padding: 2px 12px; border-radius: 8px; background: var(--accent); color: #111; font-weight: 700; }
   #talk .who { font-size: 12px; letter-spacing: .08em; color: var(--accent); font-weight: 600; }
   #talk p { margin: 5px 0 6px; font-size: 14px; line-height: 1.5; }
   #talk .hint { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); text-align: right; }
@@ -79,10 +106,10 @@
     <div class="clock"><b id="clock">12:00</b><span id="phase">Midday</span></div>
     <input id="hour" type="range" min="0" max="24" step="0.05" value="12" />
     <div class="row"><button id="play">⏸ Pause</button><select id="quality"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
-    <div class="row" style="margin-top:6px"><button id="sound" title="M">🔊 Sound</button><input type="range" id="vol" min="0" max="1" step="0.05" value="0.7" title="Volume" /></div>
+    <div class="row" style="margin-top:6px"><button id="bagBtn" title="B">🎒 Bag</button><button id="sound" title="M">🔊</button><input type="range" id="vol" min="0" max="1" step="0.05" value="0.7" title="Volume" /></div>
     <div class="row" style="margin-top:6px"><span style="color:var(--dim);font-size:11px">World</span><select id="world" title="Go to another world (it loads afresh)"></select></div>
   </div>
-  <div id="help" class="panel"><b>Drag</b> slide the map &nbsp; <b>Right-drag</b> turn &amp; tilt<br /><span id="helpZoom"><b>Wheel</b> zoom &nbsp; </span><b>W A S D</b> fly &nbsp; <b>Q E</b> turn &nbsp; <b>R F</b> tilt<br /><b>Shift</b> faster &nbsp; <b>1–9</b> places &nbsp; <b>T</b> time &nbsp; <b>H</b> hide HUD</div>
+  <div id="help" class="panel"><b>Drag</b> slide the map &nbsp; <b>Right-drag</b> turn &amp; tilt<br /><span id="helpZoom"><b>Wheel</b> zoom &nbsp; </span><b>W A S D</b> fly &nbsp; <b>Q E</b> turn &nbsp; <b>R F</b> tilt<br /><b>Shift</b> faster &nbsp; <b>1–9</b> places &nbsp; <b>T</b> time &nbsp; <b>B</b> bag &nbsp; <b>M</b> sound &nbsp; <b>H</b> hide HUD</div>
   <div id="minimap" class="panel"><canvas id="mini" width="420" height="420"></canvas></div>
   <div id="fps"></div>
   <div id="exit" class="panel"><div class="lbl" id="exitLabel">Exit</div><b id="exitName"></b><p id="exitNote"></p><button id="exitGo">Go on ▶</button></div>

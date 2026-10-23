@@ -332,6 +332,12 @@ export class Sound {
     setTimeout(() => bus.disconnect(), (t - ctx.currentTime) * 1000 + 300);
     return bus;
   }
+  /** The little sounds of the bag and the shop. */
+  cue(kind: 'use' | 'swap' | 'buy') {
+    if (kind === 'buy') { this.beep(1320, 0.12, 0.06, 'square'); this.beep(1760, 0.3, 0.06, 'square', 0.09); }
+    else if (kind === 'swap') { this.click(1800, 0.05); this.click(1200, 0.04); }
+    else { for (let i = 0; i < 3; i++) this.click(900 + i * 150, 0.05); this.beep(220, 0.12, 0.03, 'triangle', 0.3); }
+  }
   /** A driver's horn, heard from `dist` metres: one short honk at first, then angrier (two, then long ones). */
   honk(dist: number, kind: string, n: number) {
     if (!this.ok()) return;

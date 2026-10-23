@@ -33,6 +33,8 @@ export interface InteriorBuild {
   frame(dt: number, cameraYaw: number): void;
   /** How big the shadow-casting sun's area should be (metres either side of the room). */
   shadowHalf: number;
+  /** Places to press F at (the wardrobe at home). */
+  spots?: { x: number; z: number; r: number; label: string; kind: 'wardrobe' }[];
   /** The NPCs that are in it. */
   npcs?: Npc[];
 }
