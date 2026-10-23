@@ -171,8 +171,8 @@ export const STREET_FOLK_2: NpcDef[] = [
   },
   {
     id: 'goro', name: 'Goro', jp: 'ゴロー', role: 'Construction worker', model: 'street-goro',
-    at: { x: 8.2, z: -0.8, yaw: 270 },
-    route: [{ x: 8.2, z: -0.8, wait: 6 }, { x: 6.8, z: -0.8, wait: 5 }],
+    at: { x: -3.4, z: -8.1, yaw: 270 },
+    route: [{ x: -3.4, z: -8.1, wait: 6 }, { x: -5.4, z: -8.1, wait: 5 }],
     speed: 0.8, greet: 'Mind the work!',
     lines: talk('Ho! Mind the work, kid. We are fixing the road by the station.', 'Thirty years on sites. My knees complain, but the town needs paving.', 'Drink your water. It is hot out there.'),
   },
