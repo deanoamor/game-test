@@ -254,9 +254,24 @@ export function buildShop(): InteriorBuild {
   S(-3.1, 3.4, 0.72, 0.42);
 
   // by the door: a basket stack, an umbrella stand, and three bins (burnable, cans, plastic)
-  for (let k = 0; k < 5; k++) bx(body, -4.45, 0.9 + k * 0.045, -3.5, 0.46, 0.04, 0.34, k % 2 ? '#e8402a' : '#f06048', { ao: 0.03 });
-  bx(body, -4.45, 0, -3.5, 0.5, 0.9, 0.38, C.greyD, { ao: 0.08 });
-  S(-4.45, -3.5, 0.26, 0.2);
+  // the stack of baskets: a grey wire stand with six red plastic baskets nested in each other (the rims show in rings)
+  for (const sx of [-0.2, 0.2]) for (const sz of [-0.27, 0.27]) bx(body, -4.45 + sx, 0, -3.5 + sz, 0.035, 0.6, 0.035, C.greyD, { ao: 0.05 });
+  bx(body, -4.45, 0.6, -3.5, 0.46, 0.03, 0.62, C.grey, { ao: 0.05 });
+  const basketAt = (y0: number, n: number) => {
+    const x = -4.45, z = -3.5, W = 0.36, L = 0.52, H = 0.2, t = 0.025;
+    bx(body, x, y0, z, W - 0.02, t, L - 0.02, '#a8301e', { ao: 0.02 }); // the floor of the basket
+    for (const sx of [-1, 1]) bx(body, x + sx * (W / 2 - t / 2), y0, z, t, H, L, '#d8402a', { ao: 0.02 }); // the long sides
+    for (const sz of [-1, 1]) bx(body, x, y0, z + sz * (L / 2 - t / 2), W - 2 * t, H, t, '#d8402a', { ao: 0.02 }); // the ends
+    bx(body, x, y0 + H - 0.012, z, W + 0.02, 0.024, L + 0.02, '#f0604a', { ao: 0 }); // the rim, a lighter line round the top
+    bx(body, x, y0 + H - 0.012, z, W - 0.05, 0.03, L - 0.05, '#7a2416', { ao: 0 }); // the dark inside (what shows in the nest)
+    for (const sz of [-1, 1]) { // the handles: a white bar between two posts at each end, pointing out
+      bx(body, x, y0 + H + 0.005, z + sz * (L / 2 + 0.035), 0.2, 0.025, 0.025, '#f4f4f0', { ao: 0 });
+      for (const sx of [-1, 1]) bx(body, x + sx * 0.1, y0 + H - 0.05, z + sz * (L / 2 + 0.018), 0.025, 0.075, 0.03, '#f4f4f0', { ao: 0 });
+    }
+    void n;
+  };
+  for (let k = 0; k < 6; k++) basketAt(0.63 + k * 0.055, k);
+  S(-4.45, -3.5, 0.28, 0.36);
   body.frustum(-1.75, 0, -3.65, 0.13, 0.11, 0.5, 10, '#3a4a5a', { ao: 0.05 });
   for (let k = 0; k < 3; k++) bx(body, -1.4 + k * 0.1, 0.5, -3.65, 0.02, 0.4, 0.02, ['#d23a3a', '#2a3a8a', '#e8c43a'][k], { ao: 0, yaw: 6 - k * 6 });
   S(-1.75, -3.65, 0.14, 0.14);
