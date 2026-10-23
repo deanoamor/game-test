@@ -69,8 +69,22 @@ ok('the bag is the same in the shop', s.bag === 'tote' && s.items.length === 6, 
 // the clerk's shop
 await page.evaluate(() => { const g = window.__game, n = g.npcs[0]; g.player.teleport(n.pos.x, -1.2); for (let i = 0; i < 120; i++) n.update(1 / 60, g.player.pos); });
 await frames(3);
-for (let i = 0; i < 6; i++) { await page.keyboard.press('KeyF'); await frames(1); }
-ok('after talking to the clerk the shop opens', await page.evaluate(() => window.__game.bagUi.mode === 'shop' && document.querySelectorAll('#bag .rows .row').length === 8));
+await page.keyboard.press('KeyF');
+await frames(2);
+ok('at the counter F opens the shop at once', await page.evaluate(() => window.__game.bagUi.mode === 'shop' && document.querySelectorAll('#bag .rows .row').length === 8));
+ok('the shop has a button to chat with the clerk', !!(await page.$('#bag [data-chat]')));
+await page.click('#bag [data-chat]');
+await frames(2);
+ok('which closes the shop and starts the talk', await page.evaluate(() => !window.__game.bagUi.mode && window.__game.talk.talking && /Irasshaimase/.test(document.querySelector('#talk p').textContent)));
+for (let i = 0; i < 4; i++) { await page.keyboard.press('KeyF'); await frames(1); }
+ok('the talk ends, and she is free', await page.evaluate(() => !window.__game.talk.talking && !window.__game.player.frozen));
+// anywhere in the shop (by the drinks, far from the clerk): F buys
+await page.evaluate(() => { window.__game.player.teleport(1.2, 2.2); });
+await frames(3);
+ok('at the shelves there is a prompt', await page.evaluate(() => document.getElementById('act').classList.contains('on') && /Buy/.test(document.getElementById('act').textContent)));
+await page.keyboard.press('KeyF');
+await frames(2);
+ok('and F opens the shop there too', await page.evaluate(() => window.__game.bagUi.mode === 'shop'));
 await page.screenshot({ path: `${OUT}/bag-shop.png` });
 await page.evaluate(() => { const i = window.__game.inv; i.state.slots = i.state.slots.map(() => null); i.state.yen = 3000; i.add('keys', 1); });
 const before = await inv();

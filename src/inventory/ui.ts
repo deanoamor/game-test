@@ -10,7 +10,7 @@ import { Inventory } from './store';
  */
 
 type Mode = 'bag' | 'wardrobe' | 'shop';
-export interface Spot { x: number; z: number; r: number; label: string; kind: 'wardrobe' }
+export interface Spot { x: number; z: number; r: number; label: string; kind: 'wardrobe' | 'shop' }
 
 export class BagUI {
   private box: HTMLElement;
@@ -20,6 +20,10 @@ export class BagUI {
   private message = '';
   private spots: Spot[] = [];
   private near: Spot | null = null;
+  /** The shop's button to chat with the clerk. */
+  onChat: (() => void) | null = null;
+  /** True while a talk is going on (F belongs to it). */
+  busy: (() => boolean) | null = null;
 
   constructor(private inv: Inventory, private player: Player | null, host: HTMLElement, private sound?: Sound) {
     this.box = document.createElement('div');
@@ -35,7 +39,7 @@ export class BagUI {
       if (tag === 'INPUT' || tag === 'SELECT') return;
       if (e.code === 'KeyB' && !e.repeat) { this.mode === 'bag' ? this.close() : !this.mode && this.open('bag'); }
       else if (e.code === 'Escape' && this.mode) this.close();
-      else if (e.code === 'KeyF' && !e.repeat && !this.mode && this.near) this.open('wardrobe');
+      else if (e.code === 'KeyF' && !e.repeat && !this.mode && this.near && !this.busy?.()) this.open(this.near.kind);
     });
     this.box.addEventListener('click', (e) => this.click(e.target as HTMLElement));
     inv.onChange = () => this.mode && this.render();
@@ -64,6 +68,7 @@ export class BagUI {
   /** Every frame: near the wardrobe, say so. */
   update(x: number, z: number) {
     if (this.mode) return;
+    if (this.busy?.()) { this.near = null; this.prompt.classList.remove('on'); return; }
     this.near = this.spots.find((s) => Math.hypot(x - s.x, z - s.z) < s.r) ?? null;
     if (this.near) { this.prompt.innerHTML = `<b>F</b> · ${this.near.label}`; this.prompt.classList.add('on'); } else this.prompt.classList.remove('on');
   }
@@ -90,7 +95,7 @@ export class BagUI {
       html = `${head}<h5>Bags</h5><div class="bags">${bags}</div><h5>In your bag <small>(click to put away)</small></h5>${grid}<h5>In the wardrobe <small>(click to take)</small></h5><div class="grid stash">${stash}</div><div class="msg">${this.message}</div><div class="hint">Esc: close</div>`;
     } else {
       const rows = Inventory.shopItems.map((i) => `<div class="row"><span>${i.icon}</span><div><b>${i.name}</b> <small>${i.jp}</small><br><small>${i.note}</small></div><i>¥${i.price}</i><button data-buy="${i.id}">Buy</button></div>`).join('');
-      html = `${head}<div class="rows">${rows}</div><div class="msg">${this.message}</div><div class="hint">Esc: close</div>`;
+      html = `${head}<div class="rows">${rows}</div><div class="msg">${this.message}</div>${this.onChat ? '<button class="chat" data-chat>💬 Talk to the clerk</button>' : ''}<div class="hint">Esc: close</div>`;
     }
     this.box.innerHTML = html;
   }
@@ -100,6 +105,7 @@ export class BagUI {
     if (!el) return;
     const d = el.dataset;
     if ('close' in d) return this.close();
+    if ('chat' in d) { this.close(); this.onChat?.(); return; }
     if (d.slot !== undefined) { this.selected = Number(d.slot); this.message = ''; return this.render(); }
     if (d.use !== undefined) {
       const msg = this.inv.use(Number(d.use));

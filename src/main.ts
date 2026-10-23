@@ -120,7 +120,7 @@ async function main() {
     const refresh = inv.onChange;
     inv.onChange = () => { refresh?.(); wear(); };
     bagUi.setSpots(stage.extra.home?.spots ?? []);
-    if (talk) { talk.onShop = () => bagUi!.open('shop'); talk.blocked = () => !!bagUi!.mode; }
+    if (talk) { talk.onShop = () => bagUi!.open('shop'); talk.blocked = () => !!bagUi!.mode; bagUi.onChat = () => talk!.press(true); bagUi.busy = () => talk!.talking; }
     const bb = document.getElementById('bagBtn');
     if (bb) bb.onclick = () => (bagUi!.mode === 'bag' ? bagUi!.close() : bagUi!.open('bag'));
   } else document.getElementById('bagBtn')?.remove();

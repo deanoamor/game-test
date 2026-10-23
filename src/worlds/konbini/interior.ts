@@ -382,6 +382,13 @@ export function buildShop(): InteriorBuild {
     group,
     solids,
     shadowHalf: 13,
+    // anywhere in the shop's floor space: F to buy (the shelves, the coolers, the chilled case, the counter)
+    spots: [
+      { x: 2.7, z: -1.2, r: 2.3, label: 'Buy things at the counter', kind: 'shop' },
+      { x: 0.4, z: 0.55, r: 2.9, label: 'Buy things (shelves)', kind: 'shop' },
+      { x: 1.2, z: 2.6, r: 2.4, label: 'Buy drinks', kind: 'shop' },
+      { x: 3.7, z: 0.2, r: 1.9, label: 'Buy onigiri and bento', kind: 'shop' },
+    ],
     floor: () => 0,
     surface: () => 'tile',
     update(night) {

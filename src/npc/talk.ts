@@ -38,12 +38,15 @@ export class TalkUI {
   }
 
   /** F (or a click on the box): start talking to the one in reach, or go on to the next line. */
-  press() {
+  press(chat = false) {
     if (this.blocked?.()) return;
     if (this.active) {
       const line = this.active.nextLine();
-      if (line === null) { const shop = this.active.def.shop; this.finish(); if (shop) this.onShop?.(); }
+      if (line === null) this.finish();
       else this.show(this.active, line);
+    } else if (this.near && this.near.def.shop && !chat) {
+      // a shopkeeper: F opens the shop (there is a button there to chat)
+      this.onShop?.();
     } else if (this.near) {
       this.active = this.near;
       this.near.startTalk();
@@ -57,7 +60,7 @@ export class TalkUI {
     this.text.textContent = line;
     this.sound?.speak(n.def.id, line);
     const last = n.line >= n.def.lines.length - 1;
-    this.hint.textContent = last ? (n.def.shop ? 'F: shop' : 'F: goodbye') : 'F: next';
+    this.hint.textContent = last ? 'F: goodbye' : 'F: next';
     this.box.classList.add('on');
   }
 
@@ -83,7 +86,7 @@ export class TalkUI {
     if (best) {
       this.who.textContent = `${best.def.name} · ${best.def.jp}`;
       this.text.textContent = best.def.role;
-      this.hint.textContent = 'F: talk';
+      this.hint.textContent = best.def.shop ? 'F: shop' : 'F: talk';
       this.box.classList.add('on');
     } else this.box.classList.remove('on');
   }
