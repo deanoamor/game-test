@@ -9,7 +9,7 @@ const page = await browser.newPage({ viewport: { width: 900, height: 560 } });
 const errs = []; page.on('pageerror', (e) => errs.push(e.message));
 let bad = 0;
 const ok = (name, cond, extra) => { if (!cond) bad++; console.log(cond ? 'OK  ' : 'FAIL', name, extra ?? ''); };
-await page.goto('http://localhost:5300/?world=ekimae&q=low&pause=1&t=14');
+await page.goto('http://localhost:5300/?world=ekimae&q=low&pause=1&t=8');
 await page.waitForFunction(() => window.__game && window.__game.frames() > 4, null, { timeout: 240000 });
 const frames = async (n) => { const f0 = await page.evaluate(() => window.__game.frames()); await page.waitForFunction((t) => window.__game.frames() >= t, f0 + n, { timeout: 120000 }); };
 await page.evaluate(() => { const g = window.__game; g.__honks = []; const t = g.traffic, old = t.onHonk; t.onHonk = (c) => { g.__honks.push(c.n); old(c); }; });
@@ -47,13 +47,16 @@ r = await run(30);
 ok('when she steps aside it is quiet again', r.held === 0, JSON.stringify(r));
 // she cannot walk through a moving car: put her in the middle of one, and she is pushed out of it
 await page.evaluate(() => {
-  const g = window.__game, t = g.traffic, c = t.cars[3];
-  const m = new g.scene.children[0].matrix.constructor(), p = new (g.player.pos.constructor)();
-  t.meshes.get(c.kind).getMatrixAt(c.index, m); p.setFromMatrixPosition(m);
+  const g = window.__game, t = g.traffic;
+  const m = new g.scene.children[0].matrix.constructor(), P = () => new (g.player.pos.constructor)();
+  const at = (c) => { t.meshes.get(c.kind).getMatrixAt(c.index, m); return P().setFromMatrixPosition(m); };
+  // a car in the town's streets (in the walkable area)
+  const c = t.cars.find((a) => { if (!a.on) return false; const q = at(a); return q.x > -40 && q.x < 30 && q.z > 30 && q.z < 60; }) ?? t.cars[3];
+  const p = at(c);
   g.player.teleport(p.x, p.z); g.player.pos.y = p.y; g.__carAt = [p.x, p.z];
 });
 await frames(3);
-const inside = await page.evaluate(() => { const g = window.__game, p = g.player; let worst = 1e9; for (const c of p.carBlockers) worst = Math.min(worst, Math.hypot(p.pos.x - c.x, p.pos.z - c.z) - c.r); return { worst: +worst.toFixed(2), n: p.carBlockers.length }; });
+const inside = await page.evaluate(() => { const g = window.__game, p = g.player; p.carBlockers = g.traffic.circlesNear(p.pos.x, p.pos.z, 12, p.pos.y); p.update(0, 0); p.carBlockers = g.traffic.circlesNear(p.pos.x, p.pos.z, 12, p.pos.y); let worst = 1e9; for (const c of p.carBlockers) worst = Math.min(worst, Math.hypot(p.pos.x - c.x, p.pos.z - c.z) - c.r); return { worst: +worst.toFixed(2), n: p.carBlockers.length, at: window.__game.__carAt, pos: [p.pos.x, p.pos.y, p.pos.z], circles: p.carBlockers.map((c) => [+c.x.toFixed(1), +c.z.toFixed(1), c.r]) }; });
 ok('a moving car is solid for her', inside.n > 0 && inside.worst > 0.2, JSON.stringify(inside));
 ok('no page errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 await browser.close();

@@ -150,9 +150,12 @@ export class Player {
       p.x = s.x + u * cs + v * sn;
       p.z = s.z - u * sn + v * cs;
     }
-    for (const c of [...this.blockers, ...this.carBlockers]) {
-      const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), min = c.r + RADIUS;
-      if (d < min && d > 1e-6) { p.x = c.x + (dx / d) * min; p.z = c.z + (dz / d) * min; }
+    // (a car is a row of overlapping circles: a few passes, so that being pushed out of one is not into the next)
+    for (let pass = 0; pass < 3; pass++) {
+      for (const c of [...this.blockers, ...this.carBlockers]) {
+        const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), min = c.r + RADIUS;
+        if (d < min && d > 1e-6) { p.x = c.x + (dx / d) * min; p.z = c.z + (dz / d) * min; }
+      }
     }
     if (this.bounds) {
       const b = this.bounds;

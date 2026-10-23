@@ -72,13 +72,17 @@ export async function buildOutdoor(o: { scene: Scene; world: WorldDef; keep: Rec
     : { group: new Group(), glow: [] as { emissiveIntensity: number }[] };
   scene.add(marks.group);
 
+  let settled = false; // (the first time of day sets the whole road; after that cars come and go out of sight)
   return {
     obstacles: village.obstacles,
-    setNight(night) {
+    setNight(night, hour) {
       village.update(night);
+      traffic.setHour(hour, !settled);
+      settled = true;
       marks.glow.forEach((m) => { m.emissiveIntensity = night * 1.4; });
     },
     step(dt, night, target, _yaw, frozen) {
+      traffic.focus = { x: target.x, z: target.z };
       glow.update(dt, night, target);
       windU.value += dt;
       water.uniforms.uTime.value += dt;

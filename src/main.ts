@@ -234,6 +234,8 @@ async function main() {
     last = now;
     if (playing) applyHour(hour + (dt / dayLength) * 24);
     if (player) {
+      // the cars as they stand now (they moved at the end of the last frame)
+      if (stage.extra.traffic) player.carBlockers = stage.extra.traffic.circlesNear(player.pos.x, player.pos.z, 12, player.pos.y);
       // (screenshots hold her still: tests pose her by hand)
       player.update(params.has('shot') ? 0 : dt, drone.yaw);
       if (drone.following) drone.follow(player.pos.x, player.pos.z, player.pos.y);
@@ -249,7 +251,6 @@ async function main() {
       tb.length = 0;
       if (player) {
         tb.push({ x: player.pos.x, y: player.pos.y, z: player.pos.z, r: 0.3 });
-        player.carBlockers = stage.extra.traffic.circlesNear(player.pos.x, player.pos.z, 12, player.pos.y);
       }
       for (const n of stage.npcs) tb.push({ x: n.pos.x, y: n.pos.y, z: n.pos.z, r: 0.3 });
       for (let i = angry.length - 1; i >= 0; i--) {
