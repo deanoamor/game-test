@@ -48,6 +48,9 @@ await page.evaluate(() => { const g = window.__game, n = g.npcs[0]; g.player.tel
 await frames(3);
 await page.keyboard.press('KeyF');
 await frames(3);
+// (F at the clerk opens the register; the button there starts the talk)
+await page.click('#bag [data-chat]');
+await frames(3);
 const talk = await page.evaluate(() => ({ talking: window.__game.talk.talking, text: document.querySelector('#talk p')?.textContent }));
 ok('talking to Kenta', talk.talking && /Irasshaimase/.test(talk.text), JSON.stringify(talk));
 await page.screenshot({ path: `${OUT}/konbini-talk.png` });
