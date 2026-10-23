@@ -1,4 +1,4 @@
-import { AmbientLight, CanvasTexture, Color, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, PointLight, SRGBColorSpace } from 'three';
+import { AmbientLight, BoxGeometry, CanvasTexture, ConeGeometry, Color, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, PointLight, SRGBColorSpace } from 'three';
 import { GeoBuilder } from '../../util/builder';
 import type { Solid } from '../../world/village/frame';
 import type { InteriorBuild } from '../types';
@@ -379,6 +379,20 @@ export function buildShop(): InteriorBuild {
     return { k, g, shell, glass, decor, cut: 0 };
   });
 
+  // a sign over the stack of baskets, so it can be told from the rest: a plate on a post, and a little arrow that bobs
+  const basketSign = signPlane(['かご', 'BASKETS  ↓'], 0.78, 0.36, '#d8402a', '#ffffff', '#f2c230');
+  (basketSign.material as MeshBasicMaterial).side = DoubleSide;
+  basketSign.position.set(-4.7, 1.62, -3.5);
+  basketSign.rotation.y = 0.9;
+  basketSign.name = 'Basket sign';
+  const signPost = new Mesh(new BoxGeometry(0.035, 1.5, 0.035), new MeshStandardMaterial({ color: C.greyD, roughness: 0.6 }));
+  signPost.position.set(-4.7, 0.75, -3.5);
+  const arrow = new Mesh(new ConeGeometry(0.1, 0.2, 4).rotateX(Math.PI), new MeshBasicMaterial({ color: '#ffd23a', toneMapped: false }));
+  arrow.position.set(-4.45, 1.3, -3.5);
+  arrow.name = 'Basket arrow';
+  group.add(basketSign, signPost, arrow);
+  let clock = 0;
+
   const cool = new Color('#f4f8ff');
   const lights = [[-2.6, -1.8], [0.4, 0.6], [3.3, -0.8], [-2.8, 2.2], [2.8, 2.6]].map(([x, z]) => {
     const l = new PointLight(cool, 0, 10, 1.3);
@@ -420,6 +434,9 @@ export function buildShop(): InteriorBuild {
       glassMat.opacity = 0.3 + 0.4 * night;
     },
     frame(dt, yaw) {
+      clock += dt;
+      arrow.position.y = 1.28 + Math.sin(clock * 3) * 0.05;
+      arrow.rotation.y += dt * 2;
       const toward: Record<Side, number> = { N: -Math.cos(yaw), S: Math.cos(yaw), E: Math.sin(yaw), W: -Math.sin(yaw) };
       for (const w of walls) {
         const want = smoothstep(0.12, 0.55, toward[w.k]);
