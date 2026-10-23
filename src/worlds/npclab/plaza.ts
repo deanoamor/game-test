@@ -1,7 +1,7 @@
 import { CanvasTexture, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry } from 'three';
 import { GeoBuilder } from '../../util/builder';
 import { Npc } from '../../npc/npc';
-import { NURSE, STREET_FOLK } from '../../npc/people';
+import { ALL_FOLK, NURSE } from '../../npc/people';
 import type { Solid } from '../../world/village/frame';
 import type { InteriorBuild } from '../types';
 
@@ -105,8 +105,8 @@ export async function buildPlaza(): Promise<InteriorBuild> {
   // the NPC
   const nurse = await Npc.create(NURSE);
   group.add(nurse.group, nurse.shadow);
-  // the ten people of the streets
-  const folk = await Promise.all(STREET_FOLK.map((d) => Npc.create(d)));
+  // the people of the streets
+  const folk = await Promise.all(ALL_FOLK.map((d) => Npc.create(d)));
   for (const n of folk) group.add(n.group, n.shadow);
 
   return {
