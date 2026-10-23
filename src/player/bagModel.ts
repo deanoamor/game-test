@@ -9,7 +9,8 @@ const mat = (c: string) => new MeshStandardMaterial({ color: c, roughness: 0.75,
 const box = (w: number, h: number, d: number, c: string, x: number, y: number, z: number) => {
   const m = new Mesh(new BoxGeometry(w, h, d), mat(c));
   m.position.set(x, y, z);
-  m.castShadow = true;
+  // (no shadow from the sun: its shadow map is drawn only now and then, so a bag that moves would leave a stale one; she has her blob shadow)
+  m.castShadow = false;
   return m;
 };
 
