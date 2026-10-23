@@ -7,6 +7,7 @@ import { buildRoads } from '../world/roads';
 import { Signals } from '../world/signals';
 import { SignAtlas } from '../world/signs';
 import { buildTerrain } from '../world/terrain';
+import { Crowd } from '../npc/crowd';
 import { Traffic } from '../world/traffic';
 import { buildVillage } from '../world/village';
 import { buildWater } from '../world/water';
@@ -65,6 +66,12 @@ export async function buildOutdoor(o: { scene: Scene; world: WorldDef; keep: Rec
   scene.add(signals.group);
   const traffic = new Traffic(signals);
   scene.add(traffic.group);
+  // the people on the pavements (a world that asks for them)
+  let crowd: Crowd | undefined;
+  if (o.world.pedestrians) {
+    crowd = Crowd.start();
+    scene.add(crowd.group);
+  }
 
   progress(0.62, 'Placing landmarks…');
   const marks = !keep || inRect(keep, SHRINE.x, SHRINE.z, 40)
@@ -78,11 +85,13 @@ export async function buildOutdoor(o: { scene: Scene; world: WorldDef; keep: Rec
     setNight(night, hour) {
       village.update(night);
       traffic.setHour(hour, !settled);
+      crowd?.setHour(hour);
       settled = true;
       marks.glow.forEach((m) => { m.emissiveIntensity = night * 1.4; });
     },
     step(dt, night, target, _yaw, frozen) {
       traffic.focus = { x: target.x, z: target.z };
+      if (crowd) crowd.focus = { x: target.x, z: target.z };
       glow.update(dt, night, target);
       windU.value += dt;
       water.uniforms.uTime.value += dt;
@@ -93,6 +102,6 @@ export async function buildOutdoor(o: { scene: Scene; world: WorldDef; keep: Rec
     fogScale: keep ? 1.7 : 1,
     trees: trees.count,
     npcs: [],
-    extra: { signals, traffic, terrain },
+    extra: { crowd, signals, traffic, terrain },
   };
 }

@@ -54,6 +54,14 @@ export class Signals {
     return 'red';
   }
 
+  /** How long (s) it stays safe to cross where `g` has the green: until the other street gets its go (0: not now). */
+  safeFor(g: SignalGroup): number {
+    const t = this.t % TOTAL;
+    const start = g === 'main' ? 0 : GREEN.main + YELLOW + ALL_RED;
+    const end = g === 'main' ? GREEN.main + YELLOW + ALL_RED : TOTAL;
+    return t >= start && t < end ? end - t : 0;
+  }
+
   /** Whether a walk signal shows green (blinking green counts) on either street. */
   walking(): boolean {
     const m = this.light('main'), c = this.light('cross');

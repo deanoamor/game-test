@@ -273,9 +273,13 @@ async function main() {
       if (n.bubble && !before) sound.greet(n.def.id);
     }
     drone.update(dt);
+    // the strangers on the pavements walk, wait for the signal and stop for her
+    stage.extra.crowd?.update(params.has('shot') ? 0 : dt, stage.extra.signals, player ? player.pos : null);
+    if (player && stage.extra.crowd) player.blockers = [...stage.npcs.map((n) => n.blocker), ...stage.extra.crowd.blockers];
     if (stage.extra.traffic) {
       const tb = stage.extra.traffic.blockers;
       tb.length = 0;
+      if (stage.extra.crowd) for (const b of stage.extra.crowd.blockers) tb.push(b);
       if (player) {
         tb.push({ x: player.pos.x, y: player.pos.y, z: player.pos.z, r: 0.3 });
       }

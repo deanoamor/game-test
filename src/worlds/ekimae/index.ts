@@ -33,6 +33,7 @@ export const ekimae: WorldDef = {
     { name: 'Hoshi Mart', jp: 'ほしマート', at: KONBINI.door, to: 'konbini', door: KONBINI.info },
   ],
   details: ekimaeDetails,
+  pedestrians: true,
   // the door at the top of the outside stairs by the crossing is the way into her home (World 2)
   spawns: { home: HOME.out, konbini: KONBINI.out },
   // on the corner pavement by the vending machine, facing the crossing

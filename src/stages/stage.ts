@@ -1,5 +1,6 @@
 import type { Mesh, Vector3 } from 'three';
 import type { Npc } from '../npc/npc';
+import type { Crowd } from '../npc/crowd';
 import type { Signals } from '../world/signals';
 import type { Traffic } from '../world/traffic';
 import type { Obstacles } from '../world/village';
@@ -25,5 +26,5 @@ export interface Stage {
   trees: number;
   /** The NPCs of this world (they are updated by the loop, and can be talked to). */
   npcs: Npc[];
-  extra: { signals?: Signals; traffic?: Traffic; terrain?: Mesh; home?: InteriorBuild };
+  extra: { crowd?: Crowd; signals?: Signals; traffic?: Traffic; terrain?: Mesh; home?: InteriorBuild };
 }

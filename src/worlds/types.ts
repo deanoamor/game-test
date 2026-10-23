@@ -60,6 +60,8 @@ export interface WorldDef {
   player?: { x: number; z: number; yaw: number };
   /** The world's own details, added to the town where it stands (they show on the full map too). */
   details?: (kit: DetailKit) => void;
+  /** People walk the pavements (they are strangers, and they follow the clock). */
+  pedestrians?: boolean;
   /** An interior world that is out in the open (the NPC test plaza): it keeps the sun and the sky; rooms are lit by their lamps only. */
   daylight?: boolean;
   /** An interior world: built from this instead of the town. */
