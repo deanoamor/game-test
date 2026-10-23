@@ -17,5 +17,6 @@ export const npclab: WorldDef = {
   start: { key: 'npclab', name: 'NPC test room', jp: 'NPC テスト', x: -1, z: 3, radius: 1, dist: 16, pitch: 46, yaw: 15 },
   exits: [],
   interior: buildPlaza,
+  daylight: true,
   player: { x: -1, z: 3, yaw: 0 },
 };

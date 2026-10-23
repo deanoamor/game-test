@@ -32,6 +32,8 @@ export interface NpcDef {
   lines: string[];
   /** After the last line, the shop opens (the clerk). */
   shop?: boolean;
+  /** Her size next to the model's (1: as made; a child is smaller, a tall man bigger). */
+  scale?: number;
   /** What she says over her head when she sees the player (and waves). */
   greet?: string;
 }
@@ -58,6 +60,8 @@ export class Npc {
   /** What she says over her head right now (a greeting), if anything. */
   bubble: string | null = null;
   readonly label: HTMLElement;
+  /** Where the name tag hangs over her (metres above her feet). */
+  height = 1.75;
   private gait!: Gait;
   private facing = 0;
   private speed = 0;
@@ -83,6 +87,7 @@ export class Npc {
     const n = new Npc(def, ground);
     const ch = await loadCharacter(def.model, def.name);
     n.group.add(ch.root);
+    if (def.scale && def.scale !== 1) { ch.root.scale.setScalar(def.scale); n.shadow.scale.setScalar(def.scale); n.height = 1.75 * def.scale; }
     n.gait = new Gait(ch.bones, ch.hipsY, { walk: 1.4, run: 3.9 });
     n.pos.set(def.at.x, ground(def.at.x, def.at.z), def.at.z);
     n.facing = (def.at.yaw * Math.PI) / 180;
@@ -201,7 +206,7 @@ export class Npc {
 
   /** Put the name tag (and the greeting over her head) at her place on the screen. */
   project(camera: PerspectiveCamera, width: number, height: number) {
-    const v = new Vector3(this.pos.x, this.pos.y + 1.75, this.pos.z).project(camera);
+    const v = new Vector3(this.pos.x, this.pos.y + this.height, this.pos.z).project(camera);
     const far = this.pos.distanceTo(camera.position) > 60;
     const on = v.z < 1 && !far && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
     this.label.style.display = on ? 'block' : 'none';

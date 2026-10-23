@@ -3,6 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { gzipSync } from 'node:zlib';
 
 execFileSync('npx', ['vite', 'build', '--outDir', 'dist-artifact-tmp'], { stdio: 'inherit' });
 const dir = 'dist-artifact-tmp';
@@ -13,7 +14,8 @@ const js = fs.readFileSync(path.join(dir, scriptTag[1]), 'utf8').replace(/<\/scr
 const glb = {};
 for (const f of fs.readdirSync(path.join(dir, 'places')).filter((n) => n === 'japanshrine.glb')) glb[f.replace(/\.glb$/, '')] = fs.readFileSync(path.join(dir, 'places', f)).toString('base64');
 // and the characters' models
-for (const k of ['seifuku', 'gamenurse', 'konbini']) glb[k] = fs.readFileSync(path.join(dir, 'characters', `${k}.glb`)).toString('base64');
+// (gzipped: the page unpacks them as it loads them)
+for (const f of fs.readdirSync(path.join(dir, 'characters')).filter((n) => n.endsWith('.glb'))) glb[f.replace(/\.glb$/, '')] = gzipSync(fs.readFileSync(path.join(dir, 'characters', f)), { level: 9 }).toString('base64');
 const style = html.match(/<style>([\s\S]*?)<\/style>/)[1];
 const body = html.match(/<body>([\s\S]*?)<\/body>/)[1].replace(/<script type="module"[\s\S]*?<\/script>/g, ''); // keep the inline error handler
 const out = `<title>Hoshi no Kuni</title>

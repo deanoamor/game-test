@@ -31,7 +31,9 @@ async function loadModel(key: string): Promise<Group> {
   if (inline) {
     const bin = atob(inline), bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return (await loader.parseAsync(bytes.buffer, '')).scene;
+    // (a single-file build carries them gzipped: the models are mostly repeated floats and shrink to a seventh)
+    const raw = bytes[0] === 0x1f && bytes[1] === 0x8b ? await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer() : bytes.buffer;
+    return (await loader.parseAsync(raw, '')).scene;
   }
   return (await loader.loadAsync(`${import.meta.env.BASE_URL}characters/${key}.glb`)).scene;
 }

@@ -199,7 +199,7 @@ async function main() {
   };
   // inside (the home, the shop) there is no sun, sky or town round it: the only light is the lamps of the room, the same at
   // any hour, and the world outside the walls is empty (the clock still runs for the HUD)
-  const indoors = !!world.interior;
+  const indoors = !!world.interior && !world.daylight;
   if (indoors) {
     sky.mesh.visible = false;
     clouds.mesh.visible = false;
