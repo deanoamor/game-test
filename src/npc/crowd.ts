@@ -73,7 +73,7 @@ class Walker {
   readonly group = new Group();
   readonly shadow: Mesh;
   readonly pos = new Vector3();
-  readonly blocker = { x: 0, y: 0, z: 0, r: RADIUS };
+  readonly blocker = { x: 0, y: 0, z: 0, r: RADIUS, quiet: true };
   on = false;
   private gait!: Gait;
   private root!: Group;

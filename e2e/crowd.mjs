@@ -19,6 +19,7 @@ ok('no names, no talking: strangers are not NPCs', await page.evaluate(() => win
 const run = await page.evaluate(() => {
   const g = window.__game, c = g.crowd, sg = g.signals, tr = g.traffic;
   g.player.teleport(-30, 60);
+  let honks = 0; tr.onHonk = () => honks++;
   let onMainZebra = 0, onCrossZebra = 0, badMain = 0, badCross = 0, waited = 0, crossed = 0, minGapCar = 1e9, ever = new Set();
   const m = new g.scene.children[0].matrix.constructor(), p = new (g.player.pos.constructor)();
   for (let i = 0; i < 30 * 220; i++) {
@@ -32,13 +33,14 @@ const run = await page.evaluate(() => {
     }
     if (i % 15 === 0) for (const w of c.walkers) { if (!w.on) continue; for (const car of tr.cars) { if (!car.on) continue; tr.meshes.get(car.kind).getMatrixAt(car.index, m); p.setFromMatrixPosition(m); minGapCar = Math.min(minGapCar, Math.hypot(p.x - w.pos.x, p.z - w.pos.z) - car.wid / 2 - 0.3); } }
   }
-  return { onMainZebra, onCrossZebra, badMain, badCross, waited, crossedModels: ever.size, minGapCar: +minGapCar.toFixed(2) };
+  return { honks, onMainZebra, onCrossZebra, badMain, badCross, waited, crossedModels: ever.size, minGapCar: +minGapCar.toFixed(2) };
 });
 console.log(JSON.stringify(run));
 ok('they cross the main street (the zebra is used)', run.onMainZebra > 0);
 ok('they wait at the kerb for the signal', run.waited > 100);
 ok('nobody is on the zebra over the main street while the main cars have green', run.badMain === 0, `${run.badMain} frames`);
 ok('nor on the one over the cross street while its cars have green', run.badCross === 0 && run.onCrossZebra > 0, `${run.badCross} frames, ${run.onCrossZebra} on it in all`);
+ok('no car honks at people crossing in front of it (they have the signal)', run.honks === 0, `${run.honks} honks`);
 ok('no car drives through anyone', run.minGapCar > -0.25, `${run.minGapCar} m between a car and a person`);
 // they stop for the player, and if she stays in the way they ask her kindly what is wrong, wish her well, and go round her
 const stop = await page.evaluate(() => {

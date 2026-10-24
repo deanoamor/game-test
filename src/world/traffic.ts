@@ -116,7 +116,7 @@ export class Traffic {
   private static SIZE: Partial<Record<VehicleKind, [number, number]>> = { car: [4.6, 2.1], kei: [3.8, 1.9], van: [5.0, 2.2], truck: [7.2, 2.7], bus: [10.5, 2.9] };
 
   /** People standing on the road (the player, the NPCs): a car stops short of one in its way. */
-  blockers: { x: number; y: number; z: number; r: number }[] = [];
+  blockers: { x: number; y: number; z: number; r: number; quiet?: boolean }[] = [];
   /** Where the camera looks: cars only come and go far from here. */
   focus = { x: 0, z: 44 };
   private demand = 1;
@@ -322,6 +322,7 @@ export class Traffic {
         gap = Math.min(gap, ahead - (c.len + o.len) / 2);
       }
       let target = Math.min(c.cruise, Math.max(0, (gap - GAP) * l.follow));
+      let atSignal = false;
       // the signal: stop at the line on red, on yellow if there is still room, or while the junction is taken
       if (l.group && l.stop !== undefined && this.signals) {
         const front = c.s + c.len / 2;
@@ -329,11 +330,11 @@ export class Traffic {
         if (toLine > -0.3 && toLine < 60) {
           const light = this.signals.light(l.group);
           const stop = light === 'red' || (light === 'yellow' && toLine > (c.v * c.v) / (2 * 3.0) + 0.5) || taken[l.group];
-          if (stop) target = Math.min(target, Math.max(0, (toLine - 0.4) * 1.2));
+          if (stop) { target = Math.min(target, Math.max(0, (toLine - 0.4) * 1.2)); atSignal = toLine < 12; }
         }
       }
       // someone standing in the lane ahead: stop short of them (and honk, see below)
-      let block = Infinity;
+      let block = Infinity, loud = false;
       if (this.blockers.length) {
         const p = pointAt(l, c.s), px = p.x, pz = p.z, py = p.y, tx = p.tx, tz = p.tz;
         for (const b of this.blockers) {
@@ -341,17 +342,18 @@ export class Traffic {
           const dx = b.x - px, dz = b.z - pz;
           const along = dx * tx + dz * tz, lat = Math.abs(dx * tz - dz * tx);
           const reach = c.len / 2 + b.r;
-          if (along > 0 && along < reach + 3 + c.v * 1.3 + (c.v * c.v) / 5 && lat < c.wid / 2 + b.r + 0.25) block = Math.min(block, along - reach - 1.5);
+          if (along > 0 && along < reach + 3 + c.v * 1.3 + (c.v * c.v) / 5 && lat < c.wid / 2 + b.r + 0.25) { const gapTo = along - reach - 1.5; if (gapTo < block) { block = gapTo; loud = !b.quiet; } }
         }
         if (block < Infinity) target = Math.min(target, Math.max(0, block * 1.3));
       }
-      if (block === Infinity) { c.blockT = 0; c.honks = 0; c.honkT = 0; }
+      if (block === Infinity || !loud || atSignal) { c.blockT = 0; c.honks = 0; c.honkT = 0; }
       let v = target > c.v ? Math.min(target, c.v + l.accel * dt) : target;
       if (dt > 0 && block < Infinity) v = Math.min(v, Math.max(0, (block + 0.6) / dt));
       // and never into the car ahead, however short the frame
       if (dt > 0) v = Math.min(v, Math.max(0, (gap - 0.6) / dt));
       c.vNext = v;
-      if (block < Infinity && v < 0.4) {
+      // (a car honks only at someone who stands in its way for no reason: not at people crossing on their signal, and not while it waits at a red light)
+      if (block < Infinity && v < 0.4 && loud && !atSignal) {
         c.blockT += dt;
         // held up: a honk after a moment, then again and again, quicker as it goes on
         if (c.blockT > 1.0) {
