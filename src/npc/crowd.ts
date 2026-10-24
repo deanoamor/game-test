@@ -84,6 +84,8 @@ class Walker {
   /** How long the player has stood in its way (s), and how far its patience has gone (0: none, 1: it has spoken, 2: it goes round). */
   private blockedT = 0;
   private patience = 0;
+  /** How many times it has gone round her for the point it is going to (it gives the point up after two). */
+  private detours = 0;
   /** Called when it speaks up (the Japanese, the English, and where its head is). */
   onShout: ((w: Walker, text: string, en: string) => void) | null = null;
 
@@ -167,7 +169,8 @@ class Walker {
           const side = Math.sign(-(px * dz - pz * dx)) || (Math.random() < 0.5 ? 1 : -1);
           const nx = (-dz / d) * side * -1, nz = (dx / d) * side * -1;
           const wp = (k: number): Way => ({ x: player.x + nx * 1.5 + (dx / d) * k, z: player.z + nz * 1.5 + (dz / d) * k });
-          this.path.splice(this.seg, 0, wp(0.1), wp(1.9));
+          if (++this.detours > 2 && !w.gate && this.seg < this.path.length - 1) this.seg++; // (it keeps coming back to the same spot: it lets that point go)
+          else this.path.splice(this.seg, 0, wp(0.1), wp(1.9));
           this.blockedT = 0;
         }
       }
@@ -179,7 +182,10 @@ class Walker {
     if (d > 0.01) { this.pos.x += (dx / d) * step; this.pos.z += (dz / d) * step; }
     this.gait.step(dt, dt > 0 ? step / dt : 0, step);
     this.pos.y += (walkY(this.pos.x, this.pos.z) - this.pos.y) * (dt > 0 ? smooth(14, dt) : 1);
-    if (d < 0.25) {
+    // (she is standing on the point it is going to: near enough, it carries on from here)
+    const taken = player && Math.hypot(player.x - w.x, player.z - w.z) < 1.1 && Math.abs(player.y - this.pos.y) < 1.5;
+    if (d < (taken ? 1.7 : 0.25)) {
+      this.detours = 0;
       if (w.gate) this.crossing = false; // (a point of the way round someone does not end a crossing)
       if (++this.seg >= this.path.length) { this.stop(); return; }
     }

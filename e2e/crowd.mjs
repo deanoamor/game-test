@@ -69,6 +69,20 @@ ok('a person stops for the player in the way', stop !== null && stop.moved1 < 0.
 ok('and when she stays it says "Excuse me!" and then "Get out of the way!"', stop && stop.shouts[0] === 'Excuse me!' && stop.shouts[1] === 'Get out of the way!', JSON.stringify(stop?.shouts));
 ok('then it goes round her and on (it does not wait for ever)', stop && stop.passed, `${stop?.beyond?.toFixed(1)} m past her`);
 ok('without walking through her', stop && stop.minDist > 0.58, `${stop?.minDist?.toFixed(2)} m at the closest`);
+// she stands right on the point a person is going to (a corner): it must not circle her for ever
+const circle = await page.evaluate(() => {
+  const g = window.__game, c = g.crowd, p = g.player;
+  const w = c.walkers.find((x) => x.on && !x.waiting && x.path[x.seg] && !x.path[x.seg].gate && x.seg + 1 < x.path.length - 1);
+  if (!w) return null;
+  const t = w.path[w.seg];
+  p.teleport(t.x, t.z);
+  const shouts = []; c.onShout = (x, y, z, text, en) => shouts.push(en);
+  const seg0 = w.seg;
+  let nearAfter = 0;
+  for (let i = 0; i < 30 * 40; i++) { w.update(1 / 30, g.signals, p.pos); if (i > 30 * 25 && Math.hypot(w.pos.x - p.pos.x, w.pos.z - p.pos.z) < 2.2) nearAfter++; }
+  return { advanced: w.seg > seg0 || !w.on, shouts: shouts.length, nearAfter, dist: Math.hypot(w.pos.x - p.pos.x, w.pos.z - p.pos.z) };
+});
+ok('standing on its point: it gets by and goes on, it does not circle her', circle !== null && circle.advanced && circle.shouts <= 4 && circle.nearAfter < 30, JSON.stringify(circle));
 ok('no page errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 await browser.close();
 process.exit(bad ? 1 : 0);
