@@ -45,6 +45,7 @@ export class Guide {
   private beam: Mesh;
   private ring: Mesh;
   private t = 0;
+  private shown = '';
   private v = new Vector3();
   /** Called when she has done the whole list. */
   onFinished: (() => void) | null = null;
@@ -142,8 +143,13 @@ export class Guide {
       text = 'Go back outside';
       sub = `Take the ${c.world === 'home' ? 'front door' : 'automatic door'} and press Enter.`;
     }
-    this.panel.innerHTML = `<div class="q"><span class="n">${Math.min(this.step + 1, STEPS.length)}/${STEPS.length}</span><b>${text}</b><button class="skip" title="Hide the guide">✕</button></div><p>${sub}</p><div class="dist"></div>`;
-    (this.panel.querySelector('.skip') as HTMLElement).onclick = () => { this.skip(); };
+    // (the panel is only rebuilt when the words change, so the ✕ stays put under the pointer)
+    const key = `${this.step}|${text}|${sub}`;
+    if (key !== this.shown) {
+      this.shown = key;
+      this.panel.innerHTML = `<div class="q"><span class="n">${Math.min(this.step + 1, STEPS.length)}/${STEPS.length}</span><b>${text}</b><button class="skip" title="Hide the guide">✕</button></div><p>${sub}</p><div class="dist"></div>`;
+      (this.panel.querySelector('.skip') as HTMLElement).onclick = () => { this.skip(); };
+    }
     this.panel.classList.add('on');
     const dist = Math.round(Math.hypot(target.x - player.x, target.z - player.z));
     (this.panel.querySelector('.dist') as HTMLElement).textContent = dist > 2 ? `${dist} m` : 'You are here';
