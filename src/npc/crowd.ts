@@ -81,6 +81,11 @@ class Walker {
   private fade = 0;
   private leaving = false;
   waiting = false;
+  /** How long the player has stood in its way (s), and how far its patience has gone (0: none, 1: it has spoken, 2: it goes round). */
+  private blockedT = 0;
+  private patience = 0;
+  /** Called when it speaks up (the Japanese, the English, and where its head is). */
+  onShout: ((w: Walker, text: string, en: string) => void) | null = null;
 
   constructor(readonly model: string, scale: number) {
     this.base = scale;
@@ -143,12 +148,31 @@ class Walker {
     }
     if (this.crossing) want = this.cruise * 1.25;
     const dx = w.x - this.pos.x, dz = w.z - this.pos.z, d = Math.hypot(dx, dz);
-    // a stranger in the way (the player): stop short of her
+    // a stranger in the way (the player): stop short of her; if she stays, it gets cross, says so, and goes round her
+    let blocked = false;
     if (player && d > 0.01 && Math.abs(player.y - this.pos.y) < 1.5) {
       const px = player.x - this.pos.x, pz = player.z - this.pos.z;
       const along = (px * dx + pz * dz) / d, lat = Math.abs(px * dz - pz * dx) / d;
-      if (along > 0 && along < 1.1 && lat < 0.55) want = 0;
+      if (along > 0 && along < 1.1 && lat < 0.55) {
+        blocked = true;
+        want = 0;
+        this.blockedT += dt;
+        // it looks at her while it waits
+        this.facing += wrap(Math.atan2(px, pz) - this.facing) * smooth(5, dt);
+        if (this.patience === 0 && this.blockedT > 1.3) { this.patience = 1; this.onShout?.(this, 'すみません！', 'Excuse me!'); }
+        if (this.patience === 1 && this.blockedT > 3.2) {
+          this.patience = 2;
+          this.onShout?.(this, 'どいてよ！', 'Get out of the way!');
+          // two points beside her and past her, on the side the pavement has more room (the one it leans toward)
+          const side = Math.sign(-(px * dz - pz * dx)) || (Math.random() < 0.5 ? 1 : -1);
+          const nx = (-dz / d) * side * -1, nz = (dx / d) * side * -1;
+          const wp = (k: number): Way => ({ x: player.x + nx * 1.5 + (dx / d) * k, z: player.z + nz * 1.5 + (dz / d) * k });
+          this.path.splice(this.seg, 0, wp(0.1), wp(1.9));
+          this.blockedT = 0;
+        }
+      }
     }
+    if (!blocked) { this.blockedT = Math.max(0, this.blockedT - dt * 2); if (this.blockedT === 0) this.patience = 0; }
     if (want > 0 && d > 0.01) this.facing += wrap(Math.atan2(dx, dz) - this.facing) * smooth(8, dt);
     this.speed += (want - this.speed) * smooth(want > this.speed ? 3 : 8, dt);
     const step = Math.min(d, this.speed * dt);
@@ -156,7 +180,7 @@ class Walker {
     this.gait.step(dt, dt > 0 ? step / dt : 0, step);
     this.pos.y += (walkY(this.pos.x, this.pos.z) - this.pos.y) * (dt > 0 ? smooth(14, dt) : 1);
     if (d < 0.25) {
-      this.crossing = false;
+      if (w.gate) this.crossing = false; // (a point of the way round someone does not end a crossing)
       if (++this.seg >= this.path.length) { this.stop(); return; }
     }
     this.apply();
@@ -204,6 +228,8 @@ export class Crowd {
   private demand = 1;
   private spawnT = 0;
   private seen = 0;
+  /** Someone speaks up (the Japanese, the English, and where): for the game to show over their head. */
+  onShout: ((x: number, y: number, z: number, text: string, en: string) => void) | null = null;
 
   /** The crowd loads its models one by one after the game has started (people appear as they are ready). */
   static start() {
@@ -217,6 +243,7 @@ export class Crowd {
     for (const [m, s] of MODELS) {
       const w = new Walker(m, s);
       await w.load();
+      w.onShout = (who, text, en) => this.onShout?.(who.pos.x, who.pos.y + 1.9 * 1, who.pos.z, text, en);
       this.walkers.push(w);
       this.group.add(w.group, w.shadow);
     }

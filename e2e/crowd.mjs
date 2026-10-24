@@ -40,19 +40,35 @@ ok('they wait at the kerb for the signal', run.waited > 100);
 ok('nobody is on the zebra over the main street while the main cars have green', run.badMain === 0, `${run.badMain} frames`);
 ok('nor on the one over the cross street while its cars have green', run.badCross === 0 && run.onCrossZebra > 0, `${run.badCross} frames, ${run.onCrossZebra} on it in all`);
 ok('no car drives through anyone', run.minGapCar > -0.25, `${run.minGapCar} m between a car and a person`);
-// they stop for the player
+// they stop for the player, and if she stays in the way they get cross (twice) and go round her
 const stop = await page.evaluate(() => {
-  const g = window.__game, c = g.crowd, w = c.walkers.find((x) => x.on && !x.waiting);
+  const g = window.__game, c = g.crowd, p = g.player;
+  // a person walking on the open pavement, with room in front of it for her to stand (she is not pushed off by a wall)
+  let w = null, hx = 0, hz = 0;
+  for (const x of c.walkers) {
+    if (!x.on || x.waiting || !x.path[x.seg] || x.path[x.seg].gate) continue;
+    const a = x.group.rotation.y;
+    p.teleport(x.pos.x + Math.sin(a) * 0.9, x.pos.z + Math.cos(a) * 0.9);
+    if (Math.abs(Math.hypot(p.pos.x - x.pos.x, p.pos.z - x.pos.z) - 0.9) < 0.1) { w = x; hx = Math.sin(a); hz = Math.cos(a); break; }
+  }
   if (!w) return null;
-  const p = g.player;
-  // put her right in front of it, on its way
-  const ang = w.group.rotation.y;
-  p.teleport(w.pos.x + Math.sin(ang) * 0.9, w.pos.z + Math.cos(ang) * 0.9);
-  const before = [w.pos.x, w.pos.z];
-  for (let i = 0; i < 90; i++) w.update(1 / 30, g.signals, p.pos);
-  return Math.hypot(w.pos.x - before[0], w.pos.z - before[1]);
+  const shouts = []; c.onShout = (x, y, z, text, en) => shouts.push(en);
+  const px = p.pos.x, pz = p.pos.z, start = [w.pos.x, w.pos.z];
+  const out = { moved1: 0, passed: false, minDist: 1e9, shouts };
+  for (let i = 0; i < 30 * 12; i++) {
+    w.update(1 / 30, g.signals, p.pos);
+    out.minDist = Math.min(out.minDist, Math.hypot(w.pos.x - px, w.pos.z - pz));
+    if (i === 30) out.moved1 = Math.hypot(w.pos.x - start[0], w.pos.z - start[1]);
+  }
+  // how far past her (along the way it was going) it has got
+  out.beyond = (w.pos.x - px) * hx + (w.pos.z - pz) * hz;
+  out.passed = out.beyond > 0.8;
+  return out;
 });
-ok('a person stops for the player in the way', stop !== null && stop < 0.6, `${stop} m in three seconds`);
+ok('a person stops for the player in the way', stop !== null && stop.moved1 < 0.6, JSON.stringify(stop));
+ok('and when she stays it says "Excuse me!" and then "Get out of the way!"', stop && stop.shouts[0] === 'Excuse me!' && stop.shouts[1] === 'Get out of the way!', JSON.stringify(stop?.shouts));
+ok('then it goes round her and on (it does not wait for ever)', stop && stop.passed, `${stop?.beyond?.toFixed(1)} m past her`);
+ok('without walking through her', stop && stop.minDist > 0.58, `${stop?.minDist?.toFixed(2)} m at the closest`);
 ok('no page errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 await browser.close();
 process.exit(bad ? 1 : 0);

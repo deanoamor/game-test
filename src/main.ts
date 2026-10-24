@@ -86,6 +86,24 @@ async function main() {
 
   // the drivers: they stop for her (and the NPCs) on the road, and honk and shout at her if she stands in the way
   const angry: { x: number; y: number; z: number; text: string; t: number; el: HTMLElement }[] = [];
+  /** A cross word over somebody's head (the Japanese and its English). */
+  const tag = (x: number, y: number, z: number, text: string, en: string, secs = 1.8) => {
+    const el = document.createElement('div');
+    el.className = 'carTag';
+    el.innerHTML = `💢 ${text}<span class="en"></span>`;
+    el.querySelector('.en')!.textContent = en;
+    document.getElementById('hud')!.appendChild(el);
+    angry.push({ x, y, z, text, t: secs, el });
+    while (angry.length > 3) angry.shift()!.el.remove();
+  };
+  if (stage.extra.crowd) {
+    stage.extra.crowd.onShout = (x, y, z, text, en) => {
+      const lx = player?.pos.x ?? drone.target.x, lz = player?.pos.z ?? drone.target.z;
+      const d = Math.hypot(x - lx, z - lz);
+      sound.shout(text, d);
+      tag(x, y, z, text, en, 2.2);
+    };
+  }
   if (stage.extra.traffic) {
     const RAGE: [string, string][] = [['おい！', 'Hey!'], ['どけ！', 'Move!'], ['邪魔だ！', 'You are in the way!'], ['何してんだ！', 'What are you doing?!'], ['いい加減にしろ！', 'That is enough already!']];
     stage.extra.traffic.onHonk = (c) => {
@@ -95,13 +113,7 @@ async function main() {
       sound.honk(d, c.kind, c.n);
       if (d < 40) {
         if (c.n > 1) sound.shout(text, d);
-        const el = document.createElement('div');
-        el.className = 'carTag';
-        el.innerHTML = `💢 ${text}<span class="en"></span>`;
-        el.querySelector('.en')!.textContent = en;
-        document.getElementById('hud')!.appendChild(el);
-        angry.push({ x: c.x, y: c.y + 2.3, z: c.z, text, t: 1.8, el });
-        while (angry.length > 3) angry.shift()!.el.remove();
+        tag(c.x, c.y + 2.3, c.z, text, en);
       }
     };
   }
