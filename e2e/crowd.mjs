@@ -81,7 +81,7 @@ const circle = await page.evaluate(() => {
   const shouts = []; c.onShout = (x, y, z, text, en) => shouts.push(en);
   const seg0 = w.seg;
   let nearAfter = 0;
-  for (let i = 0; i < 30 * 40; i++) { w.update(1 / 30, g.signals, p.pos); if (i > 30 * 25 && Math.hypot(w.pos.x - p.pos.x, w.pos.z - p.pos.z) < 2.2) nearAfter++; }
+  for (let i = 0; i < 30 * 40; i++) { w.update(1 / 30, g.signals, p.pos); if (i > 30 * 25 && !w.waiting && Math.hypot(w.pos.x - p.pos.x, w.pos.z - p.pos.z) < 2.2) nearAfter++; } // (waiting at a kerb for the signal is not circling)
   return { advanced: w.seg > seg0 || !w.on, shouts: shouts.length, nearAfter, dist: Math.hypot(w.pos.x - p.pos.x, w.pos.z - p.pos.z) };
 });
 ok('standing on its point: it gets by and goes on, it does not circle her', circle !== null && circle.advanced && circle.shouts <= 4 && circle.nearAfter < 30, JSON.stringify(circle));
