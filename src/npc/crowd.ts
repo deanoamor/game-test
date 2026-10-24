@@ -217,6 +217,13 @@ class Walker {
     this.speed += (want - this.speed) * smooth(want > this.speed ? 3 : 8, dt);
     const step = Math.min(d, this.speed * dt);
     if (d > 0.01) { this.pos.x += (dx / d) * step; this.pos.z += (dz / d) * step; }
+    // never off the pavement (outside a crossing): if it has slid onto the kerb, it is put back on the nearest bit of it
+    if (!this.crossing && !walkable(this.pos.x, this.pos.z)) {
+      outer: for (let r = 0.1; r <= 1.2; r += 0.1) for (let k = 0; k < 16; k++) {
+        const x = this.pos.x + Math.cos((k / 16) * Math.PI * 2) * r, z = this.pos.z + Math.sin((k / 16) * Math.PI * 2) * r;
+        if (walkable(x, z)) { this.pos.x = x; this.pos.z = z; break outer; }
+      }
+    }
     this.gait.step(dt, dt > 0 ? step / dt : 0, step);
     this.pos.y += (walkY(this.pos.x, this.pos.z) - this.pos.y) * (dt > 0 ? smooth(14, dt) : 1);
     // (she is standing on the point it is going to: near enough, it carries on from here)

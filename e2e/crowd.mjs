@@ -103,7 +103,7 @@ const kerb = await page.evaluate(() => {
   }
   return { off, frames, shouts };
 });
-ok('they keep to the pavement when they go round her (and come back to it if they leave it)', kerb.off <= kerb.frames * 0.0005 && kerb.shouts > 4, JSON.stringify(kerb));
+ok('they keep to the pavement when they go round her (and come back to it if they leave it)', kerb.off <= kerb.frames * 0.0003 && kerb.shouts > 4, JSON.stringify(kerb));
 ok('no page errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 await browser.close();
 process.exit(bad ? 1 : 0);
