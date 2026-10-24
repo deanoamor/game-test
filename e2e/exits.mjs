@@ -6,6 +6,7 @@ const OUT = process.env.OUT || 'e2e/out';
 fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 900, height: 560 } });
+await page.addInitScript(() => sessionStorage.setItem('hoshi.dev', 'c322c4495f5760c665774dba39bd57df86c9094f891da74215fb42903560ae96')); // (the tests run in dev mode)
 await page.goto('http://localhost:5300/?world=ekimae&q=low&pause=1&t=13');
 await page.waitForFunction(() => window.__game && window.__game.frames() > 5, null, { timeout: 240000 });
 const exits = await page.evaluate(() => window.__game.hud.world.exits.map((e) => ({ name: e.name, at: e.at })));

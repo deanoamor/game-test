@@ -1,3 +1,4 @@
+import { isDev } from '../mode';
 import { Color } from 'three';
 import { clamp, smoothstep } from '../util/rng';
 import { EXPRESSWAY, IC, IC_RAMP, PADDY, SHRINE, VILLAGE, getRoads, heightAt, placeAt, type Place } from '../world/config';
@@ -33,7 +34,7 @@ export class Hud {
     $('worldName').textContent = areaOf(world) ? `${world.name} · ${world.jp}` : 'Hoshi no Kuni · 星の国';
     if (world.minDist === world.maxDist) $('helpZoom').style.display = 'none';
     // on foot: the keys walk, Shift runs, a drag turns the view
-    if (world.player) $('help').innerHTML = '<b>W A S D</b> walk &nbsp; <b>Shift</b> run &nbsp; <b>Drag</b> turn &amp; tilt<br /><b>Q E</b> turn &nbsp; <b>R F</b> tilt &nbsp; <b>T</b> time &nbsp; <b>H</b> hide HUD';
+    if (world.player) $('help').innerHTML = '<b>W A S D</b> walk &nbsp; <b>Shift</b> run &nbsp; <b>Drag</b> turn &amp; tilt<br /><b>Q E</b> turn &nbsp; <b>R F</b> tilt &nbsp; ' + (isDev() ? '<b>T</b> time &nbsp; ' : '<b>B</b> bag &nbsp; ') + '<b>H</b> hide HUD';
     // the worlds menu: going to another world loads it afresh
     const sel = $<HTMLSelectElement>('world');
     for (const w of WORLDS) {
@@ -57,10 +58,10 @@ export class Hud {
     window.addEventListener('keydown', (e) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'SELECT') return;
       const n = Number(e.key);
-      if (n >= 1 && n <= PLACES.length) this.onFly?.(PLACES[n - 1].key);
+      if (isDev() && n >= 1 && n <= PLACES.length) this.onFly?.(PLACES[n - 1].key);
       if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') && this.exit?.door) { e.preventDefault(); this.take(); }
       if (e.code === 'KeyH') $('hud').classList.toggle('off');
-      if (e.code === 'KeyT') $('play').click();
+      if (e.code === 'KeyT' && isDev()) $('play').click();
     });
     const hour = $<HTMLInputElement>('hour');
     hour.oninput = () => this.onHour?.(Number(hour.value));

@@ -7,6 +7,7 @@ const MODE = process.env.MODE || 'walk', VIEW = +(process.env.VIEW || 0);
 fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 420, height: 420 } });
+await page.addInitScript(() => sessionStorage.setItem('hoshi.dev', 'c322c4495f5760c665774dba39bd57df86c9094f891da74215fb42903560ae96')); // (the tests run in dev mode)
 await page.goto('http://localhost:5300/?shot=1&world=ekimae&hud=0&q=low&pause=1&t=13');
 await page.waitForFunction(() => window.__game && window.__game.frames() > 2, null, { timeout: 240000 });
 for (let k = 0; k < 12; k++) {

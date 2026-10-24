@@ -4,6 +4,7 @@ import { full } from './full';
 import { home } from './home';
 import { konbini } from './konbini';
 import { npclab } from './npclab';
+import { isDev } from '../mode';
 import type { Rect, WorldDef } from './types';
 
 export type { Exit, Rect, WorldDef } from './types';
@@ -21,13 +22,19 @@ export const WORLDS: WorldDef[] = [ekimae, home, konbini, full, npclab];
 
 /** The world this page shows: from the address (#world=… or ?world=…), the first zone by default. */
 export function currentWorld(): WorldDef {
+  // the game: World 1, or the place she went into by a door (the address and the options are for dev mode)
+  if (!isDev()) return WORLDS.find((w) => w.key === remembered().world && GAME_WORLDS.includes(w.key)) ?? WORLDS[0];
   const fromHash = /(?:^|[#&])world=([\w-]+)/.exec(location.hash)?.[1];
   const fromQuery = new URLSearchParams(location.search).get('world');
   return WORLDS.find((w) => w.key === (fromHash ?? fromQuery ?? remembered().world)) ?? WORLDS[0];
 }
 
+/** The worlds the game has (the others, the full map and the test room, are for dev mode). */
+export const GAME_WORLDS = ['ekimae', 'home', 'konbini'];
+
 /** Which world she came from (the address has `from=…`), so she arrives at the right door. */
 export function cameFrom(): string | null {
+  if (!isDev()) return remembered().from ?? null;
   return /[#&]from=([\w-]+)/.exec(location.hash)?.[1] ?? new URLSearchParams(location.search).get('from') ?? remembered().from ?? null;
 }
 

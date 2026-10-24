@@ -5,6 +5,7 @@ const URL = process.env.URL || 'http://localhost:5300/';
 const VIEWS = (process.env.VIEWS || 'town,street,ic,hillside').split(',');
 const browser = await chromium.launch({ executablePath: process.env.CHROME || '/opt/pw-browsers/chromium', args: ['--use-angle=swiftshader', '--use-gl=angle', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+await page.addInitScript(() => sessionStorage.setItem('hoshi.dev', 'c322c4495f5760c665774dba39bd57df86c9094f891da74215fb42903560ae96')); // (the tests run in dev mode)
 await page.goto(`${URL}?pause=1&world=${process.env.WORLD || 'full'}&q=${process.env.Q || 'medium'}&view=${VIEWS[0]}`);
 await page.waitForFunction(() => window.__game, null, { timeout: 300000 });
 const out = await page.evaluate(async (views) => {

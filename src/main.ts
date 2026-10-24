@@ -6,6 +6,8 @@ import { Post, type Quality } from './fx/post';
 import { Hud } from './ui/hud';
 import { yieldUI } from './util/rng';
 import { Sound } from './audio/sound';
+import { isDev } from './mode';
+import { initDevGate } from './ui/devgate';
 import { BAGS } from './inventory/items';
 import { Basket } from './inventory/shop';
 import { Inventory } from './inventory/store';
@@ -18,7 +20,10 @@ import { areaOf, arrival, carriedHour, currentWorld, forgetCarried, keepArea } f
 import { DaylightRig } from './world/daylight';
 import { Clouds, SkyDome } from './world/sky';
 
-const params = new URLSearchParams(location.search);
+// the game ignores the address's options (the world, the time, the camera, ...): they are for dev mode (see mode.ts)
+const dev = isDev();
+const params = dev ? new URLSearchParams(location.search) : new URLSearchParams();
+initDevGate();
 const nextFrame = yieldUI;
 
 async function main() {
@@ -184,9 +189,10 @@ async function main() {
   resize();
 
   // ---- state ----
-  let hour = Number(params.get('t') ?? carried ?? 11.5);
+  // the game starts on a morning, and the clock runs by itself (nobody sets it); dev mode may set it
+  let hour = Number(params.get('t') ?? carried ?? (dev ? 11.5 : 8));
   let playing = !params.has('pause') && !params.has('shot');
-  const dayLength = 360; // seconds for a whole day
+  const dayLength = dev ? 360 : 600; // seconds for a whole day
   const applyQuality = (q: Quality) => {
     quality = q;
     post.setQuality(q);
@@ -226,14 +232,15 @@ async function main() {
     document.body.style.background = `#${s.sky.horizon.getHexString()}`;
   };
   hud.onFly = (key) => {
+    if (!dev) return;
     const p = PLACES.find((q) => q.key === key);
     // on foot, a place (or a click on the map) takes her there
     if (p && player && drone.following) player.teleport(p.x, p.z);
     else if (p) drone.flyTo(p, params.has('shot'));
   };
-  hud.onMapClick = (x, z) => player && drone.following ? player.teleport(x, z) : drone.flyTo({ key: 'map', name: '', jp: '', x, z, radius: 1, dist: Math.max(drone.dist, 120), pitch: (drone.pitch * 180) / Math.PI, yaw: (drone.yaw * 180) / Math.PI });
-  hud.onHour = (h) => { playing = false; (document.getElementById('play') as HTMLElement).textContent = '▶ Play'; applyHour(h); };
-  hud.onPlay = (p) => { playing = p; };
+  hud.onMapClick = (x, z) => !dev ? undefined : player && drone.following ? player.teleport(x, z) : drone.flyTo({ key: 'map', name: '', jp: '', x, z, radius: 1, dist: Math.max(drone.dist, 120), pitch: (drone.pitch * 180) / Math.PI, yaw: (drone.yaw * 180) / Math.PI });
+  hud.onHour = (h) => { if (!dev) return; playing = false; (document.getElementById('play') as HTMLElement).textContent = '▶ Play'; applyHour(h); };
+  hud.onPlay = (p) => { if (dev) playing = p; };
   hud.onQuality = (q) => { manual = true; applyQuality(q as Quality); };
   applyQuality(quality);
   applyHour(hour);
