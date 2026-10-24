@@ -85,6 +85,25 @@ const circle = await page.evaluate(() => {
   return { advanced: w.seg > seg0 || !w.on, shouts: shouts.length, nearAfter, dist: Math.hypot(w.pos.x - p.pos.x, w.pos.z - p.pos.z) };
 });
 ok('standing on its point: it gets by and goes on, it does not circle her', circle !== null && circle.advanced && circle.shouts <= 4 && circle.nearAfter < 30, JSON.stringify(circle));
+// going round her they keep to the pavement (never the road), at the wide places and the narrow ones
+const kerb = await page.evaluate(() => {
+  const g = window.__game, c = g.crowd, sg = g.signals, tr = g.traffic, walkable = c.constructor.walkable;
+  let off = 0, frames = 0, shouts = 0, worst = 0;
+  c.onShout = () => shouts++;
+  for (const [sx, sz] of [[-20, 38.5], [4.8, 30], [-4.8, 62], [-5.4, 38.4], [20, 49.5]]) {
+    g.player.teleport(sx, sz);
+    for (let i = 0; i < 30 * 100; i++) {
+      sg.step(1 / 30); tr.blockers.length = 0; for (const b of c.blockers) tr.blockers.push(b); tr.step(1 / 30); c.update(1 / 30, sg, g.player.pos);
+      for (const w of c.walkers) {
+        if (!w.on) continue;
+        frames++;
+        if (!w.crossing && !walkable(w.pos.x, w.pos.z)) { off++; }
+      }
+    }
+  }
+  return { off, frames, shouts };
+});
+ok('they keep to the pavement when they go round her (and come back to it if they leave it)', kerb.off <= kerb.frames * 0.0005 && kerb.shouts > 4, JSON.stringify(kerb));
 ok('no page errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 await browser.close();
 process.exit(bad ? 1 : 0);

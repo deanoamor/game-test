@@ -60,6 +60,17 @@ const RADIUS = 0.3;
 const smooth = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 
+/**
+ * Where a person may walk when not crossing: the pavements (the strips along the main street, and along the cross street
+ * north and south of it), never the road and never the shop fronts. The crossing between corners is the one place off it.
+ */
+export function walkable(x: number, z: number): boolean {
+  const ax = Math.abs(x);
+  const inMain = (z >= 37.1 && z <= 39.9) || (z >= 48.1 && z <= 50.9);
+  if (inMain && ax >= 3.55) return true;
+  return ax >= 3.6 && ax <= 5.9 && (z <= 39.9 || z >= 48.1);
+}
+
 /** The ground under a point: the road, or the pavement a little higher (as for the player). */
 export function walkY(x: number, z: number) {
   let y = heightAt(x, z);
@@ -67,7 +78,7 @@ export function walkY(x: number, z: number) {
   return y;
 }
 
-interface Way { x: number; z: number; gate?: { group: 'main' | 'cross'; len: number } }
+interface Way { x: number; z: number; gate?: { group: 'main' | 'cross'; len: number }; back?: boolean }
 
 class Walker {
   readonly group = new Group();
@@ -157,6 +168,15 @@ class Walker {
       if (ok) this.crossing = true; else { want = 0; this.waiting = true; }
     }
     if (this.crossing) want = this.cruise * 1.25;
+    // off the pavement (and not crossing)? back to the nearest bit of it
+    if (!this.crossing && !w.gate && !walkable(this.pos.x, this.pos.z) && !this.path[this.seg].back) {
+      let best: Way | null = null, bd = 1e9;
+      for (let r = 0.3; r <= 3.3 && !best; r += 0.3) for (let k = 0; k < 16; k++) {
+        const x = this.pos.x + Math.cos((k / 16) * Math.PI * 2) * r, z = this.pos.z + Math.sin((k / 16) * Math.PI * 2) * r;
+        if (walkable(x, z) && r < bd) { bd = r; best = { x, z, back: true } as Way; }
+      }
+      if (best) this.path.splice(this.seg, 0, best);
+    }
     const dx = w.x - this.pos.x, dz = w.z - this.pos.z, d = Math.hypot(dx, dz);
     // a stranger in the way (the player): stop short of her; if she stays, it asks her kindly what is wrong, wishes her well, and goes round her
     let blocked = false;
@@ -173,12 +193,21 @@ class Walker {
         if (this.patience === 1 && this.blockedT > 3.2) {
           this.patience = 2;
           { const [t, e] = pick(KIND); this.onShout?.(this, t, e); }
-          // two points beside her and past her, on the side the pavement has more room (the one it leans toward)
-          const side = Math.sign(-(px * dz - pz * dx)) || (Math.random() < 0.5 ? 1 : -1);
-          const nx = (-dz / d) * side * -1, nz = (dx / d) * side * -1;
-          const wp = (k: number): Way => ({ x: player.x + nx * 1.5 + (dx / d) * k, z: player.z + nz * 1.5 + (dz / d) * k });
+          // two points beside her and past her, on the pavement (never out on the road): the side away from her first, the
+          // widest that fits; where the pavement is too narrow, a narrower way
+          const lean = Math.sign(-(px * dz - pz * dx)) || (Math.random() < 0.5 ? 1 : -1);
+          let way: Way[] | null = null;
+          for (const lateral of [1.5, 1.2, 0.95, 0.75]) {
+            for (const side of [lean, -lean]) {
+              const nx = (dz / d) * side, nz = (-dx / d) * side;
+              const wp = (k: number): Way => ({ x: player.x + nx * lateral + (dx / d) * k, z: player.z + nz * lateral + (dz / d) * k });
+              const a = wp(0.1), b = wp(1.9), m = wp(1.0);
+              if ([a, b, m].every((q) => walkable(q.x, q.z)) && walkable((this.pos.x + a.x) / 2, (this.pos.z + a.z) / 2)) { way = [a, b]; break; }
+            }
+            if (way) break;
+          }
           if (++this.detours > 2 && !w.gate && this.seg < this.path.length - 1) this.seg++; // (it keeps coming back to the same spot: it lets that point go)
-          else this.path.splice(this.seg, 0, wp(0.1), wp(1.9));
+          else if (way) this.path.splice(this.seg, 0, ...way);
           this.blockedT = 0;
         }
       }
@@ -235,6 +264,8 @@ function makeWay(from: number, to: number, jitter: P): Way[] {
 }
 
 export class Crowd {
+  /** Where people may walk (for tests). */
+  static walkable = walkable;
   readonly group = new Group();
   readonly walkers: Walker[] = [];
   /** Where the camera looks: people come and go only far from here. */
