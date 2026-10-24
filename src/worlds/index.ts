@@ -5,6 +5,7 @@ import { home } from './home';
 import { konbini } from './konbini';
 import { npclab } from './npclab';
 import { isDev } from '../mode';
+import { loadSave } from '../save';
 import type { Rect, WorldDef } from './types';
 
 export type { Exit, Rect, WorldDef } from './types';
@@ -23,7 +24,8 @@ export const WORLDS: WorldDef[] = [ekimae, home, konbini, full, npclab];
 /** The world this page shows: from the address (#world=… or ?world=…), the first zone by default. */
 export function currentWorld(): WorldDef {
   // the game: World 1, or the place she went into by a door (the address and the options are for dev mode)
-  if (!isDev()) return WORLDS.find((w) => w.key === remembered().world && GAME_WORLDS.includes(w.key)) ?? WORLDS[0];
+  // (a door brings her to its world; a restart goes on where she left off; a first visit begins in World 1)
+  if (!isDev()) { const key = remembered().world ?? loadSave()?.world; return WORLDS.find((w) => w.key === key && GAME_WORLDS.includes(w.key)) ?? WORLDS[0]; }
   const fromHash = /(?:^|[#&])world=([\w-]+)/.exec(location.hash)?.[1];
   const fromQuery = new URLSearchParams(location.search).get('world');
   return WORLDS.find((w) => w.key === (fromHash ?? fromQuery ?? remembered().world)) ?? WORLDS[0];
@@ -40,6 +42,8 @@ export function cameFrom(): string | null {
 
 /** Where she arrives in a world: at the place for the world she came from, else the world's own start. */
 export function arrival(w: WorldDef): { x: number; z: number; yaw: number } | undefined {
+  // a restart in the game: back at the spot she left
+  if (!isDev() && !remembered().world) { const s = loadSave(); if (s && s.world === w.key) return { x: s.x, z: s.z, yaw: s.yaw }; }
   const from = cameFrom();
   return (from ? w.spawns?.[from] : undefined) ?? w.player;
 }
@@ -53,8 +57,9 @@ function remembered(): { world?: string; from?: string } {
     return v;
   } catch { return {}; }
 }
-/** The clock carried over from the world she left (hours), if any. */
+/** The clock carried over from the world she left (hours), if any (in the game, a restart takes the saved time). */
 export function carriedHour(): number | null {
+  if (!isDev() && !remembered().world) return loadSave()?.hour ?? null;
   try {
     const h = JSON.parse(sessionStorage.getItem(KEY) ?? '{}').hour;
     return typeof h === 'number' ? h : null;

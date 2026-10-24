@@ -38,7 +38,7 @@
   .carTag.kind .en { color: #2c5a50; }
   .carTag .en { display: block; font-size: 11px; font-weight: 600; color: #444; text-align: center; margin-top: 1px; }
   @keyframes shake { from { margin-left: -2px; } to { margin-left: 2px; } }
-  #time .row input[type=range] { width: 90px; margin: 0; }
+  #time .row input[type=range] { width: 64px; margin: 0; }
   #time select option { color: #111; }
   #help { left: 14px; bottom: 14px; color: var(--dim); font-size: 12px; line-height: 1.7; }
   #help b { color: var(--ink); font-weight: 600; }
@@ -151,7 +151,7 @@
     <div class="clock"><b id="clock">12:00</b><span id="phase">Midday</span></div>
     <input id="hour" class="devonly" type="range" min="0" max="24" step="0.05" value="12" />
     <div class="row"><button id="play" class="devonly">⏸ Pause</button><select id="quality"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
-    <div class="row" style="margin-top:6px"><button id="bagBtn" title="B">🎒 Bag</button><button id="sound" title="M">🔊</button><input type="range" id="vol" min="0" max="1" step="0.05" value="0.7" title="Volume" /></div>
+    <div class="row" style="margin-top:6px"><button id="bagBtn" title="B">🎒 Bag</button><button id="sound" title="M">🔊</button><input type="range" id="vol" min="0" max="1" step="0.05" value="0.7" title="Volume" /><button id="newGame" title="Start a new game (the save, the bag and the guide are cleared)">↺</button></div>
     <div class="row devonly" style="margin-top:6px"><span style="color:var(--dim);font-size:11px">World</span><select id="world" title="Go to another world (it loads afresh)"></select></div>
   </div>
   <div id="help" class="panel"><b>Drag</b> slide the map &nbsp; <b>Right-drag</b> turn &amp; tilt<br /><span id="helpZoom"><b>Wheel</b> zoom &nbsp; </span><b>W A S D</b> fly &nbsp; <b>Q E</b> turn &nbsp; <b>R F</b> tilt<br /><b>Shift</b> faster &nbsp; <b>1–9</b> places &nbsp; <b>T</b> time &nbsp; <b>B</b> bag &nbsp; <b>M</b> sound &nbsp; <b>H</b> hide HUD</div>

@@ -9,6 +9,7 @@ import { Sound } from './audio/sound';
 import { isDev } from './mode';
 import { initDevGate } from './ui/devgate';
 import { Guide } from './ui/guide';
+import { clearAll, writeSave } from './save';
 import { HOME, KONBINI } from './worlds/ekimae/home';
 import { walkY } from './npc/crowd';
 import { BAGS } from './inventory/items';
@@ -299,6 +300,26 @@ async function main() {
   let manual = params.has('q');
   let autoClock = 0, autoFrames = 0, autoSteps = 0;
   let dynClock = 0, dynFrames = 0;
+  // the game saves where she is every two seconds (and when the page is left), so a restart goes on from there
+  let saveT = 2, resetting = false;
+  const save = () => { if (player && !dev && !resetting) writeSave({ world: world.key, x: player.pos.x, z: player.pos.z, yaw: (player.group.rotation.y * 180) / Math.PI, hour }); };
+  if (!dev) {
+    document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+    window.addEventListener('pagehide', save);
+  }
+  // "new game": two clicks (the second within four seconds) clear the save, the bag and the guide
+  {
+    const nb = document.getElementById('newGame') as HTMLButtonElement | null;
+    if (nb) {
+      let armed = 0;
+      nb.onclick = () => {
+        if (!armed) { armed = window.setTimeout(() => { armed = 0; nb.textContent = '↺'; }, 4000); nb.textContent = 'Sure?'; return; }
+        resetting = true;
+        clearAll();
+        location.assign(location.pathname);
+      };
+    }
+  }
   const loop = (now: number) => {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
@@ -340,6 +361,7 @@ async function main() {
     if (player) {
       bagUi?.update(player.pos.x, player.pos.z, dt);
       guide?.update(dt, player.pos, drone.camera, host.clientWidth, host.clientHeight);
+      if (!dev && (saveT -= dt) <= 0) { saveT = 2; save(); }
       // her steps: one for each foot, as the stride comes round
       const g = player.gait, idx = Math.floor(g.phase / Math.PI);
       if (idx !== stepIdx && g.walkW > 0.35) {
