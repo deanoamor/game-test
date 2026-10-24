@@ -12,7 +12,7 @@ import type { Inventory } from './store';
  * (or the button) closes it.
  */
 
-type Mode = 'bag' | 'wardrobe' | 'shelf' | 'register';
+export type Mode = 'bag' | 'wardrobe' | 'shelf' | 'register';
 /** A place to press F at: a line segment (a shelf, the counter) or a point, and how near she must be. */
 export interface Spot { x0: number; z0: number; x1: number; z1: number; r: number; label: string; kind: 'wardrobe' | 'basket' | 'shelf' | 'register'; shelf?: string }
 
@@ -36,6 +36,10 @@ export class BagUI {
   onChat: (() => void) | null = null;
   /** True while a talk is going on (F belongs to it). */
   busy: (() => boolean) | null = null;
+  /** A panel opened (the guide watches for the wardrobe). */
+  onOpened: ((m: Mode) => void) | null = null;
+  /** She paid at the register. */
+  onPaid: (() => void) | null = null;
   /** The basket in her hand changed (how many things in it; null: none). */
   onHeld: ((count: number | null) => void) | null = null;
 
@@ -72,6 +76,7 @@ export class BagUI {
   open(mode: Mode, shelf?: string) {
     if (this.mode && this.mode !== mode) return;
     this.mode = mode;
+    this.onOpened?.(mode);
     if (shelf) this.shelf = shelf;
     this.selected = -1;
     this.message = mode === 'wardrobe' ? 'Pick a bag, or move things between the bag and the wardrobe.'
@@ -207,6 +212,7 @@ export class BagUI {
       if (why) this.message = why;
       else {
         b.giveBack();
+        this.onPaid?.();
         this.message = 'Thank you very much! (The things are in your bag.)';
         this.sound?.cue('buy');
         this.sound?.speak('clerk', 'Arigatou gozaimashita! Mata okoshi kudasai!');

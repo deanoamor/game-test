@@ -8,12 +8,14 @@ import { yieldUI } from './util/rng';
 import { Sound } from './audio/sound';
 import { isDev } from './mode';
 import { initDevGate } from './ui/devgate';
+import { Guide } from './ui/guide';
+import { HOME, KONBINI } from './worlds/ekimae/home';
+import { walkY } from './npc/crowd';
 import { BAGS } from './inventory/items';
 import { Basket } from './inventory/shop';
 import { Inventory } from './inventory/store';
 import { BagUI } from './inventory/ui';
 import { buildBagModel, buildBasketModel } from './player/bagModel';
-import { KONBINI } from './worlds/ekimae/home';
 import { buildIndoor } from './stages/indoor';
 import { buildOutdoor } from './stages/outdoor';
 import { areaOf, arrival, carriedHour, currentWorld, forgetCarried, keepArea } from './worlds';
@@ -149,6 +151,27 @@ async function main() {
     if (bb) bb.onclick = () => (bagUi!.mode === 'bag' ? bagUi!.close() : bagUi!.open('bag'));
   } else document.getElementById('bagBtn')?.remove();
   void BAGS;
+
+  // the guide (the game, not dev mode): an introduction the first time, then home, the wardrobe, the Hoshi Mart, a basket, a shelf, the register
+  let guide: Guide | null = null;
+  if (player && !dev && bagUi) {
+    const layer = document.getElementById('hud')!;
+    let wardrobe = false, paid = false;
+    bagUi.onOpened = (m) => { if (m === 'wardrobe') wardrobe = true; };
+    bagUi.onPaid = () => { paid = true; };
+    const centre = (r: { x0: number; z0: number; x1: number; z1: number }) => ({ x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 });
+    const basket = bagUi.basket;
+    guide = new Guide(() => ({
+      world: world.key,
+      homeDoor: () => ({ ...centre(HOME.door), y: HOME.info.minY + 0.5 }),
+      konbiniDoor: () => { const c = centre(KONBINI.door); return { ...c, y: walkY(c.x, c.z) }; },
+      wardrobeOpened: () => wardrobe, hasBasket: () => basket.has, basketCount: () => basket.count, paid: () => paid,
+    }), layer);
+    scene.add(guide.group);
+    guide.onStep = () => sound.cue('swap');
+    guide.onFinished = () => { sound.cue('buy'); bagUi!.toast('That is everything for now. Enjoy Hoshi Town! (B: your bag)'); };
+    if (guide.needsIntro) { player.frozen = true; guide.showIntro(layer, () => { player!.frozen = false; }); }
+  }
 
   progress(0.95, 'Drawing the map…');
   await nextFrame();
@@ -316,6 +339,7 @@ async function main() {
     }
     if (player) {
       bagUi?.update(player.pos.x, player.pos.z, dt);
+      guide?.update(dt, player.pos, drone.camera, host.clientWidth, host.clientHeight);
       // her steps: one for each foot, as the stride comes round
       const g = player.gait, idx = Math.floor(g.phase / Math.PI);
       if (idx !== stepIdx && g.walkW > 0.35) {
@@ -370,7 +394,7 @@ async function main() {
   requestAnimationFrame(loop);
 
   (window as unknown as Record<string, unknown>).__game = {
-    drone, scene, renderer, light, post, hud, player, stage, talk, sound, inv, bagUi, npcs: stage.npcs, ...stage.extra,
+    drone, scene, renderer, light, post, hud, player, stage, talk, sound, inv, bagUi, guide, npcs: stage.npcs, ...stage.extra,
     hour: () => hour,
     /** Run the signals and the traffic ahead by `seconds` (for tests). */
     simulate: (seconds: number) => { const { signals, traffic } = stage.extra; if (signals && traffic) for (let t = 0; t < seconds; t += 1 / 30) { signals.step(1 / 30); traffic.step(1 / 30); } },
