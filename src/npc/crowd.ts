@@ -78,7 +78,7 @@ export function walkY(x: number, z: number) {
   return y;
 }
 
-interface Way { x: number; z: number; gate?: { group: 'main' | 'cross'; len: number }; back?: boolean }
+interface Way { x: number; z: number; gate?: { group: 'main' | 'cross'; len: number }; back?: boolean; detour?: boolean }
 
 class Walker {
   readonly group = new Group();
@@ -183,12 +183,13 @@ class Walker {
     if (player && d > 0.01 && Math.abs(player.y - this.pos.y) < 1.5) {
       const px = player.x - this.pos.x, pz = player.z - this.pos.z;
       const along = (px * dx + pz * dz) / d, lat = Math.abs(px * dz - pz * dx) / d;
-      if (along > 0 && along < 1.1 && lat < 0.55) {
+      if (along > 0 && along < 1.1 && lat < 0.55 && !w.detour) {
         blocked = true;
         want = 0;
         this.blockedT += dt;
         // it looks at her while it waits
         this.facing += wrap(Math.atan2(px, pz) - this.facing) * smooth(5, dt);
+        if (this.patience === 2 && this.blockedT > 2) { this.patience = 1; this.blockedT = 3.3; } // (still held up after going round: try again, with the next way)
         if (this.patience === 0 && this.blockedT > 1.3) { this.patience = 1; { const [t, e] = pick(ASK); this.onShout?.(this, t, e); } }
         if (this.patience === 1 && this.blockedT > 3.2) {
           this.patience = 2;
@@ -200,9 +201,11 @@ class Walker {
           for (const lateral of [1.5, 1.2, 0.95, 0.75]) {
             for (const side of [lean, -lean]) {
               const nx = (dz / d) * side, nz = (-dx / d) * side;
-              const wp = (k: number): Way => ({ x: player.x + nx * lateral + (dx / d) * k, z: player.z + nz * lateral + (dz / d) * k });
+              const wp = (k: number): Way => ({ x: player.x + nx * lateral + (dx / d) * k, z: player.z + nz * lateral + (dz / d) * k, detour: true });
               const a = wp(0.1), b = wp(1.9), m = wp(1.0);
-              if ([a, b, m].every((q) => walkable(q.x, q.z)) && walkable((this.pos.x + a.x) / 2, (this.pos.z + a.z) / 2)) { way = [a, b]; break; }
+              // (where it is going to cross the road, it only steps aside on the pavement and crosses from there: the point past her is on the road)
+              if (w.gate) { if (walkable(a.x, a.z) && walkable((this.pos.x + a.x) / 2, (this.pos.z + a.z) / 2)) { way = [a]; break; } }
+              else if ([a, b, m].every((q) => walkable(q.x, q.z)) && walkable((this.pos.x + a.x) / 2, (this.pos.z + a.z) / 2)) { way = [a, b]; break; }
             }
             if (way) break;
           }
