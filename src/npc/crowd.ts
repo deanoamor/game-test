@@ -42,6 +42,12 @@ export function crowdDemand(hour: number): number {
   return d0 + ((d1 - d0) * (h - h0)) / (h1 - h0);
 }
 
+/** What they say to someone who stands in their way: first a question, then a kind word as they ask her to leave the way open. */
+const ASK: [string, string][] = [['大丈夫ですか？', 'Are you okay?'], ['どうして立ち止まっているの？', 'Why are you standing still?'], ['何かお困りですか？', 'Do you need any help?'], ['ずっと立っているけど、どうしたの？', 'You have been standing there a while. What is wrong?']];
+const KIND: [string, string][] = [['お元気でね。通り道はあけてね。', 'I hope you are well. Please keep the way open, okay?'], ['よい一日を！ ここは通り道だから、気をつけてね。', 'Have a nice day! This is a walkway, so take care.'], ['無理しないでね。ちょっと通るよ。', 'Do not push yourself. I will just pass by.'], ['元気を出してね。道をあけてくれるとうれしいな。', 'Cheer up. It would be nice if you let people by.']];
+const FEMALE = ['office', 'street-kobayashi', 'street-tomi', 'street-mio', 'street-rin', 'dress', 'street-aoi', 'street-kiyo', 'street-sora'];
+const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
+
 /** The models they are made from (see people.ts): [model, scale]. */
 const MODELS: [string, number][] = [
   ['suit', 1], ['street-sato', 1.05], ['street-gen', 1], ['office', 1], ['street-kobayashi', 1], ['street-tomi', 1], ['street-mio', 1], ['street-rin', 1],
@@ -88,6 +94,8 @@ class Walker {
   private detours = 0;
   /** Called when it speaks up (the Japanese, the English, and where its head is). */
   onShout: ((w: Walker, text: string, en: string) => void) | null = null;
+  /** Which voice it speaks with (a higher one for the women and the children). */
+  get voice() { return FEMALE.includes(this.model) ? 'nurse' : 'default'; }
 
   constructor(readonly model: string, scale: number) {
     this.base = scale;
@@ -150,7 +158,7 @@ class Walker {
     }
     if (this.crossing) want = this.cruise * 1.25;
     const dx = w.x - this.pos.x, dz = w.z - this.pos.z, d = Math.hypot(dx, dz);
-    // a stranger in the way (the player): stop short of her; if she stays, it gets cross, says so, and goes round her
+    // a stranger in the way (the player): stop short of her; if she stays, it asks her kindly what is wrong, wishes her well, and goes round her
     let blocked = false;
     if (player && d > 0.01 && Math.abs(player.y - this.pos.y) < 1.5) {
       const px = player.x - this.pos.x, pz = player.z - this.pos.z;
@@ -161,10 +169,10 @@ class Walker {
         this.blockedT += dt;
         // it looks at her while it waits
         this.facing += wrap(Math.atan2(px, pz) - this.facing) * smooth(5, dt);
-        if (this.patience === 0 && this.blockedT > 1.3) { this.patience = 1; this.onShout?.(this, 'すみません！', 'Excuse me!'); }
+        if (this.patience === 0 && this.blockedT > 1.3) { this.patience = 1; { const [t, e] = pick(ASK); this.onShout?.(this, t, e); } }
         if (this.patience === 1 && this.blockedT > 3.2) {
           this.patience = 2;
-          this.onShout?.(this, 'どいてよ！', 'Get out of the way!');
+          { const [t, e] = pick(KIND); this.onShout?.(this, t, e); }
           // two points beside her and past her, on the side the pavement has more room (the one it leans toward)
           const side = Math.sign(-(px * dz - pz * dx)) || (Math.random() < 0.5 ? 1 : -1);
           const nx = (-dz / d) * side * -1, nz = (dx / d) * side * -1;
@@ -235,7 +243,7 @@ export class Crowd {
   private spawnT = 0;
   private seen = 0;
   /** Someone speaks up (the Japanese, the English, and where): for the game to show over their head. */
-  onShout: ((x: number, y: number, z: number, text: string, en: string) => void) | null = null;
+  onShout: ((x: number, y: number, z: number, text: string, en: string, voice: string) => void) | null = null;
 
   /** The crowd loads its models one by one after the game has started (people appear as they are ready). */
   static start() {
@@ -249,7 +257,7 @@ export class Crowd {
     for (const [m, s] of MODELS) {
       const w = new Walker(m, s);
       await w.load();
-      w.onShout = (who, text, en) => this.onShout?.(who.pos.x, who.pos.y + 1.9 * 1, who.pos.z, text, en);
+      w.onShout = (who, text, en) => this.onShout?.(who.pos.x, who.pos.y + 1.9, who.pos.z, text, en, who.voice);
       this.walkers.push(w);
       this.group.add(w.group, w.shadow);
     }

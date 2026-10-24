@@ -40,7 +40,7 @@ ok('they wait at the kerb for the signal', run.waited > 100);
 ok('nobody is on the zebra over the main street while the main cars have green', run.badMain === 0, `${run.badMain} frames`);
 ok('nor on the one over the cross street while its cars have green', run.badCross === 0 && run.onCrossZebra > 0, `${run.badCross} frames, ${run.onCrossZebra} on it in all`);
 ok('no car drives through anyone', run.minGapCar > -0.25, `${run.minGapCar} m between a car and a person`);
-// they stop for the player, and if she stays in the way they get cross (twice) and go round her
+// they stop for the player, and if she stays in the way they ask her kindly what is wrong, wish her well, and go round her
 const stop = await page.evaluate(() => {
   const g = window.__game, c = g.crowd, p = g.player;
   // a person walking on the open pavement, with room in front of it for her to stand (she is not pushed off by a wall)
@@ -66,7 +66,7 @@ const stop = await page.evaluate(() => {
   return out;
 });
 ok('a person stops for the player in the way', stop !== null && stop.moved1 < 0.6, JSON.stringify(stop));
-ok('and when she stays it says "Excuse me!" and then "Get out of the way!"', stop && stop.shouts[0] === 'Excuse me!' && stop.shouts[1] === 'Get out of the way!', JSON.stringify(stop?.shouts));
+ok('and when she stays it asks kindly what is wrong, then wishes her well (no anger)', stop && stop.shouts.length === 2 && /\?$/.test(stop.shouts[0]) && /(well|day|care|Cheer|push)/.test(stop.shouts[1]) && !stop.shouts.some((t) => /out of the way|Excuse me/.test(t)), JSON.stringify(stop?.shouts));
 ok('then it goes round her and on (it does not wait for ever)', stop && stop.passed, `${stop?.beyond?.toFixed(1)} m past her`);
 ok('without walking through her', stop && stop.minDist > 0.58, `${stop?.minDist?.toFixed(2)} m at the closest`);
 // she stands right on the point a person is going to (a corner): it must not circle her for ever

@@ -353,6 +353,11 @@ export class Sound {
       t += d + 0.07;
     }
   }
+  /** Somebody speaking to the player (a stranger on the street), heard from `dist` metres, in the voice of `id`. */
+  chat(id: string, text: string, dist: number) {
+    const g = 0.8 / (1 + (dist / 14) * (dist / 14));
+    if (g > 0.05) this.voice(id, text, g);
+  }
   /** A driver shouting (the same chirps as the voices, low and rough), from `dist` metres. */
   shout(text: string, dist: number) {
     const g = 0.9 / (1 + (dist / 16) * (dist / 16));

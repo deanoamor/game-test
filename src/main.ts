@@ -87,21 +87,22 @@ async function main() {
   // the drivers: they stop for her (and the NPCs) on the road, and honk and shout at her if she stands in the way
   const angry: { x: number; y: number; z: number; text: string; t: number; el: HTMLElement }[] = [];
   /** A cross word over somebody's head (the Japanese and its English). */
-  const tag = (x: number, y: number, z: number, text: string, en: string, secs = 1.8) => {
+  const tag = (x: number, y: number, z: number, text: string, en: string, secs = 1.8, kind = false) => {
     const el = document.createElement('div');
-    el.className = 'carTag';
-    el.innerHTML = `💢 ${text}<span class="en"></span>`;
+    el.className = kind ? 'carTag kind' : 'carTag';
+    el.innerHTML = `${kind ? '💬' : '💢'} ${text}<span class="en"></span>`;
     el.querySelector('.en')!.textContent = en;
     document.getElementById('hud')!.appendChild(el);
     angry.push({ x, y, z, text, t: secs, el });
     while (angry.length > 3) angry.shift()!.el.remove();
   };
   if (stage.extra.crowd) {
-    stage.extra.crowd.onShout = (x, y, z, text, en) => {
+    // (strangers who find her in their way ask her kindly what is wrong: a friendly bubble and a soft voice)
+    stage.extra.crowd.onShout = (x, y, z, text, en, voice) => {
       const lx = player?.pos.x ?? drone.target.x, lz = player?.pos.z ?? drone.target.z;
       const d = Math.hypot(x - lx, z - lz);
-      sound.shout(text, d);
-      tag(x, y, z, text, en, 2.2);
+      sound.chat(voice, text, d);
+      tag(x, y, z, text, en, 3.4, true);
     };
   }
   if (stage.extra.traffic) {
